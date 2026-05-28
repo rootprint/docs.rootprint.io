@@ -1,0 +1,93 @@
+---
+title: 'POST /api/ingest/ndjson - ingest log events'
+description: 'Send newline-delimited JSON log events to the Quickwit index attached to your ingest API key. Requires a bearer API key.'
+---
+
+The ingest endpoint accepts a batch of log events as NDJSON and forwards them to the Quickwit index attached to your ingest API key. Rootprint acts as an authenticated gateway - your log shippers send data here instead of directly to Quickwit, so you can keep Quickwit private and manage access with per-index API keys.
+
+If you want the full setup flow, see [Send Logs](/send-logs/overview).
+
+## Endpoint
+
+```http
+POST /api/ingest/ndjson
+```
+
+## Authentication
+
+```http
+Authorization: Bearer <your-ingest-token>
+```
+
+You must include a valid ingest API key in every request. Create API keys in the Rootprint admin panel at **Administration → API keys**. Each key is scoped to exactly one index; Rootprint uses that index when forwarding the request to Quickwit.
+
+## Request body
+
+Set `Content-Type: application/x-ndjson`. The body must contain one JSON object per line. Each line represents a single log event. The body cannot be empty.
+
+<Note>
+	NDJSON (Newline Delimited JSON) means each log entry is a complete JSON object on its own line,
+	with a newline character (`\n`) between entries. There is no wrapping array.
+</Note>
+
+## Example request
+
+```bash
+curl -X POST 'https://logs.example.com/api/ingest/ndjson' \
+  -H 'Authorization: Bearer rootprint_abc123' \
+  -H 'Content-Type: application/x-ndjson' \
+  --data-binary @- <<'EOF'
+{"timestamp_nanos":1776340800000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{"user_id":"alice"},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":1776340800000000000,"severity_number":9,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
+{"timestamp_nanos":1776340860000000000,"severity_text":"ERROR","body":{"message":"Connection timeout"},"service_name":"api-gateway","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":1776340860000000000,"severity_number":17,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
+EOF
+```
+
+<Tip>
+	Rootprint targets the index configured on the ingest API key. Check the key in **Administration → API keys** if you need to confirm where a shipper writes.
+</Tip>
+
+## Response
+
+Rootprint proxies the response from Quickwit directly. On success, Quickwit returns `200`.
+
+<ResponseField name="num_docs_for_processing" type="number">
+	The number of log events accepted for indexing in this request.
+</ResponseField>
+
+Example success response:
+
+```json
+{ "num_docs_for_processing": 2 }
+```
+
+<Note>
+	`num_docs_for_processing` is the count of documents accepted for indexing, not the count
+	successfully indexed. If individual documents fail validation against the index schema, Quickwit
+	logs the failure on the server but the API response stays the same. Inspect Quickwit's stdout (or
+	your log shipper) when you suspect documents are being silently dropped.
+</Note>
+
+## Error responses
+
+| Status | Cause                                                                    |
+| ------ | ------------------------------------------------------------------------ |
+| `400`  | The request body is empty or the payload could not be parsed             |
+| `401`  | The `Authorization` header is missing or does not contain a bearer API key |
+| `403`  | The API key is invalid or revoked                                         |
+| `404`  | The upstream index no longer exists in Quickwit                         |
+| `413`  | A proxy or upstream service rejected the request as too large           |
+| `502`  | Rootprint could not reach Quickwit to forward the request                   |
+| `503`  | Quickwit is unhealthy or unavailable                                     |
+
+App-level error responses include a JSON body with an `error` object:
+
+```json
+{
+  "error": {
+    "code": "INGEST_INVALID_TOKEN",
+    "message": "Invalid ingest token",
+    "statusCode": 403,
+    "requestId": "req_abc123"
+  }
+}
+```

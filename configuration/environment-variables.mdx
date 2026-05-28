@@ -1,0 +1,53 @@
+---
+title: 'Environment variables reference'
+description: 'Reference for all environment variables that control Rootprint behavior.'
+---
+
+Rootprint reads its configuration from environment variables at startup. For Docker deployments, set these under the `environment` key of the `rootprint` service in `docker-compose.yml`.
+
+<Note>
+	`QUICKWIT_URL` must point at a Quickwit `0.9` or later instance. Rootprint does not support
+	older Quickwit releases.
+</Note>
+
+## Required
+
+| Variable        | Description                                                                                                                                                                                  |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`  | PostgreSQL connection string (e.g. `postgres://rootprint:rootprint@db:5432/rootprint`). No default.                                                                                                    |
+| `ORIGIN`        | Canonical public URL of this Rootprint instance (e.g. `https://logs.example.com`). Used for Better Auth callbacks, invite links, CORS allow-list, and cookies. No default. Must be a valid URL. |
+| `QUICKWIT_URL`  | Quickwit REST endpoint (e.g. `http://quickwit:7280`). No default. Must be a valid URL.                                                                                                       |
+
+Rootprint refuses to start if any required variable is missing, empty, or (for URL variables) not parseable as an `http://` or `https://` URL.
+
+## Optional
+
+| Variable             | Default          | Description                                                                                                                                                                                                                       |
+| -------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET` | Auto-generated   | Secret used to sign session tokens. If unset, Rootprint generates 32 random bytes on first boot and persists them in the `app_settings` table; subsequent boots read the row. If set, must be ≥32 characters or startup fails.       |
+| `FRONTEND_URL`       | Same as `ORIGIN` | Additional allowed CORS origin. Only useful in split deployments where the SPA is hosted on a different origin than the API. Cookie domain, invite link host, and Better Auth `baseURL` always derive from `ORIGIN`, not this.    |
+| `PORT`               | `8282`           | HTTP listen port. Usually you remap with the compose `ports:` block instead of changing this.                                                                                                                                     |
+
+## Removed in this release
+
+These variables were honored in earlier (SQLite-era) builds and are no longer read. Setting them has no effect:
+
+- `ROOTPRINT_DATABASE_PATH` — Rootprint now requires PostgreSQL.
+- `ROOTPRINT_AUTH_SECRET` — renamed; use `BETTER_AUTH_SECRET`.
+- `ROOTPRINT_INVITE_EXPIRY_HOURS` — hard-coded to 48 hours.
+- `ROOTPRINT_RATE_LIMIT_*`, `ROOTPRINT_SIGNIN_RATE_LIMIT_MAX`, `ROOTPRINT_QUICKWIT_TIMEOUT_MS` — not currently implemented; will be re-exposed via the admin settings UI in a future release.
+- `HOST`, `BETTER_AUTH_URL`, `ROOTPRINT_SERVE_WEB`, `ROOTPRINT_WEB_ROOT` — replaced by `0.0.0.0` bind, derived from `ORIGIN`, and image-build defaults respectively.
+
+## Docker Compose example
+
+```yaml
+services:
+  rootprint:
+    image: ghcr.io/oleksandr-zhyhalo/rootprint:latest
+    environment:
+      DATABASE_URL: postgres://rootprint:rootprint@db:5432/rootprint
+      ORIGIN: https://logs.example.com
+      QUICKWIT_URL: http://quickwit:7280
+    ports:
+      - '8282:8282'
+```

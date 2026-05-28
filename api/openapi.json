@@ -1,0 +1,8372 @@
+{
+	"openapi": "3.1.0",
+	"info": {
+		"title": "Rootprint API",
+		"version": "0.2.2",
+		"description": "Use the Rootprint HTTP API to send logs, search logs from external tools, and automate administrative workflows against your own self-hosted Rootprint instance."
+	},
+	"servers": [
+		{
+			"url": "http://localhost:8282",
+			"description": "Local development"
+		},
+		{
+			"url": "https://logs.example.com",
+			"description": "Example self-hosted deployment"
+		}
+	],
+	"tags": [
+		{
+			"name": "System health",
+			"description": "Service reachability endpoints."
+		},
+		{
+			"name": "Authentication",
+			"description": "Setup, sign-in, sessions, and password endpoints."
+		},
+		{
+			"name": "Manage indexes",
+			"description": "Index metadata, configuration, sources, and preferences."
+		},
+		{
+			"name": "Search logs",
+			"description": "Log search, histogram, field values, export, saved query, and share endpoints."
+		},
+		{
+			"name": "Manage users",
+			"description": "Admin user and invite management."
+		},
+		{
+			"name": "Manage API keys",
+			"description": "Ingest and search API key management."
+		},
+		{
+			"name": "Configure auth",
+			"description": "Google authentication configuration endpoints."
+		},
+		{
+			"name": "Monitor system",
+			"description": "Cluster, activity, and metrics endpoints."
+		},
+		{
+			"name": "Ingest logs",
+			"description": "Token-authenticated log ingest endpoints."
+		}
+	],
+	"components": {
+		"securitySchemes": {
+			"cookieAuth": {
+				"type": "apiKey",
+				"in": "cookie",
+				"name": "better-auth.session_token",
+				"description": "Better Auth session cookie used by the Rootprint web UI."
+			},
+			"ingestBearer": {
+				"type": "http",
+				"scheme": "bearer",
+				"description": "Ingest token generated in the Rootprint admin panel.",
+				"x-default": "rootprint_ingest_token"
+			},
+			"searchBearer": {
+				"type": "http",
+				"scheme": "bearer",
+				"description": "Search token generated in the Rootprint admin panel.",
+				"x-default": "rootprint_search_token"
+			}
+		},
+		"schemas": {
+			"ApiErrorDetail": {
+				"type": "object",
+				"required": [
+					"path",
+					"message"
+				],
+				"properties": {
+					"path": {
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					}
+				}
+			},
+			"ApiError": {
+				"type": "object",
+				"required": [
+					"code",
+					"message",
+					"statusCode",
+					"requestId"
+				],
+				"properties": {
+					"code": {
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					},
+					"statusCode": {
+						"type": "integer"
+					},
+					"requestId": {
+						"type": "string"
+					},
+					"details": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ApiErrorDetail"
+						}
+					}
+				}
+			},
+			"ApiErrorBody": {
+				"type": "object",
+				"required": [
+					"error"
+				],
+				"properties": {
+					"error": {
+						"$ref": "#/components/schemas/ApiError"
+					}
+				}
+			},
+			"HealthResponse": {
+				"type": "object",
+				"required": [
+					"status"
+				],
+				"properties": {
+					"status": {
+						"type": "string",
+						"enum": [
+							"ok"
+						]
+					}
+				}
+			},
+			"SetupAdminInput": {
+				"type": "object",
+				"required": [
+					"name",
+					"email",
+					"password"
+				],
+				"properties": {
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 128
+					},
+					"email": {
+						"type": "string",
+						"format": "email"
+					},
+					"password": {
+						"type": "string",
+						"minLength": 8,
+						"maxLength": 128,
+						"format": "password"
+					}
+				}
+			},
+			"SetupAdminResponse": {
+				"type": "object",
+				"required": [
+					"id",
+					"email",
+					"name"
+				],
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string",
+						"format": "email"
+					},
+					"name": {
+						"type": "string"
+					}
+				}
+			},
+			"VerifyInviteInput": {
+				"type": "object",
+				"required": [
+					"token"
+				],
+				"properties": {
+					"token": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 128
+					}
+				}
+			},
+			"VerifyInviteResponse": {
+				"type": "object",
+				"required": [
+					"valid",
+					"email"
+				],
+				"properties": {
+					"valid": {
+						"type": "boolean"
+					},
+					"email": {
+						"type": "string",
+						"format": "email"
+					}
+				}
+			},
+			"SetupPasswordInput": {
+				"type": "object",
+				"required": [
+					"token",
+					"password"
+				],
+				"properties": {
+					"token": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 128
+					},
+					"password": {
+						"type": "string",
+						"minLength": 8,
+						"maxLength": 128,
+						"format": "password"
+					}
+				}
+			},
+			"SuccessResponse": {
+				"type": "object",
+				"required": [
+					"success"
+				],
+				"properties": {
+					"success": {
+						"type": "boolean"
+					}
+				}
+			},
+			"BootstrapResponse": {
+				"type": "object",
+				"required": [
+					"needsSetupAdmin"
+				],
+				"properties": {
+					"needsSetupAdmin": {
+						"type": "boolean"
+					}
+				}
+			},
+			"AuthProvidersInfo": {
+				"type": "object",
+				"required": [
+					"google"
+				],
+				"properties": {
+					"google": {
+						"type": "object",
+						"required": [
+							"enabled"
+						],
+						"properties": {
+							"enabled": {
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			},
+			"EmailPasswordInput": {
+				"type": "object",
+				"required": [
+					"email",
+					"password"
+				],
+				"properties": {
+					"email": {
+						"type": "string",
+						"format": "email"
+					},
+					"password": {
+						"type": "string",
+						"format": "password"
+					}
+				}
+			},
+			"ChangePasswordInput": {
+				"type": "object",
+				"required": [
+					"currentPassword",
+					"newPassword"
+				],
+				"properties": {
+					"currentPassword": {
+						"type": "string",
+						"format": "password"
+					},
+					"newPassword": {
+						"type": "string",
+						"minLength": 8,
+						"maxLength": 128,
+						"format": "password"
+					},
+					"revokeOtherSessions": {
+						"type": "boolean"
+					}
+				}
+			},
+			"IndexVisibility": {
+				"type": "string",
+				"enum": [
+					"hidden",
+					"admin",
+					"all"
+				]
+			},
+			"IndexField": {
+				"type": "object",
+				"required": [
+					"name",
+					"type",
+					"fast"
+				],
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"type": {
+						"type": "string"
+					},
+					"fast": {
+						"type": "boolean",
+						"nullable": true
+					}
+				}
+			},
+			"IndexSource": {
+				"type": "object",
+				"required": [
+					"sourceId",
+					"sourceType",
+					"enabled"
+				],
+				"properties": {
+					"sourceId": {
+						"type": "string"
+					},
+					"sourceType": {
+						"type": "string"
+					},
+					"enabled": {
+						"type": "boolean"
+					}
+				}
+			},
+			"IndexSummary": {
+				"type": "object",
+				"required": [
+					"indexId",
+					"displayName",
+					"visibility",
+					"fieldCount",
+					"sourceCount",
+					"mode",
+					"createTimestamp"
+				],
+				"properties": {
+					"indexId": {
+						"type": "string"
+					},
+					"displayName": {
+						"type": "string",
+						"nullable": true
+					},
+					"visibility": {
+						"$ref": "#/components/schemas/IndexVisibility"
+					},
+					"fieldCount": {
+						"type": "integer"
+					},
+					"sourceCount": {
+						"type": "integer"
+					},
+					"mode": {
+						"type": "string",
+						"nullable": true
+					},
+					"createTimestamp": {
+						"type": "number",
+						"nullable": true
+					}
+				}
+			},
+			"IndexDetail": {
+				"type": "object",
+				"additionalProperties": true,
+				"properties": {
+					"indexId": {
+						"type": "string"
+					},
+					"displayName": {
+						"type": "string",
+						"nullable": true
+					},
+					"visibility": {
+						"$ref": "#/components/schemas/IndexVisibility"
+					},
+					"levelField": {
+						"type": "string"
+					},
+					"messageField": {
+						"type": "string"
+					},
+					"tracebackField": {
+						"type": "string",
+						"nullable": true
+					},
+					"contextFields": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"nullable": true
+					},
+					"fields": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/IndexField"
+						}
+					},
+					"sources": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/IndexSource"
+						}
+					}
+				}
+			},
+			"SaveIndexConfigInput": {
+				"type": "object",
+				"properties": {
+					"displayName": {
+						"type": "string",
+						"maxLength": 128,
+						"nullable": true
+					},
+					"visibility": {
+						"$ref": "#/components/schemas/IndexVisibility"
+					},
+					"levelField": {
+						"type": "string",
+						"minLength": 1
+					},
+					"messageField": {
+						"type": "string",
+						"minLength": 1
+					},
+					"tracebackField": {
+						"type": "string",
+						"minLength": 1,
+						"nullable": true
+					},
+					"contextFields": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"nullable": true
+					}
+				}
+			},
+			"IndexViewConfig": {
+				"type": "object",
+				"additionalProperties": true,
+				"properties": {
+					"indexId": {
+						"type": "string"
+					},
+					"displayName": {
+						"type": "string",
+						"nullable": true
+					},
+					"levelField": {
+						"type": "string"
+					},
+					"messageField": {
+						"type": "string"
+					},
+					"tracebackField": {
+						"type": "string",
+						"nullable": true
+					},
+					"contextFields": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"nullable": true
+					},
+					"timestampField": {
+						"type": "string"
+					},
+					"isOtel": {
+						"type": "boolean"
+					}
+				}
+			},
+			"ToggleSourceInput": {
+				"type": "object",
+				"required": [
+					"enabled"
+				],
+				"properties": {
+					"enabled": {
+						"type": "boolean"
+					}
+				}
+			},
+			"LogHit": {
+				"type": "object",
+				"additionalProperties": true
+			},
+			"LogSearchResponse": {
+				"type": "object",
+				"required": [
+					"hits",
+					"numHits",
+					"elapsedTimeMicros"
+				],
+				"properties": {
+					"hits": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/LogHit"
+						}
+					},
+					"numHits": {
+						"type": "integer"
+					},
+					"elapsedTimeMicros": {
+						"type": "integer"
+					}
+				}
+			},
+			"HistogramBucket": {
+				"type": "object",
+				"required": [
+					"key",
+					"keyAsString",
+					"docCount",
+					"levels"
+				],
+				"properties": {
+					"key": {
+						"type": "number"
+					},
+					"keyAsString": {
+						"type": "string"
+					},
+					"docCount": {
+						"type": "integer"
+					},
+					"levels": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "integer"
+						}
+					}
+				}
+			},
+			"HistogramResponse": {
+				"type": "object",
+				"required": [
+					"buckets"
+				],
+				"properties": {
+					"buckets": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/HistogramBucket"
+						}
+					}
+				}
+			},
+			"FieldValuesResponse": {
+				"type": "object",
+				"required": [
+					"values"
+				],
+				"properties": {
+					"values": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"required": [
+								"value",
+								"count"
+							],
+							"properties": {
+								"value": {
+									"type": "string"
+								},
+								"count": {
+									"type": "integer"
+								}
+							}
+						}
+					}
+				}
+			},
+			"FieldValuesBulkResponse": {
+				"type": "object",
+				"required": [
+					"values"
+				],
+				"properties": {
+					"values": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"required": [
+									"value",
+									"count"
+								],
+								"properties": {
+									"value": {
+										"type": "string"
+									},
+									"count": {
+										"type": "integer"
+									}
+								}
+							}
+						}
+					},
+					"elapsedTimeMicros": {
+						"type": "integer"
+					}
+				}
+			},
+			"Preferences": {
+				"type": "object",
+				"required": [
+					"displayFields"
+				],
+				"properties": {
+					"displayFields": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"nullable": true
+					}
+				}
+			},
+			"PutPreferencesInput": {
+				"type": "object",
+				"required": [
+					"displayFields"
+				],
+				"properties": {
+					"displayFields": {
+						"type": "array",
+						"items": {
+							"type": "string",
+							"minLength": 1
+						},
+						"maxItems": 100,
+						"nullable": true
+					}
+				}
+			},
+			"IndexStatsPoint": {
+				"type": "object",
+				"additionalProperties": true,
+				"properties": {
+					"capturedAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"numDocs": {
+						"type": "integer"
+					},
+					"sizeBytes": {
+						"type": "integer"
+					},
+					"uncompressedBytes": {
+						"type": "integer"
+					},
+					"numSplits": {
+						"type": "integer"
+					},
+					"minTimestamp": {
+						"type": "number",
+						"nullable": true
+					},
+					"maxTimestamp": {
+						"type": "number",
+						"nullable": true
+					}
+				}
+			},
+			"StatsHistoryResponse": {
+				"type": "object",
+				"required": [
+					"indexId",
+					"points"
+				],
+				"properties": {
+					"indexId": {
+						"type": "string"
+					},
+					"points": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/IndexStatsPoint"
+						}
+					}
+				}
+			},
+			"ExportPreflightResponse": {
+				"type": "object",
+				"required": [
+					"total",
+					"capped",
+					"numHits"
+				],
+				"properties": {
+					"total": {
+						"type": "integer"
+					},
+					"capped": {
+						"type": "boolean"
+					},
+					"numHits": {
+						"type": "integer"
+					}
+				}
+			},
+			"SavedQuery": {
+				"type": "object",
+				"required": [
+					"id",
+					"indexId",
+					"name",
+					"description",
+					"query",
+					"createdAt",
+					"updatedAt"
+				],
+				"properties": {
+					"id": {
+						"type": "integer"
+					},
+					"indexId": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"query": {
+						"type": "string"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				}
+			},
+			"CreateSavedQueryInput": {
+				"type": "object",
+				"required": [
+					"name",
+					"query"
+				],
+				"properties": {
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 200
+					},
+					"description": {
+						"type": "string"
+					},
+					"query": {
+						"type": "string"
+					}
+				}
+			},
+			"PatchSavedQueryInput": {
+				"type": "object",
+				"minProperties": 1,
+				"properties": {
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 200
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"query": {
+						"type": "string"
+					}
+				}
+			},
+			"ShareCreateInput": {
+				"type": "object",
+				"required": [
+					"indexId",
+					"query",
+					"startTime",
+					"endTime",
+					"hit"
+				],
+				"properties": {
+					"indexId": {
+						"type": "string",
+						"minLength": 1
+					},
+					"query": {
+						"type": "string"
+					},
+					"startTime": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"endTime": {
+						"type": "integer",
+						"minimum": 0
+					},
+					"hit": {
+						"$ref": "#/components/schemas/LogHit"
+					}
+				}
+			},
+			"ShareView": {
+				"type": "object",
+				"required": [
+					"indexId",
+					"query",
+					"startTime",
+					"endTime",
+					"hit"
+				],
+				"properties": {
+					"indexId": {
+						"type": "string"
+					},
+					"query": {
+						"type": "string"
+					},
+					"startTime": {
+						"type": "integer"
+					},
+					"endTime": {
+						"type": "integer"
+					},
+					"hit": {
+						"$ref": "#/components/schemas/LogHit"
+					}
+				}
+			},
+			"UserRole": {
+				"type": "string",
+				"enum": [
+					"admin",
+					"user"
+				]
+			},
+			"User": {
+				"type": "object",
+				"required": [
+					"id",
+					"name",
+					"email",
+					"role",
+					"lastActive",
+					"status",
+					"hasCredentialAccount",
+					"inviteUrl",
+					"inviteExpiresAt"
+				],
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string",
+						"format": "email"
+					},
+					"role": {
+						"$ref": "#/components/schemas/UserRole",
+						"nullable": true
+					},
+					"lastActive": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"status": {
+						"type": "string",
+						"enum": [
+							"active",
+							"pending",
+							"expired"
+						]
+					},
+					"hasCredentialAccount": {
+						"type": "boolean"
+					},
+					"inviteUrl": {
+						"type": "string",
+						"nullable": true
+					},
+					"inviteExpiresAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					}
+				}
+			},
+			"CreateInviteInput": {
+				"type": "object",
+				"required": [
+					"email",
+					"name",
+					"role"
+				],
+				"properties": {
+					"email": {
+						"type": "string",
+						"format": "email"
+					},
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 128
+					},
+					"role": {
+						"$ref": "#/components/schemas/UserRole"
+					}
+				}
+			},
+			"SetUserRoleInput": {
+				"type": "object",
+				"required": [
+					"role"
+				],
+				"properties": {
+					"role": {
+						"$ref": "#/components/schemas/UserRole"
+					}
+				}
+			},
+			"InviteResponse": {
+				"type": "object",
+				"additionalProperties": true,
+				"properties": {
+					"inviteUrl": {
+						"type": "string"
+					}
+				}
+			},
+			"ApiKeyRole": {
+				"type": "string",
+				"enum": [
+					"ingest",
+					"search"
+				]
+			},
+			"ApiKeyCreateInput": {
+				"type": "object",
+				"required": [
+					"name",
+					"indexId",
+					"role"
+				],
+				"properties": {
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 100
+					},
+					"indexId": {
+						"type": "string",
+						"minLength": 1
+					},
+					"role": {
+						"$ref": "#/components/schemas/ApiKeyRole"
+					}
+				}
+			},
+			"ApiKeySummary": {
+				"type": "object",
+				"required": [
+					"id",
+					"name",
+					"tokenPrefix",
+					"role",
+					"indexId",
+					"lastUsedAt",
+					"createdAt",
+					"createdByUserId"
+				],
+				"properties": {
+					"id": {
+						"type": "integer"
+					},
+					"name": {
+						"type": "string"
+					},
+					"tokenPrefix": {
+						"type": "string"
+					},
+					"role": {
+						"$ref": "#/components/schemas/ApiKeyRole"
+					},
+					"indexId": {
+						"type": "string"
+					},
+					"lastUsedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"createdByUserId": {
+						"type": "string"
+					}
+				}
+			},
+			"ApiKeyCreateResponse": {
+				"type": "object",
+				"required": [
+					"summary",
+					"token"
+				],
+				"properties": {
+					"summary": {
+						"$ref": "#/components/schemas/ApiKeySummary"
+					},
+					"token": {
+						"type": "string"
+					}
+				}
+			},
+			"ApiKeyValue": {
+				"type": "object",
+				"required": [
+					"token"
+				],
+				"properties": {
+					"token": {
+						"type": "string"
+					}
+				}
+			},
+			"GoogleCredentialsInput": {
+				"type": "object",
+				"required": [
+					"clientId",
+					"clientSecret"
+				],
+				"properties": {
+					"clientId": {
+						"type": "string",
+						"minLength": 1
+					},
+					"clientSecret": {
+						"type": "string",
+						"minLength": 1,
+						"format": "password"
+					}
+				}
+			},
+			"GoogleAllowedDomainsInput": {
+				"type": "object",
+				"required": [
+					"allowedDomains"
+				],
+				"properties": {
+					"allowedDomains": {
+						"type": "array",
+						"minItems": 1,
+						"items": {
+							"type": "string",
+							"pattern": "^[a-z0-9.-]+\\.[a-z]{2,}$"
+						}
+					}
+				}
+			},
+			"GoogleAuthSettings": {
+				"type": "object",
+				"required": [
+					"configured",
+					"allowedDomains"
+				],
+				"properties": {
+					"configured": {
+						"type": "boolean"
+					},
+					"allowedDomains": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				}
+			},
+			"ActivitySummary": {
+				"type": "object",
+				"required": [
+					"totalSearches",
+					"errorCount",
+					"p50",
+					"p95",
+					"p99"
+				],
+				"properties": {
+					"totalSearches": {
+						"type": "integer"
+					},
+					"errorCount": {
+						"type": "integer"
+					},
+					"p50": {
+						"type": "number",
+						"nullable": true
+					},
+					"p95": {
+						"type": "number",
+						"nullable": true
+					},
+					"p99": {
+						"type": "number",
+						"nullable": true
+					}
+				}
+			},
+			"ActivityActorSummary": {
+				"type": "object",
+				"required": [
+					"totalSearches",
+					"errorCount",
+					"p50",
+					"p95",
+					"p99",
+					"displayName",
+					"email"
+				],
+				"properties": {
+					"totalSearches": {
+						"type": "integer"
+					},
+					"errorCount": {
+						"type": "integer"
+					},
+					"p50": {
+						"type": "number",
+						"nullable": true
+					},
+					"p95": {
+						"type": "number",
+						"nullable": true
+					},
+					"p99": {
+						"type": "number",
+						"nullable": true
+					},
+					"displayName": {
+						"type": "string",
+						"nullable": true
+					},
+					"email": {
+						"type": "string",
+						"nullable": true
+					}
+				}
+			},
+			"ActivityLatencyBucket": {
+				"type": "object",
+				"required": [
+					"t",
+					"count",
+					"p50",
+					"p95",
+					"p99"
+				],
+				"properties": {
+					"t": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"count": {
+						"type": "integer"
+					},
+					"p50": {
+						"type": "number",
+						"nullable": true
+					},
+					"p95": {
+						"type": "number",
+						"nullable": true
+					},
+					"p99": {
+						"type": "number",
+						"nullable": true
+					}
+				}
+			},
+			"ActivityVolumeBucket": {
+				"type": "object",
+				"required": [
+					"t",
+					"count"
+				],
+				"properties": {
+					"t": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"count": {
+						"type": "integer"
+					}
+				}
+			},
+			"ActivitySlowestQuery": {
+				"type": "object",
+				"required": [
+					"id",
+					"executedAt",
+					"indexId",
+					"source",
+					"actorId",
+					"actorLabel",
+					"durationMs",
+					"numHits",
+					"query",
+					"startTs",
+					"endTs"
+				],
+				"properties": {
+					"id": {
+						"type": "integer"
+					},
+					"executedAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"indexId": {
+						"type": "string"
+					},
+					"source": {
+						"type": "string",
+						"enum": [
+							"ui",
+							"token"
+						]
+					},
+					"actorId": {
+						"type": "string"
+					},
+					"actorLabel": {
+						"type": "string",
+						"nullable": true
+					},
+					"durationMs": {
+						"type": "number"
+					},
+					"numHits": {
+						"type": "integer",
+						"nullable": true
+					},
+					"query": {
+						"type": "string"
+					},
+					"startTs": {
+						"type": "number",
+						"nullable": true
+					},
+					"endTs": {
+						"type": "number",
+						"nullable": true
+					}
+				}
+			},
+			"ActivityTopActor": {
+				"type": "object",
+				"required": [
+					"kind",
+					"id",
+					"label",
+					"count",
+					"avgDurationMs",
+					"errorCount",
+					"indexes"
+				],
+				"properties": {
+					"kind": {
+						"type": "string",
+						"enum": [
+							"user",
+							"token"
+						]
+					},
+					"id": {
+						"type": "string"
+					},
+					"label": {
+						"type": "string",
+						"nullable": true
+					},
+					"count": {
+						"type": "integer"
+					},
+					"avgDurationMs": {
+						"type": "number"
+					},
+					"errorCount": {
+						"type": "integer"
+					},
+					"indexes": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				}
+			},
+			"ActivityActorIndex": {
+				"type": "object",
+				"required": [
+					"indexId",
+					"count",
+					"avgDurationMs",
+					"errorCount"
+				],
+				"properties": {
+					"indexId": {
+						"type": "string"
+					},
+					"count": {
+						"type": "integer"
+					},
+					"avgDurationMs": {
+						"type": "number"
+					},
+					"errorCount": {
+						"type": "integer"
+					}
+				}
+			},
+			"ActivityRecentRow": {
+				"type": "object",
+				"required": [
+					"id",
+					"executedAt",
+					"indexId",
+					"durationMs",
+					"numHits",
+					"query",
+					"startTs",
+					"endTs"
+				],
+				"properties": {
+					"id": {
+						"type": "integer"
+					},
+					"executedAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"indexId": {
+						"type": "string"
+					},
+					"durationMs": {
+						"type": "number"
+					},
+					"numHits": {
+						"type": "integer",
+						"nullable": true
+					},
+					"query": {
+						"type": "string"
+					},
+					"startTs": {
+						"type": "number",
+						"nullable": true
+					},
+					"endTs": {
+						"type": "number",
+						"nullable": true
+					}
+				}
+			},
+			"ActivityRecentResult": {
+				"type": "object",
+				"required": [
+					"rows",
+					"total"
+				],
+				"properties": {
+					"rows": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ActivityRecentRow"
+						}
+					},
+					"total": {
+						"type": "integer"
+					}
+				}
+			},
+			"ClusterOverview": {
+				"type": "object",
+				"additionalProperties": true
+			},
+			"AdminMetrics": {
+				"type": "object",
+				"additionalProperties": true
+			},
+			"NdjsonIngestResponse": {
+				"type": "object",
+				"additionalProperties": true,
+				"properties": {
+					"num_docs_for_processing": {
+						"type": "integer"
+					}
+				}
+			},
+			"OtlpExportLogsServiceResponse": {
+				"type": "object",
+				"properties": {
+					"partialSuccess": {
+						"type": "object",
+						"additionalProperties": true
+					}
+				}
+			}
+		}
+	},
+	"paths": {
+		"/api/health": {
+			"get": {
+				"tags": [
+					"System health"
+				],
+				"summary": "Check service health",
+				"operationId": "getHealth",
+				"responses": {
+					"200": {
+						"description": "Service is reachable.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/HealthResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/bootstrap": {
+			"get": {
+				"tags": [
+					"Authentication"
+				],
+				"summary": "Get setup bootstrap state",
+				"operationId": "getAuthBootstrap",
+				"responses": {
+					"200": {
+						"description": "Bootstrap state.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/BootstrapResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/providers": {
+			"get": {
+				"tags": [
+					"Authentication"
+				],
+				"summary": "List enabled auth providers",
+				"operationId": "listAuthProviders",
+				"responses": {
+					"200": {
+						"description": "Provider availability.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AuthProvidersInfo"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/setup-admin": {
+			"post": {
+				"tags": [
+					"Authentication"
+				],
+				"summary": "Create the first admin user",
+				"operationId": "setupAdmin",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SetupAdminInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Admin user created.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SetupAdminResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Admin already exists.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/verify-invite": {
+			"post": {
+				"tags": [
+					"Authentication"
+				],
+				"summary": "Verify an invite token",
+				"operationId": "verifyInvite",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/VerifyInviteInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Invite is valid.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/VerifyInviteResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/setup-password": {
+			"post": {
+				"tags": [
+					"Authentication"
+				],
+				"summary": "Set password from invite token",
+				"operationId": "setupPassword",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SetupPasswordInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Password configured.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SuccessResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/sign-in/email": {
+			"post": {
+				"tags": [
+					"Authentication"
+				],
+				"summary": "Sign in with email and password",
+				"description": "Handled by Better Auth.",
+				"operationId": "signInEmail",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/EmailPasswordInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Sign-in result.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"additionalProperties": true
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/get-session": {
+			"get": {
+				"tags": [
+					"Authentication"
+				],
+				"summary": "Get current session",
+				"description": "Handled by Better Auth.",
+				"operationId": "getSession",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Current session, or null.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"nullable": true
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/sign-out": {
+			"post": {
+				"tags": [
+					"Authentication"
+				],
+				"summary": "Sign out current session",
+				"description": "Handled by Better Auth.",
+				"operationId": "signOut",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Sign-out result.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"additionalProperties": true
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/change-password": {
+			"post": {
+				"tags": [
+					"Authentication"
+				],
+				"summary": "Change current user password",
+				"description": "Handled by Better Auth.",
+				"operationId": "changePassword",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ChangePasswordInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Password change result.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"additionalProperties": true
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes": {
+			"get": {
+				"tags": [
+					"Manage indexes"
+				],
+				"summary": "List indexes",
+				"operationId": "listIndexes",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Indexes visible to the current user.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/IndexSummary"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}": {
+			"get": {
+				"tags": [
+					"Manage indexes"
+				],
+				"summary": "Get index detail",
+				"operationId": "getIndex",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Index detail.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/IndexDetail"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			},
+			"patch": {
+				"tags": [
+					"Manage indexes"
+				],
+				"summary": "Update index display configuration",
+				"operationId": "updateIndexConfig",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SaveIndexConfigInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "Configuration updated."
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"Manage indexes"
+				],
+				"summary": "Delete an index",
+				"operationId": "deleteIndex",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Index deleted."
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}/fields": {
+			"get": {
+				"tags": [
+					"Manage indexes"
+				],
+				"summary": "List index fields",
+				"operationId": "listIndexFields",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Index fields.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/IndexField"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}/config": {
+			"get": {
+				"tags": [
+					"Manage indexes"
+				],
+				"summary": "Get index view configuration",
+				"operationId": "getIndexConfig",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "View configuration.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/IndexViewConfig"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}/stats": {
+			"get": {
+				"tags": [
+					"Manage indexes"
+				],
+				"summary": "Get index stats history",
+				"operationId": "getIndexStatsHistory",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "from",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "to",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 10000
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Stats history.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StatsHistoryResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}/sources/{sourceId}": {
+			"patch": {
+				"tags": [
+					"Manage indexes"
+				],
+				"summary": "Enable or disable an index source",
+				"operationId": "setSourceEnabled",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "sourceId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit source ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ToggleSourceInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "Source updated."
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"Manage indexes"
+				],
+				"summary": "Delete an index source",
+				"operationId": "deleteSource",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "sourceId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit source ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Source deleted."
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}/logs": {
+			"get": {
+				"tags": [
+					"Search logs"
+				],
+				"summary": "Search logs in an index",
+				"operationId": "searchIndexLogs",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "q",
+						"in": "query",
+						"required": false,
+						"description": "Quickwit query string.",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"required": false,
+						"description": "Maximum number of hits to return.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 1000
+						}
+					},
+					{
+						"name": "offset",
+						"in": "query",
+						"required": false,
+						"description": "Zero-based result offset.",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						}
+					},
+					{
+						"name": "startTs",
+						"in": "query",
+						"required": false,
+						"description": "Inclusive start timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "endTs",
+						"in": "query",
+						"required": false,
+						"description": "Inclusive end timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "sortOrder",
+						"in": "query",
+						"required": false,
+						"description": "Timestamp sort order.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"asc",
+								"desc"
+							]
+						}
+					},
+					{
+						"name": "countAll",
+						"in": "query",
+						"required": false,
+						"description": "When true, ask Quickwit for the total hit count.",
+						"schema": {
+							"type": "boolean"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Search results.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/LogSearchResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}/logs/histogram": {
+			"get": {
+				"tags": [
+					"Search logs"
+				],
+				"summary": "Get log histogram",
+				"operationId": "getLogHistogram",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "q",
+						"in": "query",
+						"required": false,
+						"description": "Quickwit query string.",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "startTs",
+						"in": "query",
+						"required": false,
+						"description": "Inclusive start timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "endTs",
+						"in": "query",
+						"required": false,
+						"description": "Inclusive end timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "interval",
+						"in": "query",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[1-9]\\d*[smhdwMy]$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Histogram buckets.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/HistogramResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}/fields/values": {
+			"get": {
+				"tags": [
+					"Search logs"
+				],
+				"summary": "Co-aggregated field values for multiple fields in one request",
+				"operationId": "getFieldValuesBulk",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "fields",
+						"in": "query",
+						"required": true,
+						"description": "Comma-separated list of field names.",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "q",
+						"in": "query",
+						"required": false,
+						"description": "Quickwit query string.",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "filters",
+						"in": "query",
+						"required": false,
+						"description": "URL-encoded JSON array of Filter objects.",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "startTs",
+						"in": "query",
+						"required": false,
+						"description": "Inclusive start timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "endTs",
+						"in": "query",
+						"required": false,
+						"description": "Inclusive end timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 10000
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Bulk field values.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FieldValuesBulkResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}/fields/{field}/values": {
+			"get": {
+				"tags": [
+					"Search logs"
+				],
+				"summary": "List common values for a field",
+				"operationId": "getFieldValues",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "field",
+						"in": "path",
+						"required": true,
+						"description": "Index field name.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "q",
+						"in": "query",
+						"required": false,
+						"description": "Quickwit query string.",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "startTs",
+						"in": "query",
+						"required": false,
+						"description": "Inclusive start timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "endTs",
+						"in": "query",
+						"required": false,
+						"description": "Inclusive end timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 1000
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Field values.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FieldValuesResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}/preferences": {
+			"get": {
+				"tags": [
+					"Manage indexes"
+				],
+				"summary": "Get current user index preferences",
+				"operationId": "getIndexPreferences",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Preferences.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Preferences"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"tags": [
+					"Manage indexes"
+				],
+				"summary": "Update current user index preferences",
+				"operationId": "putIndexPreferences",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/PutPreferencesInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Updated preferences.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Preferences"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}/exports/logs/preflight": {
+			"get": {
+				"tags": [
+					"Search logs"
+				],
+				"summary": "Preview a log export",
+				"operationId": "preflightLogExport",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "q",
+						"in": "query",
+						"required": false,
+						"description": "Quickwit query string.",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "startTs",
+						"in": "query",
+						"required": true,
+						"description": "Inclusive start timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number",
+							"minimum": 0
+						}
+					},
+					{
+						"name": "endTs",
+						"in": "query",
+						"required": true,
+						"description": "Inclusive end timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number",
+							"minimum": 0
+						}
+					},
+					{
+						"name": "format",
+						"in": "query",
+						"required": true,
+						"description": "Export format.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"json",
+								"csv",
+								"text"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Export size estimate.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ExportPreflightResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}/exports/logs": {
+			"get": {
+				"tags": [
+					"Search logs"
+				],
+				"summary": "Export matching logs",
+				"operationId": "exportLogs",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "q",
+						"in": "query",
+						"required": false,
+						"description": "Quickwit query string.",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "startTs",
+						"in": "query",
+						"required": true,
+						"description": "Inclusive start timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number",
+							"minimum": 0
+						}
+					},
+					{
+						"name": "endTs",
+						"in": "query",
+						"required": true,
+						"description": "Inclusive end timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number",
+							"minimum": 0
+						}
+					},
+					{
+						"name": "format",
+						"in": "query",
+						"required": true,
+						"description": "Export format.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"json",
+								"csv",
+								"text"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Gzip-compressed export file.",
+						"content": {
+							"application/gzip": {
+								"schema": {
+									"type": "string",
+									"format": "binary"
+								}
+							},
+							"text/csv": {
+								"schema": {
+									"type": "string"
+								}
+							},
+							"application/json": {
+								"schema": {
+									"type": "string"
+								}
+							},
+							"text/plain": {
+								"schema": {
+									"type": "string"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}/saved-queries": {
+			"get": {
+				"tags": [
+					"Search logs"
+				],
+				"summary": "List saved queries",
+				"operationId": "listSavedQueries",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Saved queries.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/SavedQuery"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"tags": [
+					"Search logs"
+				],
+				"summary": "Create a saved query",
+				"operationId": "createSavedQuery",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateSavedQueryInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Saved query created.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SavedQuery"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/indexes/{indexId}/saved-queries/{id}": {
+			"patch": {
+				"tags": [
+					"Search logs"
+				],
+				"summary": "Update a saved query",
+				"operationId": "updateSavedQuery",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"description": "Positive integer resource ID.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/PatchSavedQueryInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Saved query updated.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SavedQuery"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"Search logs"
+				],
+				"summary": "Delete a saved query",
+				"operationId": "deleteSavedQuery",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "indexId",
+						"in": "path",
+						"required": true,
+						"description": "Quickwit index ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"description": "Positive integer resource ID.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Saved query deleted."
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/shares": {
+			"post": {
+				"tags": [
+					"Search logs"
+				],
+				"summary": "Create a log share",
+				"operationId": "createShare",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ShareCreateInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Share created.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ShareView"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Share payload is larger than 64 KB.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/shares/{code}": {
+			"get": {
+				"tags": [
+					"Search logs"
+				],
+				"summary": "Resolve a log share",
+				"operationId": "getShare",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "code",
+						"in": "path",
+						"required": true,
+						"description": "Ten character share code.",
+						"schema": {
+							"type": "string",
+							"minLength": 10,
+							"maxLength": 10
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Share contents.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ShareView"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/users": {
+			"get": {
+				"tags": [
+					"Manage users"
+				],
+				"summary": "List users",
+				"operationId": "listUsers",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Users.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/User"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/users/{userId}": {
+			"delete": {
+				"tags": [
+					"Manage users"
+				],
+				"summary": "Delete a user",
+				"operationId": "deleteUser",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "userId",
+						"in": "path",
+						"required": true,
+						"description": "User ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "User deleted."
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/users/{userId}/role": {
+			"put": {
+				"tags": [
+					"Manage users"
+				],
+				"summary": "Set user role",
+				"operationId": "setUserRole",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "userId",
+						"in": "path",
+						"required": true,
+						"description": "User ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SetUserRoleInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "Role updated."
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/users/{userId}/password-resets": {
+			"post": {
+				"tags": [
+					"Manage users"
+				],
+				"summary": "Reset a user password",
+				"operationId": "resetUserPassword",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "userId",
+						"in": "path",
+						"required": true,
+						"description": "User ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Password reset invite.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/InviteResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/invites": {
+			"post": {
+				"tags": [
+					"Manage users"
+				],
+				"summary": "Invite a user",
+				"operationId": "createInvite",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateInviteInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Invite created.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/InviteResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/invites/{userId}/resend": {
+			"post": {
+				"tags": [
+					"Manage users"
+				],
+				"summary": "Resend an invite",
+				"operationId": "resendInvite",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "userId",
+						"in": "path",
+						"required": true,
+						"description": "User ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Invite resent.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/InviteResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/api-keys": {
+			"get": {
+				"tags": [
+					"Manage API keys"
+				],
+				"summary": "List API keys",
+				"operationId": "listApiKeys",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "role",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"$ref": "#/components/schemas/ApiKeyRole"
+						},
+						"description": "Filter by role."
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "API keys.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/ApiKeySummary"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"tags": [
+					"Manage API keys"
+				],
+				"summary": "Create an API key",
+				"operationId": "createApiKey",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ApiKeyCreateInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Created API key.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiKeyCreateResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/api-keys/{id}": {
+			"get": {
+				"tags": [
+					"Manage API keys"
+				],
+				"summary": "Get an API key value",
+				"operationId": "getApiKey",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"description": "Positive integer resource ID.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "API key value.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiKeyValue"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"Manage API keys"
+				],
+				"summary": "Delete an API key",
+				"operationId": "deleteApiKey",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"description": "Positive integer resource ID.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "API key deleted."
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/search/logs": {
+			"get": {
+				"tags": [
+					"Search logs"
+				],
+				"summary": "Search logs with a search API key",
+				"description": "Search the index attached to the bearer search API key.",
+				"x-mint": {
+					"metadata": {
+						"title": "Search logs with an API key",
+						"sidebarTitle": "Search logs",
+						"description": "Search logs from the index attached to a search API key."
+					},
+					"content": "## Authentication\n\nUse a search API key from **Administration → API keys**. Each search API key is scoped to one index, and this endpoint searches that index only."
+				},
+				"operationId": "searchLogsWithApiKey",
+				"security": [
+					{
+						"searchBearer": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "q",
+						"in": "query",
+						"required": false,
+						"description": "Quickwit query string.",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"required": false,
+						"description": "Maximum number of hits to return.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 1000
+						}
+					},
+					{
+						"name": "offset",
+						"in": "query",
+						"required": false,
+						"description": "Zero-based result offset.",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						}
+					},
+					{
+						"name": "startTs",
+						"in": "query",
+						"required": false,
+						"description": "Inclusive start timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "endTs",
+						"in": "query",
+						"required": false,
+						"description": "Inclusive end timestamp in seconds since Unix epoch.",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "sortOrder",
+						"in": "query",
+						"required": false,
+						"description": "Timestamp sort order.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"asc",
+								"desc"
+							]
+						}
+					},
+					{
+						"name": "countAll",
+						"in": "query",
+						"required": false,
+						"description": "When true, ask Quickwit for the total hit count.",
+						"schema": {
+							"type": "boolean"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Search results.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/LogSearchResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/auth/google": {
+			"get": {
+				"tags": [
+					"Configure auth"
+				],
+				"summary": "Get Google auth settings",
+				"operationId": "getGoogleAuthSettings",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Google auth settings.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/GoogleAuthSettings"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/auth/google/credentials": {
+			"put": {
+				"tags": [
+					"Configure auth"
+				],
+				"summary": "Set Google auth credentials",
+				"operationId": "putGoogleAuthCredentials",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/GoogleCredentialsInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "Credentials saved."
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"Configure auth"
+				],
+				"summary": "Delete Google auth credentials",
+				"operationId": "deleteGoogleAuthCredentials",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Credentials deleted."
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/settings/auth/google/allowed-domains": {
+			"put": {
+				"tags": [
+					"Configure auth"
+				],
+				"summary": "Set allowed Google auth domains",
+				"operationId": "putGoogleAuthAllowedDomains",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/GoogleAllowedDomainsInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"204": {
+						"description": "Allowed domains saved."
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/cluster": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "Get cluster overview",
+				"operationId": "getClusterOverview",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Cluster overview.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ClusterOverview"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/activity/summary": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "Get search activity summary",
+				"operationId": "getAdminActivitySummary",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "window",
+						"in": "query",
+						"required": false,
+						"description": "Activity lookback window. Defaults to 7d.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"24h",
+								"7d",
+								"30d"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Search activity summary.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ActivitySummary"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/activity/latency": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "Get search latency buckets",
+				"operationId": "getAdminActivityLatency",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "window",
+						"in": "query",
+						"required": false,
+						"description": "Activity lookback window. Defaults to 7d.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"24h",
+								"7d",
+								"30d"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Search latency buckets.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/ActivityLatencyBucket"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/activity/slowest": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "List slowest searches",
+				"operationId": "listAdminActivitySlowestQueries",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "window",
+						"in": "query",
+						"required": false,
+						"description": "Activity lookback window. Defaults to 7d.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"24h",
+								"7d",
+								"30d"
+							]
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"required": false,
+						"description": "Maximum number of slow queries to return. Defaults to 20.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 100
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Slowest searches.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/ActivitySlowestQuery"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/activity/top-actors": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "List top search actors",
+				"operationId": "listAdminActivityTopActors",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "window",
+						"in": "query",
+						"required": false,
+						"description": "Activity lookback window. Defaults to 7d.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"24h",
+								"7d",
+								"30d"
+							]
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"required": false,
+						"description": "Maximum number of actors to return. Defaults to 10.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 50
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Top search actors.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/ActivityTopActor"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/activity/users/{userId}/summary": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "Get user search activity summary",
+				"operationId": "getAdminUserActivitySummary",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "userId",
+						"in": "path",
+						"required": true,
+						"description": "User ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "window",
+						"in": "query",
+						"required": false,
+						"description": "Activity lookback window. Defaults to 7d.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"24h",
+								"7d",
+								"30d"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "User search activity summary.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ActivityActorSummary"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/activity/users/{userId}/volume": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "Get user search volume buckets",
+				"operationId": "getAdminUserActivityVolume",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "userId",
+						"in": "path",
+						"required": true,
+						"description": "User ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "window",
+						"in": "query",
+						"required": false,
+						"description": "Activity lookback window. Defaults to 7d.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"24h",
+								"7d",
+								"30d"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "User search volume buckets.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/ActivityVolumeBucket"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/activity/users/{userId}/latency": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "Get user search latency buckets",
+				"operationId": "getAdminUserActivityLatency",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "userId",
+						"in": "path",
+						"required": true,
+						"description": "User ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "window",
+						"in": "query",
+						"required": false,
+						"description": "Activity lookback window. Defaults to 7d.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"24h",
+								"7d",
+								"30d"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "User search latency buckets.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/ActivityLatencyBucket"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/activity/users/{userId}/indexes": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "List user search activity by index",
+				"operationId": "listAdminUserActivityIndexes",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "userId",
+						"in": "path",
+						"required": true,
+						"description": "User ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "window",
+						"in": "query",
+						"required": false,
+						"description": "Activity lookback window. Defaults to 7d.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"24h",
+								"7d",
+								"30d"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "User search activity grouped by index.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/ActivityActorIndex"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/activity/users/{userId}/recent": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "List recent user searches",
+				"operationId": "listAdminUserActivityRecent",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "userId",
+						"in": "path",
+						"required": true,
+						"description": "User ID.",
+						"schema": {
+							"type": "string",
+							"minLength": 1
+						}
+					},
+					{
+						"name": "window",
+						"in": "query",
+						"required": false,
+						"description": "Activity lookback window. Defaults to 7d.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"24h",
+								"7d",
+								"30d"
+							]
+						}
+					},
+					{
+						"name": "offset",
+						"in": "query",
+						"required": false,
+						"description": "Zero-based activity row offset. Defaults to 0.",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"required": false,
+						"description": "Maximum number of recent activity rows to return. Defaults to 100.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 500
+						}
+					},
+					{
+						"name": "status",
+						"in": "query",
+						"required": false,
+						"description": "Filter recent activity by search status. Defaults to any.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"any",
+								"success",
+								"error"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Recent user searches.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ActivityRecentResult"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/activity/tokens/{tokenId}/summary": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "Get API key activity summary",
+				"operationId": "getAdminTokenActivitySummary",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "tokenId",
+						"in": "path",
+						"required": true,
+						"description": "API key ID.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1
+						}
+					},
+					{
+						"name": "window",
+						"in": "query",
+						"required": false,
+						"description": "Activity lookback window. Defaults to 7d.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"24h",
+								"7d",
+								"30d"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "API key activity summary.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ActivityActorSummary"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/activity/tokens/{tokenId}/volume": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "Get API key volume buckets",
+				"operationId": "getAdminTokenActivityVolume",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "tokenId",
+						"in": "path",
+						"required": true,
+						"description": "API key ID.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1
+						}
+					},
+					{
+						"name": "window",
+						"in": "query",
+						"required": false,
+						"description": "Activity lookback window. Defaults to 7d.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"24h",
+								"7d",
+								"30d"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "API key volume buckets.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/ActivityVolumeBucket"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/activity/tokens/{tokenId}/latency": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "Get API key latency buckets",
+				"operationId": "getAdminTokenActivityLatency",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "tokenId",
+						"in": "path",
+						"required": true,
+						"description": "API key ID.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1
+						}
+					},
+					{
+						"name": "window",
+						"in": "query",
+						"required": false,
+						"description": "Activity lookback window. Defaults to 7d.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"24h",
+								"7d",
+								"30d"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "API key latency buckets.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/ActivityLatencyBucket"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/activity/tokens/{tokenId}/recent": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "List recent API key searches",
+				"operationId": "listAdminTokenActivityRecent",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"name": "tokenId",
+						"in": "path",
+						"required": true,
+						"description": "API key ID.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1
+						}
+					},
+					{
+						"name": "window",
+						"in": "query",
+						"required": false,
+						"description": "Activity lookback window. Defaults to 7d.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"24h",
+								"7d",
+								"30d"
+							]
+						}
+					},
+					{
+						"name": "offset",
+						"in": "query",
+						"required": false,
+						"description": "Zero-based activity row offset. Defaults to 0.",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"required": false,
+						"description": "Maximum number of recent activity rows to return. Defaults to 100.",
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 500
+						}
+					},
+					{
+						"name": "status",
+						"in": "query",
+						"required": false,
+						"description": "Filter recent activity by search status. Defaults to any.",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"any",
+								"success",
+								"error"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Recent API key searches.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ActivityRecentResult"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/metrics": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "Get parsed Quickwit metrics",
+				"operationId": "getAdminMetrics",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Parsed metrics.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AdminMetrics"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/metrics/raw": {
+			"get": {
+				"tags": [
+					"Monitor system"
+				],
+				"summary": "Get raw Quickwit metrics",
+				"operationId": "getAdminMetricsRaw",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Raw metrics text.",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/ingest/ndjson": {
+			"post": {
+				"tags": [
+					"Ingest logs"
+				],
+				"summary": "Ingest NDJSON logs",
+				"description": "Ingest newline-delimited JSON logs into the index attached to the bearer ingest API key.",
+				"x-mint": {
+					"metadata": {
+						"title": "Ingest NDJSON logs",
+						"sidebarTitle": "NDJSON ingest",
+						"description": "Send newline-delimited JSON logs to the index attached to an ingest API key."
+					},
+					"content": "## Authentication\n\nUse an ingest API key from **Administration → API keys**. Each ingest API key is scoped to one index, and Rootprint forwards the request body to that index."
+				},
+				"operationId": "ingestNdjsonLogs",
+				"security": [
+					{
+						"ingestBearer": []
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/x-ndjson": {
+							"schema": {
+								"type": "string"
+							},
+							"example": "{\"timestamp\":\"2026-05-26T12:00:00Z\",\"level\":\"INFO\",\"message\":\"hello\"}\n"
+						},
+						"application/json": {
+							"schema": {
+								"type": "string"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Quickwit ingest response.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/NdjsonIngestResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/v1/logs": {
+			"post": {
+				"tags": [
+					"Ingest logs"
+				],
+				"summary": "Ingest OTLP logs",
+				"description": "Ingest OpenTelemetry logs over OTLP HTTP/protobuf into the index attached to the bearer ingest API key.",
+				"x-mint": {
+					"metadata": {
+						"title": "Ingest OTLP logs",
+						"sidebarTitle": "OTLP ingest",
+						"description": "Send OTLP HTTP/protobuf log batches to Rootprint."
+					},
+					"content": "## Content type\n\nSend protobuf OTLP payloads with `Content-Type: application/x-protobuf`. JSON OTLP payloads are rejected."
+				},
+				"operationId": "ingestOtlpLogs",
+				"security": [
+					{
+						"ingestBearer": []
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/x-protobuf": {
+							"schema": {
+								"type": "string",
+								"format": "binary"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OTLP export logs service response.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/OtlpExportLogsServiceResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "The upstream rejected the request"
+					},
+					"401": {
+						"description": "Missing ingest bearer token"
+					},
+					"403": {
+						"description": "Invalid or revoked ingest API key"
+					},
+					"415": {
+						"description": "Unsupported content type"
+					},
+					"429": {
+						"description": "Upstream rate limit"
+					},
+					"503": {
+						"description": "Upstream unavailable"
+					}
+				}
+			}
+		}
+	}
+}

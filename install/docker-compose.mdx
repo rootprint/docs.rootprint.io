@@ -1,0 +1,206 @@
+---
+title: 'Docker Compose'
+description: 'Install Rootprint with Docker Compose'
+---
+
+## Prerequisites
+
+Install [Docker](https://www.docker.com) and [Docker Compose](https://docs.docker.com/compose/) before continuing.
+
+## Self-contained deployment (recommended)
+
+This option deploys Rootprint together with PostgreSQL and a bundled Quickwit instance. Best for getting started quickly or running a self-contained setup.
+
+Download the Compose file and start the services:
+
+```bash
+curl -O https://raw.githubusercontent.com/rootprint/docs.rootprint.io/main/docs/files/docker-compose.yml
+docker compose up -d
+```
+
+<Expandable title="docker-compose.yml">
+```yaml
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rootprint
+      POSTGRES_PASSWORD: rootprint   # change in production
+      POSTGRES_DB: rootprint
+    volumes:
+      - rootprint-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rootprint"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  quickwit:
+    image: quickwit/quickwit:v0.9.0-rc
+    restart: unless-stopped
+    volumes:
+      - rootprint-quickwit:/quickwit/qwdata
+    command: ["run"]
+    healthcheck:
+      test: ["CMD-SHELL", 'bash -c "echo > /dev/tcp/localhost/7280"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rootprint:
+    image: ghcr.io/oleksandr-zhyhalo/rootprint:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      quickwit:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://rootprint:rootprint@db:5432/rootprint
+      QUICKWIT_URL: http://quickwit:7280
+      ORIGIN: http://localhost:8282   # change to your public URL
+    ports:
+      - "8282:8282"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8282/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  rootprint-db:
+  rootprint-quickwit:
+```
+</Expandable>
+
+This starts three containers:
+
+- **Rootprint** — the web UI, exposed on port `8282`.
+- **PostgreSQL** — Rootprint application state, stored in the `rootprint-db` Docker volume.
+- **Quickwit** — the search and indexing backend, reachable only from the Compose network by default.
+
+Run `docker compose ps` to confirm all containers are healthy, then open [http://localhost:8282](http://localhost:8282).
+
+### Use S3 for storage
+
+By default, the self-contained deployment stores index data in the `rootprint-quickwit` Docker volume on local disk. This is fine for testing, but removing the volume permanently deletes all indexed logs. For a persistent, production-ready setup, configure Quickwit to store index data in S3 (or any S3-compatible object storage).
+
+Add the following environment variables to the `quickwit` service in your `docker-compose.yml`:
+
+```yaml
+services:
+  quickwit:
+    image: quickwit/quickwit:v0.9.0-rc
+    environment:
+      QW_DEFAULT_INDEX_ROOT_URI: s3://your-bucket-name/indexes
+      QW_METASTORE_URI: s3://your-bucket-name/metastore
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: us-east-1
+```
+
+Set both variables to paths within the same bucket. The bucket must already exist. See [Quickwit storage configuration](https://quickwit.io/docs/configuration/storage-config) for all options, including S3-compatible providers and custom endpoints.
+
+#### Other storage backends
+
+Quickwit also supports Azure Blob Storage, Google Cloud Storage, and S3-compatible providers (MinIO, Garage, DigitalOcean Spaces). The configuration follows the same shape — a URI scheme on `QW_DEFAULT_INDEX_ROOT_URI` and `QW_METASTORE_URI`, plus credentials.
+
+| Backend                    | URI scheme                                | Credentials                                                                                   |
+| -------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------- |
+| AWS S3                     | `s3://bucket/path`                        | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`                                    |
+| Azure Blob Storage         | `azure://container/path`                  | `QW_AZURE_STORAGE_ACCOUNT`, `QW_AZURE_STORAGE_ACCESS_KEY`                                     |
+| Google Cloud Storage       | `s3://bucket/path` with `flavor: gcs`     | HMAC keys via `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`                                   |
+| MinIO / Garage / DO Spaces | `s3://bucket/path` with matching `flavor` | Provider-specific keys via `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` and `QW_S3_ENDPOINT` |
+
+S3-compatible providers need a `flavor` set on the storage config so Quickwit picks the right path-style and multipart settings. See the [Quickwit storage reference](https://quickwit.io/docs/configuration/storage-config) for the YAML structure and the full env-var list.
+
+### Exposing Quickwit on internal networks
+
+If other services on your internal network need to ingest data directly into Quickwit, publish Quickwit's ports on the host. In `docker-compose.yml`, add these port bindings to the `quickwit` service:
+
+```yaml
+ports:
+  - '7280:7280'
+  - '7281:7281'
+```
+
+Quickwit will then be reachable at `http://<host-ip>:7280` from other machines on the same network.
+
+<Warning>
+	Quickwit has no authentication mechanism. Never expose it on a public or untrusted network —
+	restrict access at the network or firewall level and only do this within a private, trusted
+	network.
+</Warning>
+
+## Connect to an existing Quickwit instance
+
+<Note>Rootprint only supports Quickwit `0.9` and later.</Note>
+
+If you already have a Quickwit cluster running, deploy Rootprint with PostgreSQL and point it at your Quickwit instance.
+
+Download the standalone Compose file:
+
+```bash
+curl -o docker-compose.yml https://raw.githubusercontent.com/rootprint/docs.rootprint.io/main/docs/files/docker-compose.standalone.yml
+```
+
+Open `docker-compose.yml` and set `QUICKWIT_URL` to the REST API endpoint of your Quickwit instance. Do not include `/api/v1` in the URL:
+
+```yaml
+environment:
+  QUICKWIT_URL: http://your-quickwit-host:7280
+```
+
+<Expandable title="docker-compose.standalone.yml">
+```yaml
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rootprint
+      POSTGRES_PASSWORD: rootprint   # change in production
+      POSTGRES_DB: rootprint
+    volumes:
+      - rootprint-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rootprint"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rootprint:
+    image: ghcr.io/oleksandr-zhyhalo/rootprint:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://rootprint:rootprint@db:5432/rootprint
+      QUICKWIT_URL: http://your-quickwit-host:7280
+      ORIGIN: http://localhost:8282   # change to your public URL
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8282/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "8282:8282"
+
+volumes:
+  rootprint-db:
+```
+</Expandable>
+
+Then start the service:
+
+```bash
+docker compose up -d
+```
+
+Run `docker compose ps` to confirm both containers are healthy, then open [http://localhost:8282](http://localhost:8282).
+
+## Configuration
+
+Customize the deployment by setting environment variables under the `environment` key of the `rootprint` service. See the [environment variables reference](/configuration/environment-variables) for the full list, including rate limits and authentication settings.

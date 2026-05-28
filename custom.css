@@ -1,0 +1,58 @@
+/* Match the web app's flat material language: small 4px radii, no pill-like chrome. */
+:root {
+	--rootprint-radius: 4px;
+}
+
+#navbar,
+#sidebar,
+#search-bar-entry,
+#search-bar-entry-mobile,
+#topbar-cta-button,
+#endpoints-menu-trigger,
+#request-example,
+#response-example,
+#api-playground-input,
+#page-context-menu-button,
+#pagination,
+#feedback-form,
+#feedback-form-input,
+#feedback-form-submit,
+#feedback-form-cancel,
+#mobile-nav,
+#mobile-nav-content,
+card,
+callout,
+code-block,
+code-group,
+accordion,
+accordion-group,
+expandable,
+frame,
+step,
+tabs,
+tile,
+prompt,
+field,
+method-pill,
+method-nav-pill,
+tryit-button,
+option-dropdown,
+pagination-prev,
+pagination-next {
+	border-radius: var(--rootprint-radius) !important;
+}
+
+/* Mintlify method badges and nav tags tend to render as pills; square them off. */
+method-pill,
+method-nav-pill,
+nav-tag-pill,
+[data-badge] {
+	border-radius: var(--rootprint-radius) !important;
+}
+
+/* Keep media pleasant, but avoid oversized rounded preview frames. */
+img,
+video,
+iframe {
+	border-radius: var(--rootprint-radius);
+}

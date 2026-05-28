@@ -1,0 +1,132 @@
+---
+title: 'API reference'
+description: 'Use the Rootprint HTTP API to ingest logs, search logs from external tools, and automate administration against your own Rootprint deployment.'
+---
+
+The Rootprint API is the HTTP surface behind your self-hosted instance. Start with the external APIs when you need to send logs from a shipper or query logs from another tool. Use the session-based APIs when you need to automate web-app workflows such as index management, user administration, or monitoring.
+
+If you are setting up log collection for the first time, start with [Send logs](/send-logs/overview). If you already know the endpoint you need, use the generated endpoint reference in the sidebar.
+
+<CardGroup cols={3}>
+  <Card title="Send logs" icon="send" href="/send-logs/overview">
+    Choose OTLP or the NDJSON gateway and create the right ingest API key.
+  </Card>
+  <Card title="NDJSON ingest" icon="braces" href="/api/ingest-logs">
+    Push newline-delimited JSON logs through Rootprint to Quickwit.
+  </Card>
+  <Card title="Search API" icon="search" href="/api/reference/search-logs/search-logs-with-a-search-api-key">
+    Query logs from external tools with a search API key.
+  </Card>
+</CardGroup>
+
+## Base URL
+
+All API requests go to your Rootprint instance. Replace the host below with your deployment URL.
+
+```
+https://logs.example.com
+```
+
+## Authentication
+
+Rootprint uses three authentication modes, depending on the endpoint.
+
+| Use case                                 | Auth method                | Where to get it                     |
+| ---------------------------------------- | -------------------------- | ----------------------------------- |
+| Send logs over NDJSON or OTLP            | Ingest API key (bearer)    | **Administration → API keys**       |
+| Search logs from an external tool        | Search API key (bearer)    | **Administration → API keys**       |
+| Manage indexes, users, settings, UI data | Better Auth session cookie | Sign in through the Rootprint web app |
+| Check health                             | None                       | `GET /api/health` is public         |
+
+Bearer-token endpoints use the standard `Authorization` header.
+
+```http
+Authorization: Bearer <token>
+```
+
+Ingest and search API keys are scoped to one index. The key decides which index the request can write to or read from.
+
+<Note>
+  App and admin endpoints are primarily intended for the Rootprint web UI. They are documented so the
+  contract is visible, but automation should prefer token-based ingest and search where possible.
+</Note>
+
+## Endpoint groups
+
+The generated endpoint reference is arranged around the audience for each endpoint.
+
+| Group                 | What it contains                                               |
+| --------------------- | -------------------------------------------------------------- |
+| Log ingest API        | NDJSON and OTLP endpoints for log producers                    |
+| Search API            | The API-key-authenticated endpoint for external log search     |
+| Log explorer API      | Session-based search, histograms, field values, exports, shares, and saved queries |
+| Index management API  | Index metadata, field discovery, sources, preferences, and stats |
+| API keys              | Create, inspect, and delete ingest and search API keys         |
+| User and invite API   | Users, roles, password resets, invites, and invite acceptance  |
+| Authentication API    | Setup, sign-in, sessions, sign-out, and password changes       |
+| Auth settings API     | Google authentication credentials and allowed domains          |
+| System monitoring API | Health, cluster overview, activity, and metrics                |
+
+## Common content types
+
+Use `application/json` for most app and admin endpoints.
+
+Use `application/x-ndjson` for the NDJSON gateway.
+
+```http
+Content-Type: application/x-ndjson
+```
+
+Use `application/x-protobuf` for OTLP logs.
+
+```http
+Content-Type: application/x-protobuf
+```
+
+## Good first requests
+
+| Goal             | Endpoint                  | Notes                                      |
+| ---------------- | ------------------------- | ------------------------------------------ |
+| Health check     | `GET /api/health`         | No authentication required                 |
+| Send NDJSON logs | `POST /api/ingest/ndjson` | Requires an ingest API key                   |
+| Send OTLP logs   | `POST /v1/logs`           | Requires an ingest API key and protobuf body |
+| Search logs      | `GET /api/search/logs`    | Requires a search API key                  |
+
+## Error responses
+
+Most app-level endpoints return JSON errors with a stable `error` object.
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Request validation failed",
+    "statusCode": 400,
+    "requestId": "req_abc123"
+  }
+}
+```
+
+| Status | Meaning                                            |
+| ------ | -------------------------------------------------- |
+| `400`  | Invalid query string, path parameter, or JSON body |
+| `401`  | Missing session or bearer token                    |
+| `403`  | Authenticated, but not allowed                     |
+| `404`  | Unknown route or resource                          |
+| `409`  | Conflict, such as first-admin setup already done   |
+| `413`  | Payload too large                                  |
+| `415`  | Unsupported media type                             |
+| `429`  | Upstream rate limit                                |
+| `500`  | Internal server error                              |
+| `503`  | Quickwit or another upstream dependency is down    |
+
+OTLP endpoints follow OTLP-style error responses instead of the app JSON error shape.
+
+## Playground notes
+
+The generated endpoint pages include an interactive playground. For token-based endpoints, paste the token value into the bearer auth field. For session-cookie endpoints, use the playground against a Rootprint instance where you are signed in, or treat the page as a contract reference instead of an interactive client.
+
+<Note>
+  Rootprint does not apply an application-level rate limit to ingest endpoints. Apply rate limiting at
+  your reverse proxy or load balancer if your deployment needs it.
+</Note>

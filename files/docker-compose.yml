@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rootprint
+      POSTGRES_PASSWORD: rootprint   # change in production
+      POSTGRES_DB: rootprint
+    volumes:
+      - rootprint-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rootprint"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  quickwit:
+    image: quickwit/quickwit:v0.9.0-rc
+    restart: unless-stopped
+    volumes:
+      - rootprint-quickwit:/quickwit/qwdata
+    command: ["run"]
+    healthcheck:
+      test: ["CMD-SHELL", 'bash -c "echo > /dev/tcp/localhost/7280"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rootprint:
+    image: ghcr.io/oleksandr-zhyhalo/rootprint:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      quickwit:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://rootprint:rootprint@db:5432/rootprint
+      QUICKWIT_URL: http://quickwit:7280
+      ORIGIN: http://localhost:8282   # change to your public URL
+    ports:
+      - "8282:8282"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8282/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  rootprint-db:
+  rootprint-quickwit:

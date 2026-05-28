@@ -1,0 +1,318 @@
+{
+	"$schema": "https://mintlify.com/docs.json",
+	"theme": "maple",
+	"name": "Rootprint",
+	"description": "Self-hosted log management documentation for operators and developers.",
+	"colors": {
+		"primary": "#008060",
+		"light": "#27f795",
+		"dark": "#00371e"
+	},
+	"favicon": "/favicon.ico",
+	"logo": {
+		"light": "/images/logo.png",
+		"dark": "/images/logo.png",
+		"href": "https://rootprint.io"
+	},
+	"appearance": {
+		"default": "light",
+		"strict": true
+	},
+	"fonts": {
+		"family": "Roboto",
+		"weight": 400,
+		"heading": {
+			"family": "Roboto",
+			"weight": 400
+		},
+		"body": {
+			"family": "Roboto",
+			"weight": 400
+		}
+	},
+	"icons": {
+		"library": "lucide"
+	},
+	"background": {
+		"color": {
+			"light": "#ffffff",
+			"dark": "#0a0a0a"
+		}
+	},
+	"styling": {
+		"eyebrows": "breadcrumbs",
+		"latex": false,
+		"codeblocks": {
+			"theme": "github-light"
+		}
+	},
+	"search": {
+		"prompt": "Search Rootprint docs..."
+	},
+	"navbar": {
+		"links": [
+			{
+				"label": "Website",
+				"href": "https://rootprint.io"
+			}
+		],
+		"primary": {
+			"type": "github",
+			"href": "https://github.com/oleksandr-zhyhalo/rootprint"
+		}
+	},
+	"footer": {
+		"socials": {
+			"github": "https://github.com/oleksandr-zhyhalo/rootprint",
+			"website": "https://rootprint.io"
+		}
+	},
+	"api": {
+		"openapi": {
+			"source": "api/openapi.json",
+			"directory": "api/reference"
+		},
+		"playground": {
+			"display": "interactive"
+		},
+		"params": {
+			"expanded": "closed",
+			"post": ["nullable"]
+		},
+		"url": "full",
+		"examples": {
+			"languages": ["curl", "javascript", "python", "go"],
+			"defaults": "required",
+			"prefill": true
+		}
+	},
+	"redirects": [
+		{
+			"source": "/send-logs/http-ingest",
+			"destination": "/send-logs/http"
+		},
+		{
+			"source": "/send-logs",
+			"destination": "/send-logs/overview"
+		}
+	],
+	"navigation": {
+		"tabs": [
+			{
+				"tab": "Documentation",
+				"groups": [
+					{
+						"group": "Get Started",
+						"pages": [
+							"index",
+							{
+								"group": "Installation",
+								"pages": ["install/docker-compose", "install/scaling"]
+							},
+							"quickstart"
+						]
+					},
+					{
+						"group": "Send Logs",
+						"pages": [
+							"send-logs/overview",
+							"send-logs/otlp",
+							"send-logs/http",
+							{
+								"group": "Languages",
+								"pages": [
+									"send-logs/languages/python",
+									"send-logs/languages/javascript",
+									"send-logs/languages/go",
+									"send-logs/languages/zig"
+								]
+							},
+							{
+								"group": "Platforms",
+								"pages": ["send-logs/platforms/docker"]
+							},
+							{
+								"group": "Web Servers",
+								"pages": ["send-logs/web-servers/caddy", "send-logs/web-servers/nginx"]
+							},
+							{
+								"group": "Log Agents",
+								"pages": ["send-logs/log-agents/fluent-bit", "send-logs/log-agents/vector"]
+							}
+						]
+					},
+					{
+						"group": "Search Logs",
+						"pages": ["search/query-language", "indexes"]
+					},
+					{
+						"group": "Manage Rootprint",
+						"pages": [
+							"configuration/environment-variables",
+							"configuration/google-auth",
+							"configuration/reset-admin-password",
+							"configuration/manage-indexes",
+							"configuration/index-config",
+							"configuration/custom-indexes"
+						]
+					},
+					{
+						"group": "Tutorials",
+						"pages": ["tutorials/linux-auth-audit-vector"]
+					}
+				]
+			},
+			{
+				"tab": "API Reference",
+				"groups": [
+					{
+						"group": "Overview",
+						"pages": ["api/overview"]
+					},
+					{
+						"group": "Log ingest API",
+						"openapi": {
+							"source": "api/openapi.json",
+							"directory": "api/reference"
+						},
+						"pages": ["POST /api/ingest/ndjson", "POST /v1/logs"]
+					},
+					{
+						"group": "Search API",
+						"openapi": {
+							"source": "api/openapi.json",
+							"directory": "api/reference"
+						},
+						"pages": ["GET /api/search/logs"]
+					},
+					{
+						"group": "Log explorer API",
+						"openapi": {
+							"source": "api/openapi.json",
+							"directory": "api/reference"
+						},
+						"pages": [
+							"GET /api/indexes/{indexId}/logs",
+							"GET /api/indexes/{indexId}/logs/histogram",
+							"GET /api/indexes/{indexId}/fields/{field}/values",
+							"GET /api/indexes/{indexId}/fields/values",
+							"GET /api/indexes/{indexId}/exports/logs/preflight",
+							"GET /api/indexes/{indexId}/exports/logs",
+							"GET /api/indexes/{indexId}/saved-queries",
+							"POST /api/indexes/{indexId}/saved-queries",
+							"PATCH /api/indexes/{indexId}/saved-queries/{id}",
+							"DELETE /api/indexes/{indexId}/saved-queries/{id}",
+							"POST /api/shares",
+							"GET /api/shares/{code}"
+						]
+					},
+					{
+						"group": "Index management API",
+						"openapi": {
+							"source": "api/openapi.json",
+							"directory": "api/reference"
+						},
+						"pages": [
+							"GET /api/indexes",
+							"GET /api/indexes/{indexId}",
+							"PATCH /api/indexes/{indexId}",
+							"DELETE /api/indexes/{indexId}",
+							"GET /api/indexes/{indexId}/fields",
+							"GET /api/indexes/{indexId}/config",
+							"GET /api/indexes/{indexId}/stats",
+							"PATCH /api/indexes/{indexId}/sources/{sourceId}",
+							"DELETE /api/indexes/{indexId}/sources/{sourceId}",
+							"GET /api/indexes/{indexId}/preferences",
+							"PUT /api/indexes/{indexId}/preferences"
+						]
+					},
+					{
+						"group": "API keys",
+						"openapi": {
+							"source": "api/openapi.json",
+							"directory": "api/reference"
+						},
+						"pages": [
+							"GET /api/api-keys",
+							"POST /api/api-keys",
+							"GET /api/api-keys/{id}",
+							"DELETE /api/api-keys/{id}"
+						]
+					},
+					{
+						"group": "User and invite API",
+						"openapi": {
+							"source": "api/openapi.json",
+							"directory": "api/reference"
+						},
+						"pages": [
+							"GET /api/users",
+							"DELETE /api/users/{userId}",
+							"PUT /api/users/{userId}/role",
+							"POST /api/users/{userId}/password-resets",
+							"POST /api/invites",
+							"POST /api/invites/{userId}/resend",
+							"POST /api/auth/verify-invite",
+							"POST /api/auth/setup-password"
+						]
+					},
+					{
+						"group": "Authentication API",
+						"openapi": {
+							"source": "api/openapi.json",
+							"directory": "api/reference"
+						},
+						"pages": [
+							"GET /api/auth/bootstrap",
+							"GET /api/auth/providers",
+							"POST /api/auth/setup-admin",
+							"POST /api/auth/sign-in/email",
+							"GET /api/auth/get-session",
+							"POST /api/auth/sign-out",
+							"POST /api/auth/change-password"
+						]
+					},
+					{
+						"group": "Auth settings API",
+						"openapi": {
+							"source": "api/openapi.json",
+							"directory": "api/reference"
+						},
+						"pages": [
+							"GET /api/settings/auth/google",
+							"PUT /api/settings/auth/google/credentials",
+							"DELETE /api/settings/auth/google/credentials",
+							"PUT /api/settings/auth/google/allowed-domains"
+						]
+					},
+					{
+						"group": "System monitoring API",
+						"openapi": {
+							"source": "api/openapi.json",
+							"directory": "api/reference"
+						},
+						"pages": [
+							"GET /api/health",
+							"GET /api/admin/cluster",
+							"GET /api/admin/activity/summary",
+							"GET /api/admin/activity/latency",
+							"GET /api/admin/activity/slowest",
+							"GET /api/admin/activity/top-actors",
+							"GET /api/admin/activity/users/{userId}/summary",
+							"GET /api/admin/activity/users/{userId}/volume",
+							"GET /api/admin/activity/users/{userId}/latency",
+							"GET /api/admin/activity/users/{userId}/indexes",
+							"GET /api/admin/activity/users/{userId}/recent",
+							"GET /api/admin/activity/tokens/{tokenId}/summary",
+							"GET /api/admin/activity/tokens/{tokenId}/volume",
+							"GET /api/admin/activity/tokens/{tokenId}/latency",
+							"GET /api/admin/activity/tokens/{tokenId}/recent",
+							"GET /api/admin/metrics",
+							"GET /api/admin/metrics/raw"
+						]
+					}
+				]
+			}
+		]
+	}
+}
