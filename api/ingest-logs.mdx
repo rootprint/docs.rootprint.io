@@ -19,7 +19,7 @@ POST /api/ingest/ndjson
 Authorization: Bearer <your-ingest-token>
 ```
 
-You must include a valid ingest API key in every request. Create API keys in the Rootprint admin panel at **Administration → API keys**. Each key is scoped to exactly one index; Rootprint uses that index when forwarding the request to Quickwit.
+You must include a valid ingest API key in every request. Create API keys in the Rootprint web UI at **Settings → API keys**. Each key is scoped to exactly one index; Rootprint uses that index when forwarding the request to Quickwit.
 
 ## Request body
 
@@ -43,7 +43,7 @@ EOF
 ```
 
 <Tip>
-	Rootprint targets the index configured on the ingest API key. Check the key in **Administration → API keys** if you need to confirm where a shipper writes.
+	Rootprint targets the index configured on the ingest API key. Check the key in **Settings → API keys** if you need to confirm where a shipper writes.
 </Tip>
 
 ## Response
@@ -76,8 +76,7 @@ Example success response:
 | `403`  | The API key is invalid or revoked                                         |
 | `404`  | The upstream index no longer exists in Quickwit                         |
 | `413`  | A proxy or upstream service rejected the request as too large           |
-| `502`  | Rootprint could not reach Quickwit to forward the request                   |
-| `503`  | Quickwit is unhealthy or unavailable                                     |
+| `503`  | Rootprint could not reach Quickwit, or Quickwit is unhealthy or unavailable |
 
 App-level error responses include a JSON body with an `error` object:
 

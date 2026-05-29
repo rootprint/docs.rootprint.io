@@ -196,12 +196,11 @@
 							"GET /api/indexes/{indexId}/logs/histogram",
 							"GET /api/indexes/{indexId}/fields/{field}/values",
 							"GET /api/indexes/{indexId}/fields/values",
-							"GET /api/indexes/{indexId}/exports/logs/preflight",
-							"GET /api/indexes/{indexId}/exports/logs",
+							"GET /api/indexes/{indexId}/logs/export",
 							"GET /api/indexes/{indexId}/saved-queries",
 							"POST /api/indexes/{indexId}/saved-queries",
-							"PATCH /api/indexes/{indexId}/saved-queries/{id}",
-							"DELETE /api/indexes/{indexId}/saved-queries/{id}",
+							"PATCH /api/indexes/{indexId}/saved-queries/{savedQueryId}",
+							"DELETE /api/indexes/{indexId}/saved-queries/{savedQueryId}",
 							"POST /api/shares",
 							"GET /api/shares/{code}"
 						]
@@ -235,8 +234,8 @@
 						"pages": [
 							"GET /api/api-keys",
 							"POST /api/api-keys",
-							"GET /api/api-keys/{id}",
-							"DELETE /api/api-keys/{id}"
+							"GET /api/api-keys/{apiKeyId}",
+							"DELETE /api/api-keys/{apiKeyId}"
 						]
 					},
 					{
@@ -247,11 +246,11 @@
 						},
 						"pages": [
 							"GET /api/users",
+							"POST /api/users",
 							"DELETE /api/users/{userId}",
 							"PUT /api/users/{userId}/role",
 							"POST /api/users/{userId}/password-resets",
-							"POST /api/invites",
-							"POST /api/invites/{userId}/resend",
+							"POST /api/users/{userId}/invites",
 							"POST /api/auth/verify-invite",
 							"POST /api/auth/setup-password"
 						]
@@ -303,10 +302,10 @@
 							"GET /api/admin/activity/users/{userId}/latency",
 							"GET /api/admin/activity/users/{userId}/indexes",
 							"GET /api/admin/activity/users/{userId}/recent",
-							"GET /api/admin/activity/tokens/{tokenId}/summary",
-							"GET /api/admin/activity/tokens/{tokenId}/volume",
-							"GET /api/admin/activity/tokens/{tokenId}/latency",
-							"GET /api/admin/activity/tokens/{tokenId}/recent",
+							"GET /api/admin/activity/api-keys/{apiKeyId}/summary",
+							"GET /api/admin/activity/api-keys/{apiKeyId}/volume",
+							"GET /api/admin/activity/api-keys/{apiKeyId}/latency",
+							"GET /api/admin/activity/api-keys/{apiKeyId}/recent",
 							"GET /api/admin/metrics",
 							"GET /api/admin/metrics/raw"
 						]

@@ -49,7 +49,7 @@ curl -X POST 'http://quickwit:7280/api/v1/indexes' \
   --data-binary @my-index.yaml
 ```
 
-The index appears in **Administration → Indexes** on the next page load — no Rootprint restart needed.
+The index appears in **Settings → Indexes** on the next page load — no Rootprint restart needed.
 
 <Note>
 	Rootprint proxies index management actions to Quickwit but does not currently expose an "create
@@ -168,7 +168,7 @@ For the merge policy and other tuning knobs, see the upstream [Quickwit index co
 
 Once the index exists in Quickwit:
 
-1. Open **Administration → Indexes** and click the new index.
+1. Open **Settings → Indexes** and click the new index.
 2. On the **Configuration** tab, set the [field mappings](/configuration/index-config) so the message, level, and traceback render correctly.
 3. Create an [ingest API key](/api/overview) scoped to the index and route writes through the [NDJSON gateway](/send-logs/http) or, for OpenTelemetry-shaped data, the [OTLP endpoint](/send-logs/otlp).
 

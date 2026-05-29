@@ -4014,148 +4014,7 @@
 				}
 			}
 		},
-		"/api/indexes/{indexId}/exports/logs/preflight": {
-			"get": {
-				"tags": [
-					"Search logs"
-				],
-				"summary": "Preview a log export",
-				"operationId": "preflightLogExport",
-				"security": [
-					{
-						"cookieAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"name": "indexId",
-						"in": "path",
-						"required": true,
-						"description": "Quickwit index ID.",
-						"schema": {
-							"type": "string",
-							"minLength": 1
-						}
-					},
-					{
-						"name": "q",
-						"in": "query",
-						"required": false,
-						"description": "Quickwit query string.",
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"name": "startTs",
-						"in": "query",
-						"required": true,
-						"description": "Inclusive start timestamp in seconds since Unix epoch.",
-						"schema": {
-							"type": "number",
-							"minimum": 0
-						}
-					},
-					{
-						"name": "endTs",
-						"in": "query",
-						"required": true,
-						"description": "Inclusive end timestamp in seconds since Unix epoch.",
-						"schema": {
-							"type": "number",
-							"minimum": 0
-						}
-					},
-					{
-						"name": "format",
-						"in": "query",
-						"required": true,
-						"description": "Export format.",
-						"schema": {
-							"type": "string",
-							"enum": [
-								"json",
-								"csv",
-								"text"
-							]
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Export size estimate.",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ExportPreflightResponse"
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Request validation failed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiErrorBody"
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Authentication required",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiErrorBody"
-								}
-							}
-						}
-					},
-					"403": {
-						"description": "Permission denied",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiErrorBody"
-								}
-							}
-						}
-					},
-					"404": {
-						"description": "Resource not found",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiErrorBody"
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Internal server error",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiErrorBody"
-								}
-							}
-						}
-					},
-					"503": {
-						"description": "Upstream service unavailable",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiErrorBody"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/indexes/{indexId}/exports/logs": {
+		"/api/indexes/{indexId}/logs/export": {
 			"get": {
 				"tags": [
 					"Search logs"
@@ -4220,11 +4079,20 @@
 								"text"
 							]
 						}
+					},
+					{
+						"name": "dryRun",
+						"in": "query",
+						"required": false,
+						"description": "When `true`, returns a JSON size estimate (ExportPreflightResponse) instead of the export stream. The web UI uses this to confirm large downloads before starting them.",
+						"schema": {
+							"type": "boolean"
+						}
 					}
 				],
 				"responses": {
 					"200": {
-						"description": "Gzip-compressed export file.",
+						"description": "Gzip-compressed export stream (`Content-Encoding: gzip`). When `dryRun=true`, returns a JSON size estimate instead.",
 						"content": {
 							"application/gzip": {
 								"schema": {
@@ -4232,19 +4100,9 @@
 									"format": "binary"
 								}
 							},
-							"text/csv": {
-								"schema": {
-									"type": "string"
-								}
-							},
 							"application/json": {
 								"schema": {
-									"type": "string"
-								}
-							},
-							"text/plain": {
-								"schema": {
-									"type": "string"
+									"$ref": "#/components/schemas/ExportPreflightResponse"
 								}
 							}
 						}
@@ -4519,7 +4377,7 @@
 				}
 			}
 		},
-		"/api/indexes/{indexId}/saved-queries/{id}": {
+		"/api/indexes/{indexId}/saved-queries/{savedQueryId}": {
 			"patch": {
 				"tags": [
 					"Search logs"
@@ -4543,10 +4401,10 @@
 						}
 					},
 					{
-						"name": "id",
+						"name": "savedQueryId",
 						"in": "path",
 						"required": true,
-						"description": "Positive integer resource ID.",
+						"description": "Saved query ID.",
 						"schema": {
 							"type": "integer",
 							"minimum": 1
@@ -4659,10 +4517,10 @@
 						}
 					},
 					{
-						"name": "id",
+						"name": "savedQueryId",
 						"in": "path",
 						"required": true,
-						"description": "Positive integer resource ID.",
+						"description": "Saved query ID.",
 						"schema": {
 							"type": "integer",
 							"minimum": 1
@@ -5028,6 +4886,100 @@
 						}
 					}
 				}
+			},
+			"post": {
+				"tags": [
+					"Manage users"
+				],
+				"summary": "Invite a user",
+				"operationId": "createInvite",
+				"security": [
+					{
+						"cookieAuth": []
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateInviteInput"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Invite created.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/InviteResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Request validation failed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Permission denied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Upstream service unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiErrorBody"
+								}
+							}
+						}
+					}
+				}
 			}
 		},
 		"/api/users/{userId}": {
@@ -5320,109 +5272,13 @@
 				}
 			}
 		},
-		"/api/invites": {
+		"/api/users/{userId}/invites": {
 			"post": {
 				"tags": [
 					"Manage users"
 				],
-				"summary": "Invite a user",
-				"operationId": "createInvite",
-				"security": [
-					{
-						"cookieAuth": []
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/CreateInviteInput"
-							}
-						}
-					}
-				},
-				"responses": {
-					"201": {
-						"description": "Invite created.",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/InviteResponse"
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Request validation failed",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiErrorBody"
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Authentication required",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiErrorBody"
-								}
-							}
-						}
-					},
-					"403": {
-						"description": "Permission denied",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiErrorBody"
-								}
-							}
-						}
-					},
-					"404": {
-						"description": "Resource not found",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiErrorBody"
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Internal server error",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiErrorBody"
-								}
-							}
-						}
-					},
-					"503": {
-						"description": "Upstream service unavailable",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiErrorBody"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/invites/{userId}/resend": {
-			"post": {
-				"tags": [
-					"Manage users"
-				],
-				"summary": "Resend an invite",
-				"operationId": "resendInvite",
+				"summary": "Reissue an invite",
+				"operationId": "reissueInvite",
 				"security": [
 					{
 						"cookieAuth": []
@@ -5708,7 +5564,7 @@
 				}
 			}
 		},
-		"/api/api-keys/{id}": {
+		"/api/api-keys/{apiKeyId}": {
 			"get": {
 				"tags": [
 					"Manage API keys"
@@ -5722,10 +5578,10 @@
 				],
 				"parameters": [
 					{
-						"name": "id",
+						"name": "apiKeyId",
 						"in": "path",
 						"required": true,
-						"description": "Positive integer resource ID.",
+						"description": "API key ID.",
 						"schema": {
 							"type": "integer",
 							"minimum": 1
@@ -5818,10 +5674,10 @@
 				],
 				"parameters": [
 					{
-						"name": "id",
+						"name": "apiKeyId",
 						"in": "path",
 						"required": true,
-						"description": "Positive integer resource ID.",
+						"description": "API key ID.",
 						"schema": {
 							"type": "integer",
 							"minimum": 1
@@ -7532,7 +7388,7 @@
 				}
 			}
 		},
-		"/api/admin/activity/tokens/{tokenId}/summary": {
+		"/api/admin/activity/api-keys/{apiKeyId}/summary": {
 			"get": {
 				"tags": [
 					"Monitor system"
@@ -7546,7 +7402,7 @@
 				],
 				"parameters": [
 					{
-						"name": "tokenId",
+						"name": "apiKeyId",
 						"in": "path",
 						"required": true,
 						"description": "API key ID.",
@@ -7644,7 +7500,7 @@
 				}
 			}
 		},
-		"/api/admin/activity/tokens/{tokenId}/volume": {
+		"/api/admin/activity/api-keys/{apiKeyId}/volume": {
 			"get": {
 				"tags": [
 					"Monitor system"
@@ -7658,7 +7514,7 @@
 				],
 				"parameters": [
 					{
-						"name": "tokenId",
+						"name": "apiKeyId",
 						"in": "path",
 						"required": true,
 						"description": "API key ID.",
@@ -7759,7 +7615,7 @@
 				}
 			}
 		},
-		"/api/admin/activity/tokens/{tokenId}/latency": {
+		"/api/admin/activity/api-keys/{apiKeyId}/latency": {
 			"get": {
 				"tags": [
 					"Monitor system"
@@ -7773,7 +7629,7 @@
 				],
 				"parameters": [
 					{
-						"name": "tokenId",
+						"name": "apiKeyId",
 						"in": "path",
 						"required": true,
 						"description": "API key ID.",
@@ -7874,7 +7730,7 @@
 				}
 			}
 		},
-		"/api/admin/activity/tokens/{tokenId}/recent": {
+		"/api/admin/activity/api-keys/{apiKeyId}/recent": {
 			"get": {
 				"tags": [
 					"Monitor system"
@@ -7888,7 +7744,7 @@
 				],
 				"parameters": [
 					{
-						"name": "tokenId",
+						"name": "apiKeyId",
 						"in": "path",
 						"required": true,
 						"description": "API key ID.",

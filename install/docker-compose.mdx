@@ -14,7 +14,7 @@ This option deploys Rootprint together with PostgreSQL and a bundled Quickwit in
 Download the Compose file and start the services:
 
 ```bash
-curl -O https://raw.githubusercontent.com/rootprint/docs.rootprint.io/main/docs/files/docker-compose.yml
+curl -O https://raw.githubusercontent.com/rootprint/docs.rootprint.io/main/files/docker-compose.yml
 docker compose up -d
 ```
 
@@ -142,7 +142,7 @@ If you already have a Quickwit cluster running, deploy Rootprint with PostgreSQL
 Download the standalone Compose file:
 
 ```bash
-curl -o docker-compose.yml https://raw.githubusercontent.com/rootprint/docs.rootprint.io/main/docs/files/docker-compose.standalone.yml
+curl -o docker-compose.yml https://raw.githubusercontent.com/rootprint/docs.rootprint.io/main/files/docker-compose.standalone.yml
 ```
 
 Open `docker-compose.yml` and set `QUICKWIT_URL` to the REST API endpoint of your Quickwit instance. Do not include `/api/v1` in the URL:
@@ -203,4 +203,4 @@ Run `docker compose ps` to confirm both containers are healthy, then open [http:
 
 ## Configuration
 
-Customize the deployment by setting environment variables under the `environment` key of the `rootprint` service. See the [environment variables reference](/configuration/environment-variables) for the full list, including rate limits and authentication settings.
+Customize the deployment by setting environment variables under the `environment` key of the `rootprint` service. See the [environment variables reference](/configuration/environment-variables) for the full list, including the database URL, public origin, Quickwit endpoint, and session secret.

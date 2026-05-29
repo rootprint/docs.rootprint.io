@@ -33,8 +33,8 @@ Rootprint uses three authentication modes, depending on the endpoint.
 
 | Use case                                 | Auth method                | Where to get it                     |
 | ---------------------------------------- | -------------------------- | ----------------------------------- |
-| Send logs over NDJSON or OTLP            | Ingest API key (bearer)    | **Administration → API keys**       |
-| Search logs from an external tool        | Search API key (bearer)    | **Administration → API keys**       |
+| Send logs over NDJSON or OTLP            | Ingest API key (bearer)    | **Settings → API keys**       |
+| Search logs from an external tool        | Search API key (bearer)    | **Settings → API keys**       |
 | Manage indexes, users, settings, UI data | Better Auth session cookie | Sign in through the Rootprint web app |
 | Check health                             | None                       | `GET /api/health` is public         |
 
@@ -116,6 +116,7 @@ Most app-level endpoints return JSON errors with a stable `error` object.
 | `409`  | Conflict, such as first-admin setup already done   |
 | `413`  | Payload too large                                  |
 | `415`  | Unsupported media type                             |
+| `422`  | Unprocessable entity, such as a share payload over 64KB |
 | `429`  | Upstream rate limit                                |
 | `500`  | Internal server error                              |
 | `503`  | Quickwit or another upstream dependency is down    |

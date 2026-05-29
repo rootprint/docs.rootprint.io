@@ -17,7 +17,7 @@ description: 'Tail log files on a Linux host with Fluent Bit and ship them to Ro
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
     The default index for OTLP traffic is `otel-logs-v0_9` — see [Indexes](/indexes) for its
-    schema. In **Administration → API keys**, click **Create API key**, give it a name, pick
+    schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
     `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once — copy it before
     clicking **Done**. API keys are scoped to one index — you cannot reuse one across indexes.
   </Step>
@@ -142,7 +142,7 @@ If your systemd unit drops privileges to a non-root user, also `sudo chown -R fl
   on the `Header` line reads exactly `Authorization Bearer <token>`, with one space between
   `Authorization` and `Bearer` and one between `Bearer` and the token.
 - **`403` from Rootprint** — the token's index scope does not match `otel-logs-v0_9`, or the token
-  was revoked. Mint a fresh ingest API key for `otel-logs-v0_9` in **Administration → API keys**.
+  was revoked. Mint a fresh ingest API key for `otel-logs-v0_9` in **Settings → API keys**.
 - **`413` from Rootprint** — a single batch exceeded 10 MB on the wire. Lower the output batch size
   by setting `Workers 1` and reducing `Mem_Buf_Limit` on the `[INPUT]` block, or split the
   upstream load across multiple `[INPUT]` instances.

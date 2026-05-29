@@ -21,7 +21,7 @@ Rootprint supports Google OAuth as an additional sign-in method alongside the de
   </Step>
 
   <Step title="Enter credentials in Rootprint">
-    In Rootprint, go to **Administration → Authentication** and find the **Google Auth** section. Enter:
+    In Rootprint, go to **Settings → Authentication** and find the **Google Auth** section. Enter:
 
     - **Client ID** — from the Google Cloud Console
     - **Client Secret** — from the Google Cloud Console
@@ -35,17 +35,15 @@ Rootprint supports Google OAuth as an additional sign-in method alongside the de
 
   </Step>
 
-  <Step title="Apply the configuration">
-    Restart the Rootprint container to apply the new configuration:
-
-    ```bash
-    docker compose restart rootprint
-    ```
-
-    After the restart, the "Sign in with Google" button appears on the sign-in page.
+  <Step title="Save the configuration">
+    Click **Save**. The change takes effect immediately — Rootprint reloads its auth
+    configuration in place, so no restart is required. The "Sign in with Google" button
+    appears on the sign-in page right away.
 
     <Note>
-      Google auth configuration changes — including saving credentials, updating allowed domains, and removing Google auth — only take effect after a server restart.
+      Google auth configuration changes — saving credentials, updating allowed domains, and
+      removing Google auth — all apply live. Allowed domains are evaluated at sign-in time, so
+      editing them takes effect on the next Google sign-in attempt.
     </Note>
 
   </Step>
@@ -53,18 +51,14 @@ Rootprint supports Google OAuth as an additional sign-in method alongside the de
 
 ## Removing Google auth
 
-To disable Google sign-in, go to **Administration → Authentication → Google Auth** and click **Remove Google Auth**, then restart the server:
-
-```bash
-docker compose restart rootprint
-```
-
-After the restart, the Google sign-in button is removed from the sign-in page.
+To disable Google sign-in, go to **Settings → Authentication → Google Auth** and click
+**Remove Google Auth**. The change applies immediately and the Google sign-in button disappears
+from the sign-in page — no restart required.
 
 <Warning>
 	Rootprint tracks whether each user has a password set. Users who signed in exclusively via Google
 	never had one, so **Reset password** and self-serve password change are disabled for them. To give
 	a Google-only user password access after disabling Google auth, delete the user from
-	**Administration → Users** and invite them again — the new invite link prompts them to set a
+	**Settings → Users** and invite them again — the new invite link prompts them to set a
 	password.
 </Warning>

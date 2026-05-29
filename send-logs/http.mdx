@@ -18,7 +18,7 @@ Rootprint exposes an authenticated NDJSON gateway at `/api/ingest/ndjson`. Each 
   </Step>
 
 <Step title="Create an ingest API key">
-	In **Administration → API keys**, click **Create API key**, pick the target index, and choose the
+	In **Settings → API keys**, click **Create API key**, pick the target index, and choose the
 	**Ingest** role. Copy the value shown on creation. API keys are scoped to one index — you cannot
 	reuse one across indexes.
 </Step>
@@ -50,7 +50,7 @@ Rootprint forwards the body unchanged. You must send the format your API key's Q
 ## Troubleshooting
 
 - **401** — missing or malformed Bearer token.
-- **403** — the API key is invalid or revoked. Create a new ingest API key for that index in **Administration → API keys**.
+- **403** — the API key is invalid or revoked. Create a new ingest API key for that index in **Settings → API keys**.
 - **400** — NDJSON parse error. Common causes: trailing comma between objects, a JSON array instead of one-object-per-line, wrong `Content-Type`.
 - **Accepted but not visible in Search** — Quickwit has not flushed the new documents yet. Wait a few seconds and search again.
 

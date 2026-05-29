@@ -36,21 +36,22 @@ Quickwit's upstream OTLP endpoint does not accept JSON, and Rootprint does not t
 
 ## Size and encoding
 
-- **Maximum body:** 10 MB on the wire (post-compression if `Content-Encoding` is set).
+- Rootprint does not impose its own body-size limit on OTLP requests. The effective ceiling comes from Quickwit's OTLP endpoint and any reverse proxy you place in front of Rootprint — size requests there if you need a hard limit.
 - `Content-Encoding: gzip` is forwarded to Quickwit unchanged.
 
 ## Response codes
 
-| Status | Meaning                                                       |
-| ------ | ------------------------------------------------------------- |
-| `200`  | Accepted. Empty body.                                         |
-| `400`  | Empty request body.                                           |
-| `401`  | Missing Bearer API key.                                       |
-| `403`  | Invalid or unknown ingest API key.                            |
-| `413`  | Body exceeds 10 MB.                                           |
-| `415`  | `Content-Type` is not `application/x-protobuf`.               |
-| `429`  | Upstream Quickwit is rate-limited. `Retry-After` is echoed.   |
-| `503`  | Upstream Quickwit error or network failure. `Retry-After: 5`. |
+Rootprint maps OTLP errors to gRPC-style status codes. Upstream Quickwit rejections (malformed protobuf, schema mismatch, oversized payload) are normalized to `400`, and any upstream `5xx` or network failure is clamped to a retryable `503`.
+
+| Status | Meaning                                                                 |
+| ------ | ----------------------------------------------------------------------- |
+| `200`  | Accepted. Empty body.                                                   |
+| `400`  | Empty request body, or Quickwit rejected the payload.                   |
+| `401`  | Missing Bearer API key.                                                 |
+| `403`  | Invalid or unknown ingest API key.                                      |
+| `415`  | `Content-Type` is not `application/x-protobuf`.                         |
+| `429`  | Upstream Quickwit is rate-limited. `Retry-After` is echoed (default 5). |
+| `503`  | Upstream Quickwit error or network failure. `Retry-After: 5`.           |
 
 <Note>
 	Rootprint returns an empty `200` on success rather than a populated OTLP `PartialSuccess` response.
@@ -69,7 +70,7 @@ Quickwit's upstream OTLP endpoint does not accept JSON, and Rootprint does not t
 
 ## Index target
 
-The target index is pinned by the ingest API key, not by the SDK. To write to a different index, create an ingest API key scoped to that index in **Administration → API keys** and use its value in the `Authorization` header. See [Manage indexes](/configuration/manage-indexes).
+The target index is pinned by the ingest API key, not by the SDK. To write to a different index, create an ingest API key scoped to that index in **Settings → API keys** and use its value in the `Authorization` header. See [Manage indexes](/configuration/manage-indexes).
 
 ## Related
 

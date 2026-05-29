@@ -15,7 +15,7 @@ description: 'Tail log files on a Linux host with Vector and ship them to Rootpr
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
     The default index for OTLP traffic is `otel-logs-v0_9` — see [Indexes](/indexes) for its
-    schema. In **Administration → API keys**, click **Create API key**, give it a name, pick
+    schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
     `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once — copy it before
     clicking **Done**. API keys are scoped to one index — you cannot reuse one across indexes.
   </Step>
@@ -161,7 +161,7 @@ Field-by-field:
   under `sinks.rootprint.protocol.request.headers.Authorization` reads exactly `Bearer <token>`,
   with a single space between `Bearer` and the token.
 - **`403` from Rootprint** — the token's index scope does not match `otel-logs-v0_9`, or the token
-  was revoked. Mint a fresh ingest API key for `otel-logs-v0_9` in **Administration → API keys**.
+  was revoked. Mint a fresh ingest API key for `otel-logs-v0_9` in **Settings → API keys**.
 - **`413` from Rootprint** — a single batch exceeded 10 MB on the wire. Lower
   `sinks.rootprint.protocol.batch.max_bytes`.
 - **`415` from Rootprint** — encoding is misconfigured. The `encoding.codec` value must be `otlp`;
