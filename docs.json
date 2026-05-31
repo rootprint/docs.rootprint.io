@@ -10,8 +10,8 @@
 	},
 	"favicon": "/favicon.ico",
 	"logo": {
-		"light": "/images/logo.png",
-		"dark": "/images/logo.png",
+		"light": "/images/rootprint-wordmark.png",
+		"dark": "/images/rootprint-wordmark.png",
 		"href": "https://rootprint.io"
 	},
 	"appearance": {
