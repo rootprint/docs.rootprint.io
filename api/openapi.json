@@ -5764,7 +5764,7 @@
 						"sidebarTitle": "Search logs",
 						"description": "Search logs from the index attached to a search API key."
 					},
-					"content": "## Authentication\n\nUse a search API key from **Administration → API keys**. Each search API key is scoped to one index, and this endpoint searches that index only."
+					"content": "## Authentication\n\nUse a search API key from **Administration → API keys**. Each search API key is scoped to one index, and this endpoint searches that index only.\n\n```http\nAuthorization: Bearer <search-api-key>\n```"
 				},
 				"operationId": "searchLogsWithApiKey",
 				"security": [
