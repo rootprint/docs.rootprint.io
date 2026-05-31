@@ -58,12 +58,12 @@
 		],
 		"primary": {
 			"type": "github",
-			"href": "https://github.com/oleksandr-zhyhalo/rootprint"
+			"href": "https://github.com/rootprint/rootprint"
 		}
 	},
 	"footer": {
 		"socials": {
-			"github": "https://github.com/oleksandr-zhyhalo/rootprint",
+			"github": "https://github.com/rootprint/rootprint",
 			"website": "https://rootprint.io"
 		}
 	},
