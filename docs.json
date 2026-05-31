@@ -88,6 +88,10 @@
 	},
 	"redirects": [
 		{
+			"source": "/configuration/index-config",
+			"destination": "/configuration/manage-indexes"
+		},
+		{
 			"source": "/send-logs/http-ingest",
 			"destination": "/send-logs/http"
 		},
@@ -152,7 +156,6 @@
 							"configuration/google-auth",
 							"configuration/reset-admin-password",
 							"configuration/manage-indexes",
-							"configuration/index-config",
 							"configuration/custom-indexes"
 						]
 					},

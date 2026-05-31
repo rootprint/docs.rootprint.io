@@ -19,7 +19,7 @@ Until you save explicit settings for an index, Rootprint uses these OpenTelemetr
 | Message field   | `body.message`                    |
 | Traceback field | `attributes.exception.stacktrace` |
 
-The bundled OTel index uses these paths out of the box. For custom-schema indexes, override any of them in [Per Index configuration](/configuration/index-config).
+The bundled OTel index uses these paths out of the box. For custom-schema indexes, override any of them in the index's [Configuration tab](/configuration/manage-indexes#field-role-mappings).
 
 ### Schema
 
@@ -142,10 +142,10 @@ trace_id:abc123def456...
 
 ## Custom indexes
 
-For non-OpenTelemetry data — audit trails, custom application events, third-party log formats — create an index with the schema your data needs. See [Create a custom index](/configuration/custom-indexes) for the YAML structure, field types, tokenizers, and retention policy. Once it exists, configure how Rootprint maps its fields from [Per Index configuration](/configuration/index-config).
+For non-OpenTelemetry data — audit trails, custom application events, third-party log formats — create an index with the schema your data needs. See [Create a custom index](/configuration/custom-indexes) for the YAML structure, field types, tokenizers, and retention policy. Once it exists, configure how Rootprint maps its fields from the index's [Configuration tab](/configuration/manage-indexes#configuration-tab).
 
 ## Next steps
 
 - [Send logs](/send-logs/overview) to start ingesting data into any index.
 - [Search query syntax](/search/query-language) to learn what users can type in the search box.
-- [Configure index fields](/configuration/index-config) to map log level, message, and traceback for your schema.
+- [Configure index fields](/configuration/manage-indexes#field-role-mappings) to map log level, message, and traceback for your schema.

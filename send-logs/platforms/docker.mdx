@@ -23,7 +23,7 @@ Run a Vector sidecar next to your other containers. It reads each container's lo
 
   <Step title="Create the Vector config">
     Save this as `vector.yaml` next to your `docker-compose.yml`. Replace `<your-rootprint>` with
-    your Rootprint base URL and `<your-ingest-token>` with the token you copied in step 1.
+    your Rootprint base URL and `<your-ingest-token>` with the API key you copied in step 1.
 
     ```yaml
     sources:
@@ -214,7 +214,7 @@ If a container writes structured JSON to stdout, the body arrives as a string bu
 - **`permission denied` opening `/var/run/docker.sock`** — rootless Docker uses `$XDG_RUNTIME_DIR/docker.sock` (typically `/run/user/<uid>/docker.sock`). Adjust the volume mount on the `rootprint-vector` service accordingly.
 - **Vector's own logs flooding back** — `exclude_containers` in `vector.yaml` does not match the compose service's `container_name`. Both must be the same string. If you renamed the service in your compose file, update `exclude_containers` to match.
 - **`service.name` shows as `unknown_service`** — the Vector compose service was started without `container_name` set, so Docker assigned a generated name like `<project>_rootprint-vector_1`. Pin `container_name` on every service whose `service.name` you want to read cleanly.
-- **`401`, `403`, `413`, `415` from Rootprint** — same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
+- **`401`, `403`, `415` from Rootprint** — same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
 
 ## Related
 

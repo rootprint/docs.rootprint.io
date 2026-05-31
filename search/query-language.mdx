@@ -1,9 +1,9 @@
 ---
 title: 'Search query syntax'
-description: 'Build precise log searches with the Quickwit query language — terms, phrases, ranges, booleans, and field paths.'
+description: 'Build precise log searches with Lucene query syntax — terms, phrases, ranges, booleans, and field paths.'
 ---
 
-The Rootprint search box accepts the [Quickwit query language](https://quickwit.io/docs/reference/query-language). Queries combine field-scoped clauses with boolean operators, and the same syntax works whether you type it in the UI or pass it to the search API.
+The Rootprint search box accepts [Lucene query syntax](https://quickwit.io/docs/reference/query-language). Queries combine field-scoped clauses with boolean operators, and the same syntax works whether you type it in the UI or pass it to the search API.
 
 ## Quick reference
 
@@ -64,17 +64,18 @@ How a field was tokenized at index time decides how queries against it match. Th
 This means `severity_text:error` will **not** match a document with `"severity_text": "ERROR"` — the index stored `ERROR` as a single token. Match the case your shipper sends, or filter via the UI quick-filters which know each field's casing.
 
 <Tip>
-	If you query a custom index and exact-match terms are missing, check the field's tokenizer in
-	**Settings → Indexes → Fields**. The same value indexed with `default` and `raw` produces
-	different match behavior.
+	If you query a custom index and exact-match terms are missing, the field is probably tokenized
+	differently than you expect. Tokenizers are set in the index's Quickwit configuration — see
+	[Create a custom index](/configuration/custom-indexes). The same value indexed with `default` and
+	`raw` produces different match behavior.
 </Tip>
 
 ## Time ranges
 
-The Rootprint UI exposes a time picker that bounds every query to a time window — you don't write the timestamp clause yourself. If you call the search API directly, pass `start_timestamp` and `end_timestamp` as **seconds** (regardless of the field's precision):
+The Rootprint UI exposes a time picker that bounds every query to a time window — you don't write the timestamp clause yourself. If you call the search API directly, pass `startTs` and `endTs` as **seconds** (regardless of the field's precision). The index is determined by your search API key, not the URL:
 
 ```http
-GET /api/v1/otel-logs-v0_9/search?query=severity_text:ERROR&start_timestamp=1776340000&end_timestamp=1776343600
+GET /api/search/logs?q=severity_text:ERROR&startTs=1776340000&endTs=1776343600
 ```
 
 ## Common log search recipes
@@ -117,6 +118,6 @@ For example, to search for the literal string `(test)` in a phrase, wrap it in q
 
 ## Related
 
-- [Quickwit query language reference](https://quickwit.io/docs/reference/query-language) — the upstream specification.
+- [Lucene query syntax reference](https://quickwit.io/docs/reference/query-language) — the upstream specification.
 - [Indexes](/indexes) — fields, tokenizers, and the bundled OTel schema.
-- [Per Index configuration](/configuration/index-config) — map message, level, and traceback for custom indexes.
+- [Manage indexes](/configuration/manage-indexes#field-role-mappings) — map message, level, and traceback for custom indexes.

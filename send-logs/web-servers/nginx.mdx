@@ -36,7 +36,7 @@ description: "Tail nginx's default `combined` access logs and error logs with Ve
 
   <Step title="Write the Vector config">
     Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint
-    base URL and `<your-ingest-token>` with the token you copied in step 1.
+    base URL and `<your-ingest-token>` with the API key you copied in step 1.
 
     ```yaml
     sources:
@@ -365,7 +365,7 @@ service.name:nginx AND attributes.nginx.format:error AND attributes.nginx.upstre
 - **Records arrive but `attributes.http.*` are missing** — the entry came from `error.log` (no access fields), by design. Filter access-log entries with `attributes.nginx.format:access`.
 - **`body` looks like a raw nginx line instead of a structured message** — the access log is using a non-default `log_format` directive in `nginx.conf`. The parser expects nginx's stock combined format. Either remove the custom `log_format` or extend the `parse_nginx` remap to handle the alternate shape.
 - **`severity_text` is always `INFO` for access entries even on 5xx** — by design. nginx's combined format has no severity field; this parser trusts the source. Filter on `attributes.http.response.status_code:>=500` to surface server errors.
-- **`401`, `403`, `413`, `415` from Rootprint** — same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
+- **`401`, `403`, `415` from Rootprint** — same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
 
 ## Related
 

@@ -30,11 +30,13 @@ Rootprint exposes an authenticated NDJSON gateway at `/api/ingest/ndjson`. Each 
     curl -X POST 'https://<your-rootprint>/api/ingest/ndjson' \
       -H 'Authorization: Bearer <your-ingest-token>' \
       -H 'Content-Type: application/x-ndjson' \
-      --data-binary @- <<'EOF'
-    {"timestamp_nanos":1776340800000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":1776340800000000000,"severity_number":9,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
-    {"timestamp_nanos":1776340860000000000,"severity_text":"ERROR","body":{"message":"Checkout failed"},"service_name":"frontend","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":1776340860000000000,"severity_number":17,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
+      --data-binary @- <<EOF
+    {"timestamp_nanos":$(date +%s)000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":9,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
+    {"timestamp_nanos":$(date +%s)000000000,"severity_text":"ERROR","body":{"message":"Checkout failed"},"service_name":"frontend","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":17,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
     EOF
     ```
+
+    The unquoted heredoc lets `$(date +%s)000000000` stamp each entry with the current time in Unix epoch nanoseconds (UTC) — second precision, which is plenty here — so they appear in Search right away instead of in the past. This works the same on Linux and macOS.
 
   </Step>
 
@@ -45,7 +47,7 @@ Rootprint exposes an authenticated NDJSON gateway at `/api/ingest/ndjson`. Each 
 
 ## Payload format
 
-Rootprint forwards the body unchanged. You must send the format your API key's Quickwit index expects - typically NDJSON with `Content-Type: application/x-ndjson`. The payload must match the target index schema; Quickwit rejects documents that don't. See [Indexes](/indexes) for the built-in `otel-logs-v0_9` schema, or [Per Index configuration](/configuration/index-config) for Rootprint's display mapping over your custom schema.
+Rootprint forwards the body unchanged. You must send the format your API key's Quickwit index expects - typically NDJSON with `Content-Type: application/x-ndjson`. The payload must match the target index schema; Quickwit rejects documents that don't. See [Indexes](/indexes) for the built-in `otel-logs-v0_9` schema, or the index's [Configuration tab](/configuration/manage-indexes#field-role-mappings) for Rootprint's display mapping over your custom schema.
 
 ## Troubleshooting
 
@@ -59,5 +61,5 @@ Rootprint forwards the body unchanged. You must send the format your API key's Q
 - [OTLP reference](/send-logs/otlp) — for OpenTelemetry apps
 - [Indexes](/indexes) — default OTEL schema
 - [Create a custom index](/configuration/custom-indexes) — define your own schema in Quickwit
-- [Per Index configuration](/configuration/index-config) — map log level, message, and traceback
+- [Manage indexes](/configuration/manage-indexes#field-role-mappings) — map log level, message, and traceback
 - [POST /api/ingest/ndjson](/api/ingest-logs) — endpoint reference

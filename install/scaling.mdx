@@ -11,35 +11,17 @@ Scaling Rootprint means keeping Rootprint single-node and moving scale-sensitive
 Quickwit. Quickwit is the distributed search and indexing layer; Rootprint is the UI, auth, ingest
 gateway, and API layer in front of it.
 
-<Note>
-Rootprint targets Quickwit `0.9` and later. Quickwit's public docs currently show `0.8.1` as the
-latest stable version, so this page uses the Quickwit `main branch` docs where the `0.9` Ingest V2
-behavior is documented.
-</Note>
-
 ## What you can run in parallel
 
 | Component | Multi-instance? | Notes |
 | --------- | --------------- | ----- |
 | Rootprint | No | Run one active Rootprint instance. Do not add load-balanced Rootprint replicas and do not build a shared filesystem for Rootprint. |
-| Quickwit | Yes | Quickwit is designed as a horizontally scalable cluster of indexers, searchers, a control plane, a metastore service, and a janitor. |
+| Quickwit | Yes | Quickwit is designed as a horizontally scalable cluster. Add nodes to grow ingest and search capacity. |
 | Rootprint database | External Postgres | Rootprint stores users, API keys, saved queries, preferences, and activity state in Postgres. This is separate from Quickwit's metastore, even if both databases run on the same Postgres server. |
 
 If you need a bigger deployment, keep one Rootprint instance and point `QUICKWIT_URL` at a
 Quickwit REST endpoint, load balancer, or Kubernetes service. Quickwit nodes serve the REST API and
 can redirect requests to the right service in the cluster.
-
-## Quickwit source-of-truth summary
-
-Use these as the operating rules for Rootprint deployments:
-
-- Rootprint is not multi-node. There is no Rootprint shared-filesystem setup to create.
-- Quickwit cluster mode requires shared index storage such as S3, MinIO, Azure Blob Storage, or Google Cloud Storage. Do not try to make multiple Quickwit nodes share one local `file://` index directory.
-- Quickwit's file-backed metastore has no locking and does not support multiple instances running at the same time. Use PostgreSQL for distributed Quickwit.
-- Kafka is not required just because you have multiple Quickwit indexes.
-- With Quickwit `0.9`, Ingest V2 is enabled by default and is used by the existing `/api/v1/<index-id>/ingest` endpoint. It distributes indexing in the cluster regardless of which node received the request.
-- Kafka, Pulsar, and Kinesis are still good choices when you want a durable external queue, replay, source partitioning, or exactly-once queue consumption.
-- On Quickwit `0.8` and earlier, indexing one source across multiple indexers was documented as Kafka-only. Do not apply that older limitation to Rootprint's required Quickwit `0.9` setup.
 
 ## The Quickwit metastore is the first thing to fix
 
@@ -79,75 +61,35 @@ Use a managed Postgres service unless you already operate Postgres yourself.
 
 See [Quickwit metastore configuration](https://quickwit.io/docs/main-branch/configuration/metastore-config) for connection-string options and metastore behavior.
 
-## Kafka is optional, not required for multiple indexes
+## Move index storage to object storage
 
-A single Quickwit indexer with 4 vCPUs is a good place to start. Quickwit's sizing guide says
-indexers can handle roughly `7.5 MB/s` per core, and the deployment guide uses `20-40 MB/s` for a
-small 4-vCPU indexer as a practical starting range.
+Quickwit decouples compute from storage: indexers and searchers are stateless and share their state
+through object storage and the metastore, not a local disk. That decoupling is what lets the cluster
+scale — but it only works once index data lives somewhere every node can reach.
 
-You do **not** need Kafka just because you create multiple Quickwit indexes. Quickwit's own sizing
-guide says multiple indexes are one way to break indexing work into multiple pipelines, and the
-Quickwit `0.8` release blog describes the Ingest V2 work as designed for large multi-index
-clusters.
-
-The practical choices are:
-
-- Keep using Rootprint's NDJSON gateway and OTLP endpoint for normal Rootprint deployments. Rootprint forwards ingest to Quickwit's HTTP APIs; the NDJSON gateway uses Quickwit's ingest endpoint, which uses Ingest V2 by default in `0.9`.
-- Use Kafka, Pulsar, or Kinesis when producers already write to a queue, when you need replay, or when you want Quickwit to consume a durable partitioned stream directly.
-- Use Kafka specifically if you are operating Quickwit `0.8` or earlier and need one source indexed by several indexers. Rootprint does not support those older Quickwit versions.
-- Add Quickwit searcher nodes when search concurrency or heavy aggregations are the bottleneck. Searchers are stateless and can be scaled independently of indexers.
-
-The important durability tradeoff is that Quickwit `0.9` Ingest V2 distribution is not the same as
-an external durable queue. Quickwit's docs note that future versions will add write-ahead-log
-replication for higher durability. If your ingest path must survive arbitrary Quickwit indexer loss
-and replay from a known offset, use Kafka, Pulsar, or Kinesis.
-
-## Quickwit storage backend
-
-Bundled Compose uses a Docker volume on local disk. For a multi-node Quickwit cluster, move index
-data to object storage:
+The bundled Compose keeps index data in a local Docker volume, which is single-node only. For any
+multi-node cluster, move it to shared object storage:
 
 - Set `QW_DEFAULT_INDEX_ROOT_URI` to an object storage URI such as `s3://my-bucket/indexes`.
-- Keep `QW_METASTORE_URI` on PostgreSQL for distributed Quickwit.
-- Configure credentials and storage flavor for every Quickwit node.
-- Give every indexer its own local `data_dir` for the split cache, ingest queue, and in-progress split work. This directory is node-local cache/workspace, not shared storage.
+- Keep `QW_METASTORE_URI` on PostgreSQL, and configure the same storage credentials and flavor on every node.
 
-Quickwit supports S3 and S3-compatible storage, Azure Blob Storage, Google Cloud Storage, and local
-file storage. Local file storage is for single-server deployments. Cluster mode requires shared
-index storage such as S3 or MinIO.
+Quickwit supports S3 and S3-compatible storage (MinIO, Garage, DigitalOcean Spaces), Azure Blob
+Storage, and Google Cloud Storage. The [Docker Compose install page](/install/docker-compose#use-s3-for-storage)
+shows the S3 setup; the [storage reference](https://quickwit.io/docs/main-branch/configuration/storage-config)
+covers the other backends.
 
-The [Docker Compose install page](/install/docker-compose#use-s3-for-storage) shows the S3 setup.
-The [Quickwit storage reference](https://quickwit.io/docs/main-branch/configuration/storage-config)
-covers Azure, GCS, and S3-compatible flavors such as MinIO, Garage, and DigitalOcean Spaces.
+## Scale the Quickwit cluster to your load
 
-## Quickwit cluster shape
+Quickwit ships as a single binary that runs any combination of services — indexers, searchers, a
+control plane, a metastore service, and a janitor — selected per node with `quickwit run --service ...`
+or `QW_ENABLED_SERVICES`. Because nodes coordinate through PostgreSQL and object storage, you grow
+the cluster by adding nodes, not by resizing one machine.
 
-Quickwit is distributed as one binary or Docker image. You choose which services run on a node with
-the `quickwit run --service ...` option or with `QW_ENABLED_SERVICES`.
-
-For Kubernetes, start from the official [Quickwit Helm chart](https://quickwit.io/docs/main-branch/deployment/kubernetes/helm). For your own deployment, these are the minimum cluster settings to understand:
-
-```yaml
-# Start this node with: quickwit run --service indexer --config quickwit.yaml
-version: 0.7
-cluster_id: rootprint-quickwit
-node_id: quickwit-indexer-1
-listen_address: 0.0.0.0
-peer_seeds:
-  - quickwit-0.internal:7280
-  - quickwit-1.internal:7280
-metastore_uri: postgres://quickwit:secret@postgres:5432/quickwit_metastore
-default_index_root_uri: s3://my-bucket/quickwit-indexes
-```
-
-Operational notes from the Quickwit docs:
-
-- Each node needs a unique `node_id` and a shared `cluster_id`.
-- `listen_address` defaults to `127.0.0.1`, which is not valid for forming a cluster.
-- `peer_seeds` bootstraps cluster discovery. It does not need to list every node.
-- In Kubernetes, use a headless service for `peer_seeds`.
-- Control plane, Quickwit metastore service, and janitor are lightweight. Quickwit's sizing guide recommends one replica of each.
-- Scale indexers for ingest throughput and searchers for query concurrency.
+How far you scale is up to you and driven by your workload: add **indexers** when ingest throughput
+is the bottleneck, and add **searchers** (stateless, sized by query concurrency) when search or
+aggregations are. The control plane, metastore service, and janitor are lightweight — one of each is
+usually enough. For Kubernetes, start from the official
+[Quickwit Helm chart](https://quickwit.io/docs/main-branch/deployment/kubernetes/helm).
 
 ## Sizing rough numbers
 
@@ -162,14 +104,8 @@ Use these as starting points and measure. Quickwit's cluster sizing guide is the
 | Searcher disk | Searchers do not need disk unless you enable the searcher split cache. |
 | PostgreSQL metastore | For most Quickwit clusters, Quickwit recommends a PostgreSQL instance with `1` core and `4 GB` RAM. |
 
-Searcher nodes are stateless. Size them by query concurrency and aggregation load, not by total data
-volume. Adding or removing searchers does not move index data.
-
-## Monitoring
-
-Quickwit exposes Prometheus metrics on the same port as the REST API (`/metrics`). For a starter Grafana setup, see [Monitoring Quickwit with Grafana](https://quickwit.io/docs/operating/monitoring-with-grafana).
-
-Rootprint itself does not currently emit Prometheus metrics. The `/api/health` endpoint reports liveness and the connectivity status of the Quickwit backend.
+Size searchers by query concurrency and aggregation load, not by total data volume — adding or
+removing them never moves index data.
 
 ## Related
 
@@ -177,8 +113,6 @@ Rootprint itself does not currently emit Prometheus metrics. The `/api/health` e
 - [Custom indexes](/configuration/custom-indexes): where to put `commit_timeout_secs` and `indexing_resources.heap_size`.
 - [Environment variables](/configuration/environment-variables): the Rootprint-side configuration surface.
 - [Quickwit deployment modes](https://quickwit.io/docs/main-branch/deployment/deployment-modes): upstream cluster topology.
-- [Quickwit Ingest API](https://quickwit.io/docs/main-branch/ingest-data/ingest-api#ingest-api-versions): Ingest V2 behavior in `0.9`.
 - [Quickwit cluster sizing](https://quickwit.io/docs/main-branch/deployment/cluster-sizing): upstream sizing guidance.
 - [Quickwit metastore configuration](https://quickwit.io/docs/main-branch/configuration/metastore-config): PostgreSQL and file-backed metastore rules.
 - [Quickwit storage configuration](https://quickwit.io/docs/main-branch/configuration/storage-config): supported index storage backends.
-- [Quickwit 0.8 release blog](https://quickwit.io/blog/quickwit-0.8): Ingest V2 beta and large multi-index cluster context.

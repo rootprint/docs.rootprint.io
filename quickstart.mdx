@@ -10,7 +10,7 @@ This guide walks you through deploying Rootprint locally, signing in, and sendin
     Follow the [Docker Compose installation guide](/install/docker-compose) to start Rootprint. The quickest option is:
 
     ```bash
-    curl -O https://raw.githubusercontent.com/rootprint/docs.rootprint.io/main/files/docker-compose.yml
+    curl -o docker-compose.yml https://docs.rootprint.io/files/docker-compose.yaml
     docker compose up -d
     ```
 
@@ -18,15 +18,15 @@ This guide walks you through deploying Rootprint locally, signing in, and sendin
 
 <Step title="Create the admin account">
 	Open [http://localhost:8282](http://localhost:8282) in your browser. On first boot, Rootprint
-	redirects you to the setup wizard at `/auth/setup-admin`. Enter your desired admin credentials and
+	redirects you to the setup wizard. Enter your desired admin credentials and
 	submit the form. You will be signed in automatically after setup completes.
 </Step>
 
   <Step title="Create an ingest API key">
     Rootprint requires a bearer API key to accept log data. To create one:
 
-    1. In the top navigation, go to **Settings → API keys**.
-    2. Click **Create API key**, give it a name, pick the index it will write to, and choose the **Ingest** role.
+    1. In the sidebar, open **Settings → API keys**.
+    2. Click **Create API key**, give it a name, pick the bundled `otel-logs-v0_9` index, and choose the **Ingest** role.
     3. The value is shown once on creation — copy it before clicking **Done**. You can re-reveal it later with the eye icon on the key's row.
 
     You will use this API key in the next step to authenticate your log shipper.
@@ -40,13 +40,11 @@ This guide walks you through deploying Rootprint locally, signing in, and sendin
     curl -X POST 'http://localhost:8282/api/ingest/ndjson' \
       -H 'Authorization: Bearer <your-ingest-token>' \
       -H 'Content-Type: application/x-ndjson' \
-      --data-binary @- <<'EOF'
-    {"timestamp_nanos":1776340800000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{"user_id":"alice"},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":1776340800000000000,"severity_number":9,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
-    {"timestamp_nanos":1776340860000000000,"severity_text":"ERROR","body":{"message":"Connection timeout"},"service_name":"api-gateway","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":1776340860000000000,"severity_number":17,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
+      --data-binary @- <<EOF
+    {"timestamp_nanos":$(date +%s)000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{"user_id":"alice"},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":9,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
+    {"timestamp_nanos":$(date +%s)000000000,"severity_text":"ERROR","body":{"message":"Connection timeout"},"service_name":"api-gateway","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":17,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
     EOF
     ```
-
-    The ingest endpoint accepts NDJSON format — one JSON object per line, with no trailing comma.
 
   </Step>
 
@@ -59,6 +57,6 @@ This guide walks you through deploying Rootprint locally, signing in, and sendin
 
 - [Read the Send Logs guide](/send-logs/overview) to understand the default OpenTelemetry path and the authenticated HTTP gateway.
 - [Learn the search query syntax](/search/query-language) to filter your logs precisely.
-- [Configure your index fields](/configuration/index-config) to map log level, message, and traceback fields for your data schema.
+- [Configure your index fields](/configuration/manage-indexes#field-role-mappings) to map log level, message, and traceback fields for your data schema.
 - [Set up Google OAuth](/configuration/google-auth) to let your team sign in with their company Google accounts.
 - [Explore the Ingest API reference](/api/ingest-logs) for endpoint-level details.

@@ -28,7 +28,7 @@ description: 'Ship /var/log/auth.log to Rootprint with Vector and search SSH, su
 
   <Step title="Write the Vector config">
     Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint base
-    URL and `<your-ingest-token>` with the token you copied in step 1.
+    URL and `<your-ingest-token>` with the API key you copied in step 1.
 
     ```yaml
     sources:
@@ -245,7 +245,7 @@ attributes.user.name:root
 - **Records arrive but `attributes.process.name` is missing** — the syslog regex didn't match. Most often this means the line is in RFC 5424 format or your daemon emits a non-standard prefix. Inspect the raw `body.message` in Rootprint to see the shape of the line, then adjust the regex in the `parse_auth` transform.
 - **`severity_text` is always `INFO` even for failures** — the message-pattern match runs against a lowercased copy, so case is not the issue. Check that the failure phrases your daemon actually writes match one of the alternations in the `match(lower, ...)` block; some PAM modules use phrasing the default patterns don't catch. Add the missing pattern to the alternation.
 - **SSH-specific fields (`source_ip`, `ssh_user`) are missing on `sudo` or PAM events** — by design. Those extractions only fire on SSH log lines. The other fields (`process.name`, `host.name`, `severity_text`) populate for every event.
-- **`401`, `403`, `413`, `415` from Rootprint** — same four codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
+- **`401`, `403`, `415` from Rootprint** — same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
 
 ## Related
 

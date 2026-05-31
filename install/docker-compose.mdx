@@ -14,7 +14,7 @@ This option deploys Rootprint together with PostgreSQL and a bundled Quickwit in
 Download the Compose file and start the services:
 
 ```bash
-curl -O https://raw.githubusercontent.com/rootprint/docs.rootprint.io/main/files/docker-compose.yml
+curl -o docker-compose.yml https://docs.rootprint.io/files/docker-compose.yaml
 docker compose up -d
 ```
 
@@ -135,14 +135,18 @@ Quickwit will then be reachable at `http://<host-ip>:7280` from other machines o
 
 ## Connect to an existing Quickwit instance
 
-<Note>Rootprint only supports Quickwit `0.9` and later.</Note>
+<Warning>
+	**Prerequisite: Quickwit `0.9` or later is required.** Rootprint relies on Quickwit `0.9`
+	Ingest V2 behavior and does not support `0.8` or earlier. Confirm your instance's version before
+	connecting it.
+</Warning>
 
 If you already have a Quickwit cluster running, deploy Rootprint with PostgreSQL and point it at your Quickwit instance.
 
 Download the standalone Compose file:
 
 ```bash
-curl -o docker-compose.yml https://raw.githubusercontent.com/rootprint/docs.rootprint.io/main/files/docker-compose.standalone.yml
+curl -o docker-compose.yml https://docs.rootprint.io/files/docker-compose.standalone.yaml
 ```
 
 Open `docker-compose.yml` and set `QUICKWIT_URL` to the REST API endpoint of your Quickwit instance. Do not include `/api/v1` in the URL:

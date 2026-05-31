@@ -21,11 +21,11 @@ Rootprint supports Google OAuth as an additional sign-in method alongside the de
   </Step>
 
   <Step title="Enter credentials in Rootprint">
-    In Rootprint, go to **Settings → Authentication** and find the **Google Auth** section. Enter:
+    In Rootprint, go to **Settings → Authentication**, then click **Configure** on the **Google** row. Enter:
 
     - **Client ID** — from the Google Cloud Console
     - **Client Secret** — from the Google Cloud Console
-    - **Allowed Domains** — one or more email domains whose users are permitted to sign in (e.g. `company.com`)
+    - **Allowed domains** — one or more email domains whose users are permitted to sign in (e.g. `company.com`)
 
     <Note>
       Only users with an email address ending in one of the allowed domains can sign in with Google. For example, adding `company.com` permits `alice@company.com` but blocks `user@gmail.com`. You can add multiple domains if needed.
@@ -51,9 +51,9 @@ Rootprint supports Google OAuth as an additional sign-in method alongside the de
 
 ## Removing Google auth
 
-To disable Google sign-in, go to **Settings → Authentication → Google Auth** and click
-**Remove Google Auth**. The change applies immediately and the Google sign-in button disappears
-from the sign-in page — no restart required.
+To disable Google sign-in, open **Settings → Authentication**, click **Configure** (or **Edit**) on
+the **Google** row, and click **Remove**. The change applies immediately and the Google sign-in
+button disappears from the sign-in page — no restart required.
 
 <Warning>
 	Rootprint tracks whether each user has a password set. Users who signed in exclusively via Google

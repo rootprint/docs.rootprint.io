@@ -105,10 +105,10 @@ def index():
 - **401 / 403** — the Bearer token is missing, malformed, or the `%20` separator is not URL-encoded. Re-check `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.
 - **Nothing in Search** — records are batched; wait 2–5 s or call `logger_provider.force_flush()` from your script. Also verify `OTEL_SERVICE_NAME` is set so you can filter on `service_name`.
 - **TLS errors against a self-signed endpoint** — set `OTEL_EXPORTER_OTLP_CERTIFICATE=/path/to/ca.pem`.
-- **Records rejected by Quickwit** — the token is scoped to a specific index. If that index's schema doesn't accept the record, create a token for a different index. See [Manage indexes](/configuration/manage-indexes).
+- **Records rejected by Quickwit** — the API key is scoped to a specific index. If that index's schema doesn't accept the record, create an API key for a different index. See [Manage indexes](/configuration/manage-indexes).
 
 ## Related
 
 - [OTLP reference](/send-logs/otlp) — endpoint URL, response codes, env-var table
 - [Indexes](/indexes) — `otel-logs-v0_9` schema and custom-index concepts
-- [Per Index configuration](/configuration/index-config) — map log level, message, and traceback fields
+- [Manage indexes](/configuration/manage-indexes#field-role-mappings) — map log level, message, and traceback fields

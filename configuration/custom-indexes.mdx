@@ -3,7 +3,7 @@ title: 'Create a custom index'
 description: 'Define a Quickwit index with your own schema, tokenizers, and retention policy — then point Rootprint at it.'
 ---
 
-The bundled `otel-logs-v0_9` index works for any application that emits OpenTelemetry logs. For everything else — audit trails, third-party log formats, application events with a specialized schema — create an index in Quickwit with the fields and types your data needs, then map it into the Rootprint UI from [Per Index configuration](/configuration/index-config).
+The bundled `otel-logs-v0_9` index works for any application that emits OpenTelemetry logs. For everything else — audit trails, third-party log formats, application events with a specialized schema — create an index in Quickwit with the fields and types your data needs, then map it into the Rootprint UI from the index's [Configuration tab](/configuration/manage-indexes#configuration-tab).
 
 This page covers the index definition you send to Quickwit. For routing logs once the index exists, see the [HTTP NDJSON gateway](/send-logs/http).
 
@@ -169,12 +169,12 @@ For the merge policy and other tuning knobs, see the upstream [Quickwit index co
 Once the index exists in Quickwit:
 
 1. Open **Settings → Indexes** and click the new index.
-2. On the **Configuration** tab, set the [field mappings](/configuration/index-config) so the message, level, and traceback render correctly.
+2. On the **Configuration** tab, set the [field mappings](/configuration/manage-indexes#field-role-mappings) so the message, level, and traceback render correctly.
 3. Create an [ingest API key](/api/overview) scoped to the index and route writes through the [NDJSON gateway](/send-logs/http) or, for OpenTelemetry-shaped data, the [OTLP endpoint](/send-logs/otlp).
 
 ## Related
 
 - [Quickwit index configuration reference](https://quickwit.io/docs/configuration/index-config) — the full upstream schema.
 - [Indexes](/indexes) — the bundled `otel-logs-v0_9` schema.
-- [Per Index configuration](/configuration/index-config) — Rootprint field-role mapping.
+- [Manage indexes](/configuration/manage-indexes#field-role-mappings) — Rootprint field-role mapping.
 - [Search query syntax](/search/query-language) — what users can query against your fields.

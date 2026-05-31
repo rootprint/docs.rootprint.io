@@ -59,7 +59,7 @@ Two setup paths are documented below. **Bare-metal** runs Vector as a `systemd` 
 
   <Step title="Write the Vector config">
     Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint
-    base URL and `<your-ingest-token>` with the token you copied in step 1.
+    base URL and `<your-ingest-token>` with the API key you copied in step 1.
 
     ```yaml
     sources:
@@ -308,7 +308,7 @@ Two setup paths are documented below. **Bare-metal** runs Vector as a `systemd` 
 
   <Step title="Save the Vector config">
     Save the following as `vector.yaml` next to your `compose.yml`. Replace `<your-rootprint>` with
-    your Rootprint base URL and `<your-ingest-token>` with the token you copied in step 1.
+    your Rootprint base URL and `<your-ingest-token>` with the API key you copied in step 1.
 
     ```yaml
     sources:
@@ -590,7 +590,7 @@ service.name:caddy AND attributes.caddy.logger:http.log.access
 - **Records arrive but `attributes.http.*` are missing** — the entry came from `error.log` (no `.request` block), by design. Filter access-log entries with `attributes.caddy.logger:http.log.access`.
 - **`body` looks like raw JSON instead of just the message** — the access log is using a non-default `format` directive in the Caddyfile. The parser expects Caddy's default JSON encoder. Either remove the `format` directive or extend the `parse_caddy` remap to handle the alternate shape.
 - **`severity_text` is always `INFO` even for 5xx responses** — by design. Caddy emits every HTTP access at `level: info` regardless of status code; this parser trusts the source. Filter on `attributes.http.response.status_code:>=500` to surface server errors.
-- **`401`, `403`, `413`, `415` from Rootprint** — same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
+- **`401`, `403`, `415` from Rootprint** — same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
 - **Docker setup ships zero logs** — `include_containers` does not match the Caddy container's actual name. Run `docker ps --format '{{.Names}}'` to see the real names. Either set `container_name: caddy` on your Caddy compose service or update `include_containers` in `vector.yaml`.
 - **Vector container exits with `permission denied` on `/var/run/docker.sock`** — rootless Docker or SELinux. Either run Docker rootful, add `:z` to the socket mount on SELinux hosts, or grant the Vector image's user access to the docker group inside the image.
 - **`host.name` always reads the Vector container ID** — by default `get_hostname!()` returns the container's hostname, which Docker sets to the container ID. Set `hostname: <your-host>` on the `rootprint-vector` compose service to override.

@@ -28,7 +28,7 @@ description: 'Tail log files on a Linux host with Vector and ship them to Rootpr
 
   <Step title="Write the Vector config">
     Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint base
-    URL, `<your-ingest-token>` with the token you copied in step 1, `/var/log/myapp/*.log` with
+    URL, `<your-ingest-token>` with the API key you copied in step 1, `/var/log/myapp/*.log` with
     the glob that matches your application's log files, and `myapp` with your service name.
 
     ```yaml
@@ -98,8 +98,8 @@ description: 'Tail log files on a Linux host with Vector and ship them to Rootpr
 
     `read_from: end` skips existing content on first start, so installing Vector against an
     existing log file does not replay everything that was already there. Flip it to `beginning`
-    if you want a one-time backfill. `batch.max_bytes` is set to 8 MiB — comfortably below
-    Rootprint's 10 MB OTLP body limit even after gzip variance.
+    if you want a one-time backfill. `batch.max_bytes` is set to 8 MiB — a conservative size that
+    stays well within typical reverse-proxy and upstream limits even after gzip variance.
 
   </Step>
 
@@ -160,9 +160,10 @@ Field-by-field:
 - **`401` from Rootprint** — the `Authorization` header is missing or malformed. Confirm the value
   under `sinks.rootprint.protocol.request.headers.Authorization` reads exactly `Bearer <token>`,
   with a single space between `Bearer` and the token.
-- **`403` from Rootprint** — the token's index scope does not match `otel-logs-v0_9`, or the token
-  was revoked. Mint a fresh ingest API key for `otel-logs-v0_9` in **Settings → API keys**.
-- **`413` from Rootprint** — a single batch exceeded 10 MB on the wire. Lower
+- **`403` from Rootprint** — the API key's index scope does not match `otel-logs-v0_9`, or the key
+  has been deleted. Mint a fresh ingest API key for `otel-logs-v0_9` in **Settings → API keys**.
+- **`413` from a proxy in front of Rootprint** — a single batch was too large on the wire. Rootprint
+  itself sets no OTLP body-size limit, but a reverse proxy may. Lower
   `sinks.rootprint.protocol.batch.max_bytes`.
 - **`415` from Rootprint** — encoding is misconfigured. The `encoding.codec` value must be `otlp`;
   any other value sends a content type Rootprint rejects.
@@ -180,4 +181,4 @@ Field-by-field:
 
 - [OTLP reference](/send-logs/otlp) — endpoint URL, response codes, body limits.
 - [Indexes](/indexes) — the `otel-logs-v0_9` schema, so you know what you can search.
-- [Manage indexes](/configuration/manage-indexes) — token lifecycle and per-index permissions.
+- [Manage indexes](/configuration/manage-indexes) — API key lifecycle and per-index permissions.

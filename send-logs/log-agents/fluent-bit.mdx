@@ -32,7 +32,7 @@ description: 'Tail log files on a Linux host with Fluent Bit and ship them to Ro
   <Step title="Write the Fluent Bit config">
     Save the following at `/etc/fluent-bit/fluent-bit.conf`. Replace `<your-rootprint-host>` with the
     hostname of your Rootprint deployment, `<port>` with `443` (HTTPS) or `80` (HTTP) or whatever
-    custom port you serve on, `<your-ingest-token>` with the token you copied in step 1, and
+    custom port you serve on, `<your-ingest-token>` with the API key you copied in step 1, and
     `/var/log/myapp/*.log` with the glob that matches your application's log files.
 
     ```ini
@@ -141,9 +141,10 @@ If your systemd unit drops privileges to a non-root user, also `sudo chown -R fl
 - **`401` from Rootprint** — the `Authorization` header is missing or malformed. Confirm the value
   on the `Header` line reads exactly `Authorization Bearer <token>`, with one space between
   `Authorization` and `Bearer` and one between `Bearer` and the token.
-- **`403` from Rootprint** — the token's index scope does not match `otel-logs-v0_9`, or the token
-  was revoked. Mint a fresh ingest API key for `otel-logs-v0_9` in **Settings → API keys**.
-- **`413` from Rootprint** — a single batch exceeded 10 MB on the wire. Lower the output batch size
+- **`403` from Rootprint** — the API key's index scope does not match `otel-logs-v0_9`, or the key
+  has been deleted. Mint a fresh ingest API key for `otel-logs-v0_9` in **Settings → API keys**.
+- **`413` from a proxy in front of Rootprint** — a single batch was too large on the wire. Rootprint
+  itself sets no OTLP body-size limit, but a reverse proxy may. Lower the output batch size
   by setting `Workers 1` and reducing `Mem_Buf_Limit` on the `[INPUT]` block, or split the
   upstream load across multiple `[INPUT]` instances.
 - **`415` from Rootprint** — wrong output plugin selected. The `Name` line on the `[OUTPUT]` block
@@ -167,4 +168,4 @@ If your systemd unit drops privileges to a non-root user, also `sudo chown -R fl
 
 - [OTLP reference](/send-logs/otlp) — endpoint URL, response codes, body limits.
 - [Indexes](/indexes) — the `otel-logs-v0_9` schema, so you know what you can search.
-- [Manage indexes](/configuration/manage-indexes) — token lifecycle and per-index permissions.
+- [Manage indexes](/configuration/manage-indexes) — API key lifecycle and per-index permissions.
