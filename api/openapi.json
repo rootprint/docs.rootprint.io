@@ -71,7 +71,7 @@
 				"type": "http",
 				"scheme": "bearer",
 				"description": "Search token generated in the Rootprint admin panel.",
-				"x-default": "rootprint_search_token"
+				"x-default": "Bearer rootprint_search_token"
 			}
 		},
 		"schemas": {
