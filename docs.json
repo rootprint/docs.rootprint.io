@@ -73,7 +73,7 @@
 			"directory": "api/reference"
 		},
 		"playground": {
-			"display": "interactive"
+			"display": "simple"
 		},
 		"params": {
 			"expanded": "closed",

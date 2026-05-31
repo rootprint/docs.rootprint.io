@@ -33,7 +33,7 @@ Set `Content-Type: application/x-ndjson`. The body must contain one JSON object 
 ## Example request
 
 ```bash
-curl -X POST 'https://logs.example.com/api/ingest/ndjson' \
+curl -X POST 'https://your-rootprint-host/api/ingest/ndjson' \
   -H 'Authorization: Bearer lwit_abc123' \
   -H 'Content-Type: application/x-ndjson' \
   --data-binary @- <<'EOF'
