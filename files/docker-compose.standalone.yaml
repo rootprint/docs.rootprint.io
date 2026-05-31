@@ -15,7 +15,7 @@ services:
       retries: 10
 
   rootprint:
-    image: ghcr.io/oleksandr-zhyhalo/rootprint:latest
+    image: ghcr.io/rootprint/rootprint:latest
     restart: unless-stopped
     depends_on:
       db:
