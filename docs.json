@@ -304,7 +304,6 @@
               "GET /api/admin/cluster",
               "GET /api/admin/activity/summary",
               "GET /api/admin/activity/latency",
-              "GET /api/admin/activity/slowest",
               "GET /api/admin/activity/top-actors",
               "GET /api/admin/activity/users/{userId}/summary",
               "GET /api/admin/activity/users/{userId}/volume",
