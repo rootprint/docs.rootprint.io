@@ -1,9 +1,9 @@
 ---
-title: 'Send logs over HTTP (NDJSON gateway)'
-description: 'Authenticated NDJSON gateway in front of Quickwit - push logs to the index attached to your ingest API key using whatever schema that index expects.'
+title: 'Send logs over HTTP'
+description: 'Authenticated HTTP endpoint in front of Quickwit - push logs to the index attached to your ingest API key using whatever schema that index expects.'
 ---
 
-Rootprint exposes an authenticated NDJSON gateway at `/api/ingest/ndjson`. Each ingest API key is scoped to a single index; Rootprint forwards the request body unmodified to Quickwit. Use this endpoint when you already control the wire format and want to write to a custom-schema index.
+Rootprint exposes an authenticated HTTP endpoint at `/api/ingest/ndjson`. Each ingest API key is scoped to a single index; Rootprint forwards the request body unmodified to Quickwit. Use this endpoint when you already control the wire format and want to write to a custom-schema index.
 
 <Note>
 	For OpenTelemetry-instrumented apps, prefer the [OTLP endpoint](/send-logs/otlp) — it handles
@@ -14,7 +14,7 @@ Rootprint exposes an authenticated NDJSON gateway at `/api/ingest/ndjson`. Each 
 
 <Steps>
   <Step title="Pick the target index">
-    Decide which Quickwit index you'll write to. The default OTEL index is `otel-logs-v0_9` — see [Indexes](/indexes) for its schema, or follow [Create a custom index](/configuration/custom-indexes) to define your own first.
+    Decide which Quickwit index you'll write to. The built-in OTEL index is `otel-logs-v0_9` — see [Indexes](/indexes) for its schema, or follow [Create a custom index](/configuration/custom-indexes) to define your own first.
   </Step>
 
 <Step title="Create an ingest API key">
@@ -23,7 +23,7 @@ Rootprint exposes an authenticated NDJSON gateway at `/api/ingest/ndjson`. Each 
 	reuse one across indexes.
 </Step>
 
-  <Step title="POST NDJSON to the gateway">
+  <Step title="POST NDJSON to the endpoint">
     Replace `<your-rootprint>` and `<your-ingest-token>`. The payload is one JSON document per line - no trailing comma.
 
     ```bash
@@ -59,7 +59,7 @@ Rootprint forwards the body unchanged. You must send the format your API key's Q
 ## Related
 
 - [OTLP reference](/send-logs/otlp) — for OpenTelemetry apps
-- [Indexes](/indexes) — default OTEL schema
+- [Indexes](/indexes) — built-in OTEL schema
 - [Create a custom index](/configuration/custom-indexes) — define your own schema in Quickwit
 - [Manage indexes](/configuration/manage-indexes#field-role-mappings) — map log level, message, and traceback
 - [POST /api/ingest/ndjson](/api/ingest-logs) — endpoint reference

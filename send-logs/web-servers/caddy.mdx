@@ -16,8 +16,8 @@ Two setup paths are documented below. **Bare-metal** runs Vector as a `systemd` 
 
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
-    The default index for OTLP traffic is `otel-logs-v0_9` — see [Indexes](/indexes) for its
-    schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
+    Logs land in whichever index your ingest token is scoped to — these guides use the built-in
+    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
     `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once — copy it before
     clicking **Done**. API keys are scoped to one index — you cannot reuse one across indexes.
   </Step>

@@ -1,12 +1,12 @@
 ---
 title: 'Send logs'
-description: 'Pick the right ingestion path: OTLP for anything OpenTelemetry, the NDJSON gateway for custom-schema indexes.'
+description: 'Pick the right ingestion path: OTLP for anything OpenTelemetry, the HTTP endpoint for custom-schema indexes.'
 ---
 
 Rootprint accepts logs two ways:
 
-- **OTLP HTTP** — the OpenTelemetry Protocol. Use this with any OTEL SDK, the OTEL Collector, or a sidecar that speaks OTLP. Records land in your OTEL logs index (`otel-logs-v0_9` by default).
-- **Rootprint NDJSON gateway** — an authenticated HTTP endpoint that forwards NDJSON straight to a Quickwit index. Use this when you control the wire format and want to write to a custom-schema index.
+- **OTLP HTTP** — OpenTelemetry logs over HTTP (protobuf). Use this with any OTEL SDK, the OTEL Collector, or a sidecar that speaks OTLP. Records land in the index your ingest token is scoped to.
+- **Rootprint HTTP endpoint** — an authenticated endpoint that forwards NDJSON straight to a Quickwit index. Use this when you control the wire format and want to write to a custom-schema index.
 
 ## Pick a path
 
@@ -15,7 +15,7 @@ Rootprint accepts logs two ways:
 | An app in Python, Node.js, Go, Java, or .NET | The matching [language page](#languages) (OTLP SDK)                                      |
 | Container logs on a Linux host               | [Docker](/send-logs/platforms/docker) (OTEL Collector)                                   |
 | Logs already on disk on a Linux host         | [Fluent Bit](/send-logs/log-agents/fluent-bit) or [Vector](/send-logs/log-agents/vector) |
-| Existing pipeline that emits your own schema | [HTTP (NDJSON gateway)](/send-logs/http)                                                 |
+| Existing pipeline that emits your own schema | [HTTP endpoint](/send-logs/http)                                                        |
 | Something else that speaks OTLP              | [OTLP reference](/send-logs/otlp)                                                        |
 
 ## Integrations
@@ -44,7 +44,7 @@ Rootprint accepts logs two ways:
 ### Other
 
 <CardGroup cols={3}>
-	<Card title="HTTP (NDJSON gateway)" icon="globe" href="/send-logs/http" />
+	<Card title="HTTP endpoint" icon="globe" href="/send-logs/http" />
 </CardGroup>
 
 ## Before you start
@@ -52,6 +52,6 @@ Rootprint accepts logs two ways:
 Every path requires an **ingest API key**. API keys are created in **Settings → API keys** and are scoped to a single index — one key, one index. Pick the index you want to write to, create an ingest API key for it, and keep the value ready for the integration page you follow.
 
 <Note>
-	The built-in `otel-logs-v0_9` index is created on first boot and is ready for OTLP traffic with no
-	extra configuration. See [Indexes](/indexes) for its schema.
+	The built-in `otel-logs-v0_9` index is created on first boot, so there's an OpenTelemetry-ready
+	index to scope a token to without any extra configuration. See [Indexes](/indexes) for its schema.
 </Note>

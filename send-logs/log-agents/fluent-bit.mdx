@@ -3,7 +3,7 @@ title: 'Send logs with Fluent Bit'
 description: 'Tail log files on a Linux host with Fluent Bit and ship them to Rootprint over OTLP.'
 ---
 
-[Fluent Bit](https://fluentbit.io) is a lightweight log forwarder built for edge and host-level collection. This page sets up Fluent Bit as a `systemd` service on a Linux host: it tails files under `/var/log/`, batches the records, and ships them to Rootprint's OTLP endpoint with a Bearer token. Records land in your `otel-logs-v0_9` index, the same index every OpenTelemetry SDK writes to.
+[Fluent Bit](https://fluentbit.io) is a lightweight log forwarder built for edge and host-level collection. This page sets up Fluent Bit as a `systemd` service on a Linux host: it tails files under `/var/log/`, batches the records, and ships them to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to — `otel-logs-v0_9` in this guide.
 
 <Warning>
 	The `tail` input paths and `systemctl` invocations below assume a Linux host. Fluent Bit itself
@@ -16,8 +16,8 @@ description: 'Tail log files on a Linux host with Fluent Bit and ship them to Ro
 
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
-    The default index for OTLP traffic is `otel-logs-v0_9` — see [Indexes](/indexes) for its
-    schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
+    Logs land in whichever index your ingest token is scoped to — these guides use the built-in
+    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
     `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once — copy it before
     clicking **Done**. API keys are scoped to one index — you cannot reuse one across indexes.
   </Step>

@@ -3,7 +3,7 @@ title: 'Send logs from Go'
 description: 'Ship Go logs to Rootprint with the OpenTelemetry SDK and the slog bridge over OTLP HTTP.'
 ---
 
-Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Go SDK's `otlploghttp` exporter speaks this protocol directly, and the `otelslog` bridge lets Go's standard `slog` API emit through it. Records land in the OTEL logs index pinned by your ingest API key (default: `otel-logs-v0_9`).
+Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Go SDK's `otlploghttp` exporter speaks this protocol directly, and the `otelslog` bridge lets Go's standard `slog` API emit through it. Records land in the OTEL logs index pinned by your ingest API key (`otel-logs-v0_9` in these examples).
 
 ## Setup
 

@@ -9,7 +9,7 @@ If you are setting up log collection for the first time, start with [Send logs](
 
 <CardGroup cols={3}>
   <Card title="Send logs" icon="send" href="/send-logs/overview">
-    Choose OTLP or the NDJSON gateway and create the right ingest API key.
+    Choose OTLP or the HTTP endpoint and create the right ingest API key.
   </Card>
   <Card title="NDJSON ingest" icon="braces" href="/api/ingest-logs">
     Push newline-delimited JSON logs through Rootprint to Quickwit.
@@ -71,7 +71,7 @@ The generated endpoint reference is arranged around the audience for each endpoi
 
 Use `application/json` for most app and admin endpoints.
 
-Use `application/x-ndjson` for the NDJSON gateway.
+Use `application/x-ndjson` for the HTTP endpoint.
 
 ```http
 Content-Type: application/x-ndjson

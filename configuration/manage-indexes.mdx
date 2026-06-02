@@ -56,7 +56,7 @@ Lists every field in the index schema with its type and a **Fast** indicator (wh
 
 ### Sources tab
 
-Data sources are the pipelines Quickwit uses to receive or pull documents for the index — for example the built-in `_ingest-api-source` that backs the HTTP ingest gateway, or a Kafka or file-based source you have configured in Quickwit. Each row shows the source ID, its type, an enable/disable toggle, and a delete action.
+Data sources are the pipelines Quickwit uses to receive or pull documents for the index — for example the built-in `_ingest-api-source` that backs the HTTP ingest endpoint, or a Kafka or file-based source you have configured in Quickwit. Each row shows the source ID, its type, an enable/disable toggle, and a delete action.
 
 - **Toggle** a source off to pause ingestion from it; toggle it back on to resume.
 - **Delete** removes the source from Quickwit (confirmation required). Ingestion from it stops; you can recreate it by re-ingesting.
@@ -75,4 +75,4 @@ To prevent accidents, the modal requires you to type the exact index ID before t
 
 - [Indexes](/indexes) — schema details for the built-in OpenTelemetry index and custom index concepts.
 - [Create a custom index](/configuration/custom-indexes) — the YAML structure for non-OpenTelemetry schemas.
-- [HTTP (NDJSON gateway)](/send-logs/http) — how ingest API keys and the gateway interact with these sources.
+- [HTTP endpoint](/send-logs/http) — how ingest API keys and the endpoint interact with these sources.

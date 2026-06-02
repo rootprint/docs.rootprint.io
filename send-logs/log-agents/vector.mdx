@@ -3,7 +3,7 @@ title: 'Send logs with Vector'
 description: 'Tail log files on a Linux host with Vector and ship them to Rootprint over OTLP.'
 ---
 
-[Vector](https://vector.dev) is a stand-alone log collector that reads files, applies transforms, and ships records to one or more sinks. This page sets up Vector as a `systemd` service on a Linux host: it tails files under `/var/log/`, shapes each line into the OTLP wire format with a `remap` transform, and ships the result to Rootprint's OTLP endpoint with a Bearer token. Records land in your `otel-logs-v0_9` index, the same index every OpenTelemetry SDK writes to. Vector's `opentelemetry` sink is currently in beta upstream — stable enough for production logs, but worth tracking the [Vector changelog](https://github.com/vectordotdev/vector/releases) for breaking changes.
+[Vector](https://vector.dev) is a stand-alone log collector that reads files, applies transforms, and ships records to one or more sinks. This page sets up Vector as a `systemd` service on a Linux host: it tails files under `/var/log/`, shapes each line into the OTLP wire format with a `remap` transform, and ships the result to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to — `otel-logs-v0_9` in this guide. Vector's `opentelemetry` sink is currently in beta upstream — stable enough for production logs, but worth tracking the [Vector changelog](https://github.com/vectordotdev/vector/releases) for breaking changes.
 
 <Warning>
 	The `file` source paths and `systemctl` invocations below assume a Linux host. Vector itself runs
@@ -14,8 +14,8 @@ description: 'Tail log files on a Linux host with Vector and ship them to Rootpr
 
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
-    The default index for OTLP traffic is `otel-logs-v0_9` — see [Indexes](/indexes) for its
-    schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
+    Logs land in whichever index your ingest token is scoped to — these guides use the built-in
+    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
     `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once — copy it before
     clicking **Done**. API keys are scoped to one index — you cannot reuse one across indexes.
   </Step>
