@@ -12,7 +12,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
     <Tabs>
       <Tab title="OTEL SDK">
         ```bash
-        npm install @opentelemetry/api-logs @opentelemetry/sdk-node @opentelemetry/sdk-logs @opentelemetry/exporter-logs-otlp-proto
+        npm install @opentelemetry/api-logs @opentelemetry/sdk-logs @opentelemetry/exporter-logs-otlp-proto @opentelemetry/resources
         ```
       </Tab>
       <Tab title="Pino">
@@ -22,7 +22,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
       </Tab>
       <Tab title="Winston">
         ```bash
-        npm install winston @opentelemetry/api-logs @opentelemetry/sdk-node @opentelemetry/sdk-logs @opentelemetry/exporter-logs-otlp-proto @opentelemetry/winston-transport
+        npm install winston @opentelemetry/api-logs @opentelemetry/sdk-logs @opentelemetry/exporter-logs-otlp-proto @opentelemetry/winston-transport @opentelemetry/resources
         ```
       </Tab>
     </Tabs>
@@ -47,18 +47,26 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
       <Tab title="OTEL SDK">
         ```javascript
         import { logs } from '@opentelemetry/api-logs';
-        import { NodeSDK } from '@opentelemetry/sdk-node';
-        import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
+        import { LoggerProvider, BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
         import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-proto';
+        import { defaultResource, detectResources, envDetector } from '@opentelemetry/resources';
 
-        const sdk = new NodeSDK({
-            logRecordProcessors: [new BatchLogRecordProcessor(new OTLPLogExporter())]
+        // Pick up service.name (and anything in OTEL_RESOURCE_ATTRIBUTES) from the environment
+        const resource = defaultResource().merge(
+            detectResources({ detectors: [envDetector] })
+        );
+
+        const provider = new LoggerProvider({
+            resource,
+            processors: [new BatchLogRecordProcessor(new OTLPLogExporter())]
         });
 
-        sdk.start();
+        logs.setGlobalLoggerProvider(provider);
 
         logs.getLogger('hello').emit({ severityText: 'INFO', body: 'Hello from Node to Rootprint' });
-        await sdk.shutdown();
+
+        await provider.forceFlush();
+        await provider.shutdown(); // optional — flushes and stops the processor cleanly
         ```
       </Tab>
       <Tab title="Pino">
@@ -81,17 +89,22 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
       <Tab title="Winston">
         ```javascript
         import { logs } from '@opentelemetry/api-logs';
-        import { NodeSDK } from '@opentelemetry/sdk-node';
-        import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
+        import { LoggerProvider, BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
         import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-proto';
+        import { defaultResource, detectResources, envDetector } from '@opentelemetry/resources';
         import { OpenTelemetryTransportV3 } from '@opentelemetry/winston-transport';
         import winston from 'winston';
 
-        const sdk = new NodeSDK({
-            logRecordProcessors: [new BatchLogRecordProcessor(new OTLPLogExporter())]
+        const resource = defaultResource().merge(
+            detectResources({ detectors: [envDetector] })
+        );
+
+        const provider = new LoggerProvider({
+            resource,
+            processors: [new BatchLogRecordProcessor(new OTLPLogExporter())]
         });
 
-        sdk.start();
+        logs.setGlobalLoggerProvider(provider);
 
         const logger = winston.createLogger({
             level: 'info',
@@ -100,9 +113,9 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
 
         logger.info('Hello from Winston to Rootprint');
 
-        // Short-lived scripts should shut down the SDK before exit so the
+        // Short-lived scripts should shut down the provider before exit so the
         // batch processor can flush buffered records.
-        await sdk.shutdown();
+        await provider.shutdown();
         ```
       </Tab>
     </Tabs>
@@ -139,15 +152,20 @@ Initialise the SDK once at process start, then log from anywhere. Keep the setup
 ```javascript
 // otel.js
 import { logs } from '@opentelemetry/api-logs';
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
+import { LoggerProvider, BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-proto';
+import { defaultResource, detectResources, envDetector } from '@opentelemetry/resources';
 
-const sdk = new NodeSDK({
-	logRecordProcessors: [new BatchLogRecordProcessor(new OTLPLogExporter())]
+const resource = defaultResource().merge(
+	detectResources({ detectors: [envDetector] })
+);
+
+const provider = new LoggerProvider({
+	resource,
+	processors: [new BatchLogRecordProcessor(new OTLPLogExporter())]
 });
 
-sdk.start();
+logs.setGlobalLoggerProvider(provider);
 
 export const logger = logs.getLogger('express-app');
 ```
@@ -176,7 +194,7 @@ app.listen(3000);
 ## Troubleshooting
 
 - **401 / 403** — the Bearer token is missing, malformed, or the `%20` separator is not URL-encoded. Re-check `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.
-- **Nothing in Search** — the batch processor buffers records. For short-lived scripts call `await sdk.shutdown()` before exit.
+- **Nothing in Search** — the batch processor buffers records. For short-lived scripts call `await provider.forceFlush()` (or `await provider.shutdown()`) before exit.
 - **`fetch is not defined`** — upgrade to Node.js 18+ or pass a polyfilled fetch to the exporter.
 - **Pino transport not emitting** — `pino-opentelemetry-transport` reads the `OTEL_*` env vars itself; make sure they are set in the process that spawns the transport worker.
 - **TLS errors against a self-signed endpoint** — set `NODE_EXTRA_CA_CERTS=/path/to/ca.pem`.
