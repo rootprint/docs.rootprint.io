@@ -160,6 +160,7 @@
             "pages": [
               "configuration/environment-variables",
               "configuration/google-auth",
+              "configuration/github-auth",
               "configuration/reset-admin-password",
               "configuration/manage-indexes",
               "configuration/custom-indexes"
