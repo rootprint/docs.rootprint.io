@@ -7,8 +7,9 @@ The **Settings → Indexes** section gives admins a single place to inspect ever
 
 <Note>
 	Index actions proxy directly to the Quickwit metastore. Reads (the index list, fields, and
-	sources) are fetched live from Quickwit, and changes such as deleting an index or toggling a
-	source apply to Quickwit itself, not just Rootprint's local metadata.
+	sources) are fetched live from Quickwit, and changes such as deleting an index or creating,
+	editing, toggling, or deleting a source apply to Quickwit itself, not just Rootprint's local
+	metadata.
 </Note>
 
 ## Indexes list
@@ -56,10 +57,83 @@ Lists every field in the index schema with its type and a **Fast** indicator (wh
 
 ### Sources tab
 
-Data sources are the pipelines Quickwit uses to receive or pull documents for the index — for example the built-in `_ingest-api-source` that backs the HTTP ingest endpoint, or a Kafka or file-based source you have configured in Quickwit. Each row shows the source ID, its type, an enable/disable toggle, and a delete action.
+Data sources are the pipelines Quickwit uses to receive or pull documents for the index — for example the built-in `_ingest-api-source` that backs the HTTP and OTLP ingest endpoints, or an external source that pulls from Amazon Kinesis or files announced over SQS. Each row shows the source ID, its type, and whether it is enabled. Click a row to open the source detail page, or use **Create source** to add a new one.
 
-- **Toggle** a source off to pause ingestion from it; toggle it back on to resume.
-- **Delete** removes the source from Quickwit (confirmation required). Ingestion from it stops; you can recreate it by re-ingesting.
+#### Built-in sources
+
+Quickwit's own sources — `_ingest-api-source`, `_ingest-cli-source`, and any source whose type is `ingest-api`/`ingest-cli` or whose ID starts with an underscore — are managed by Quickwit. They back the HTTP and OTLP ingest endpoints and can be **viewed** but not edited, disabled, or deleted from Rootprint. Opening one shows a read-only summary of its configuration.
+
+#### Creating a source
+
+Click **Create source** on the Sources tab. Rootprint can create two source types; pick one and Quickwit starts pulling documents into this index as soon as the source is saved.
+
+| Source type                            | Pulls from                                                                                            |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Amazon Kinesis**                     | A Kinesis data stream.                                                                                 |
+| **File (S3 / SQS notifications)**      | Files referenced by messages on an SQS queue — typically S3 event notifications, or raw object URIs.  |
+
+Every source needs a **Source ID** that starts with a letter and is 3–255 characters of letters, digits, `-`, or `_`. The source ID and type are fixed once the source is created.
+
+The form is split into two tabs — **Connection** (where the data comes from) and **Transform (VRL)** (an optional per-document script). The connection fields depend on the source type:
+
+<Tabs>
+<Tab title="Amazon Kinesis">
+
+| Field            | Required | Notes                                                                                                                  |
+| ---------------- | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Stream name**  | Yes      | The Kinesis stream to consume.                                                                                         |
+| **AWS endpoint** | Yes      | Provide either a **Region** (e.g. `us-east-1`) **or** a **Custom endpoint** (e.g. `http://localhost:4566`) — not both. |
+
+AWS credentials are **not** entered in the form. Quickwit reads them from the environment of the container it runs in (standard `AWS_*` environment variables, an instance role, or other ambient credentials).
+
+</Tab>
+<Tab title="File (S3 / SQS notifications)">
+
+| Field             | Required | Notes                                                                                                                                                 |
+| ----------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **SQS queue URL** | Yes      | The SQS queue that receives the file notifications (e.g. `https://sqs.us-east-1.amazonaws.com/123456789/my-queue`).                                    |
+| **Message type**  | Yes      | How each SQS message references the file: **S3 notification** (an S3 event payload, the default) or **Raw URI** (the message body is the object URI). |
+
+As with Kinesis, AWS credentials come from the environment, not the form.
+
+</Tab>
+</Tabs>
+
+Both source types also accept three optional fields:
+
+| Field                  | Notes                                                                                                                                                            |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Input format**       | The document format on the wire. Defaults to JSON. Other choices: `json`, `plain_text`, `otlp_logs_json`, `otlp_logs_protobuf`, `otlp_traces_json`, `otlp_traces_protobuf`. |
+| **Number of pipelines**| How many indexing pipelines Quickwit runs for this source. Leave blank to use Quickwit's default of one.                                                          |
+| **VRL script**         | An optional [Vector Remap Language](https://vector.dev/docs/reference/vrl/) program run on each document before indexing — see below. Leave blank to disable.     |
+
+#### Editing a source
+
+Open a Kinesis or file source from the list to edit it in place. The same Connection and Transform tabs appear, pre-filled with the current configuration; the source ID and type are read-only. Saving applies the change to Quickwit immediately. Sources of other types (those created directly in Quickwit) and built-in sources are shown read-only.
+
+#### Transforms (VRL)
+
+The **Transform (VRL)** tab holds an optional Vector Remap Language script that runs on every document before it is indexed — useful for normalizing fields, dropping sensitive keys, or reshaping payloads. For example:
+
+```text
+.message = downcase(string!(.message))
+del(.username)
+```
+
+Leave the script blank to ingest documents unchanged.
+
+#### Enable, reset, and delete
+
+The source detail page header offers three actions for editable sources:
+
+- **Disable / Enable** pauses or resumes ingestion from the source without removing it.
+- **Reset checkpoint** clears Quickwit's position for the source so it re-processes from the beginning.
+- **Delete** removes the source from Quickwit (confirmation required). Ingestion stops; you can recreate it later.
+
+<Warning>
+	Resetting a checkpoint makes Quickwit re-read the source from the start, which can produce
+	**duplicate documents**. Use it only when you intend to re-ingest.
+</Warning>
 
 ## Deleting an index
 

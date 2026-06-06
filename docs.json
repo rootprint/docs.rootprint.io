@@ -229,7 +229,11 @@
               "GET /api/indexes/{indexId}/fields",
               "GET /api/indexes/{indexId}/config",
               "GET /api/indexes/{indexId}/stats",
+              "POST /api/indexes/{indexId}/sources",
+              "GET /api/indexes/{indexId}/sources/{sourceId}",
+              "PUT /api/indexes/{indexId}/sources/{sourceId}",
               "PATCH /api/indexes/{indexId}/sources/{sourceId}",
+              "POST /api/indexes/{indexId}/sources/{sourceId}/reset-checkpoint",
               "DELETE /api/indexes/{indexId}/sources/{sourceId}",
               "GET /api/indexes/{indexId}/preferences",
               "PUT /api/indexes/{indexId}/preferences"
@@ -257,6 +261,7 @@
             "pages": [
               "GET /api/users",
               "POST /api/users",
+              "GET /api/users/{userId}",
               "DELETE /api/users/{userId}",
               "PUT /api/users/{userId}/role",
               "POST /api/users/{userId}/password-resets",
@@ -291,7 +296,11 @@
               "GET /api/settings/auth/google",
               "PUT /api/settings/auth/google/credentials",
               "DELETE /api/settings/auth/google/credentials",
-              "PUT /api/settings/auth/google/allowed-domains"
+              "PUT /api/settings/auth/google/allowed-domains",
+              "GET /api/settings/auth/github",
+              "PUT /api/settings/auth/github/credentials",
+              "DELETE /api/settings/auth/github/credentials",
+              "PUT /api/settings/auth/github/allowed-orgs"
             ]
           },
           {
