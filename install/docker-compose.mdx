@@ -110,10 +110,10 @@ Quickwit also supports Azure Blob Storage, Google Cloud Storage, and S3-compatib
 | -------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------- |
 | AWS S3                     | `s3://bucket/path`                        | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`                                    |
 | Azure Blob Storage         | `azure://container/path`                  | `QW_AZURE_STORAGE_ACCOUNT`, `QW_AZURE_STORAGE_ACCESS_KEY`                                     |
-| Google Cloud Storage       | `gs://bucket/path`                        | Service account JSON via `GOOGLE_APPLICATION_CREDENTIALS`                                     |
+| Google Cloud Storage       | `s3://bucket/path` with `flavor: gcs`     | HMAC keys via `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`                                   |
 | MinIO / Garage / DO Spaces | `s3://bucket/path` with matching `flavor` | Provider-specific keys via `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` and `QW_S3_ENDPOINT` |
 
-S3-compatible providers need a `flavor` set on the storage config so Quickwit picks the right path-style and multipart settings. Google Cloud Storage can alternatively be reached through the S3-compatible interface using the `gcs` flavor with HMAC keys. See the [Quickwit storage reference](https://quickwit.io/docs/configuration/storage-config) for the YAML structure and the full env-var list.
+S3-compatible providers need a `flavor` set on the storage config so Quickwit picks the right path-style and multipart settings. See the [Quickwit storage reference](https://quickwit.io/docs/configuration/storage-config) for the YAML structure and the full env-var list.
 
 ### Exposing Quickwit on internal networks
 
