@@ -4,8 +4,8 @@ description: 'Ship Zig logs to Rootprint with the opentelemetry-sdk std.log brid
 ---
 
 <Warning>
-	The `opentelemetry-sdk` for Zig is in **alpha** (v0.1.1, Zig 0.15.2). It has not been
-	battle-tested in production environments. Expect breaking changes between releases.
+	The `opentelemetry-sdk` for Zig is in **alpha** (v0.1.1, Zig 0.15.2). It is not yet
+	proven in production. Expect breaking changes between releases.
 </Warning>
 
 Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Zig SDK's `std.log` bridge routes all
@@ -45,7 +45,7 @@ the OTEL logs index pinned by your ingest API key (`otel-logs-v0_9` in these exa
     export OTEL_EXPORTER_OTLP_LOGS_HEADERS=Authorization=Bearer%20<your-ingest-token>
     ```
 
-    <Warning>The `%20` after `Bearer` is required — OTEL expects URL-encoded header values.</Warning>
+    <Warning>The `%20` after `Bearer` is required. OTEL expects URL-encoded header values.</Warning>
 
   </Step>
 
@@ -116,13 +116,13 @@ The `std.log` bridge maps Zig log levels to OpenTelemetry severity numbers autom
 | `err`     | ERROR (17)    |
 
 Log messages and their format arguments become the log record **body**. Unlike Go's `slog.With`,
-the `std.log` API does not support structured key/value attributes — format args are interpolated
+the `std.log` API does not support structured key/value attributes. Format args are interpolated
 into the message string.
 
 ```zig
 std.log.info("user signed up: {s} plan={s}", .{ user_id, plan });
 ```
 
-For structured attributes, use the direct SDK API — see the
+For structured attributes, use the direct SDK API: see the
 [examples/logs/](https://github.com/zig-o11y/opentelemetry-sdk/tree/main/examples/logs) folder
 in the SDK repository.

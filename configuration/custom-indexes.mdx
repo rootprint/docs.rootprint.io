@@ -1,9 +1,9 @@
 ---
 title: 'Create a custom index'
-description: 'Define a Quickwit index with your own schema, tokenizers, and retention policy — then point Rootprint at it.'
+description: 'Define a Quickwit index with your own schema, tokenizers, and retention policy, then point Rootprint at it.'
 ---
 
-The bundled `otel-logs-v0_9` index works for any application that emits OpenTelemetry logs. For everything else — audit trails, third-party log formats, application events with a specialized schema — create an index in Quickwit with the fields and types your data needs, then map it into the Rootprint UI from the index's [Configuration tab](/configuration/manage-indexes#configuration-tab).
+The bundled `otel-logs-v0_9` index works for any application that emits OpenTelemetry logs. For everything else (audit trails, third-party log formats, application events with a specialized schema), create an index in Quickwit with the fields and types your data needs, then map it into the Rootprint UI from the index's [Configuration tab](/configuration/manage-indexes#configuration-tab).
 
 This page covers the index definition you send to Quickwit. For routing logs once the index exists, see the [HTTP endpoint](/send-logs/http).
 
@@ -49,7 +49,7 @@ curl -X POST 'http://quickwit:7280/api/v1/indexes' \
   --data-binary @my-index.yaml
 ```
 
-The index appears in **Settings → Indexes** on the next page load — no Rootprint restart needed.
+The index appears in **Settings → Indexes** on the next page load. No Rootprint restart needed.
 
 <Note>
 	Rootprint proxies index management actions to Quickwit but does not currently expose an "create
@@ -118,7 +118,7 @@ Set `timestamp_field` on `doc_mapping` to a `datetime` field marked `fast: true`
 
 - Partition splits by time, so time-bounded searches only scan relevant splits.
 - Drive the retention policy (next section).
-- Enforce search bounds — the Rootprint time picker passes `start_timestamp` and `end_timestamp` based on this field.
+- Enforce search bounds: the Rootprint time picker passes `start_timestamp` and `end_timestamp` based on this field.
 
 Without a `timestamp_field`, queries scan every split and retention has nothing to age out.
 
@@ -132,11 +132,11 @@ retention:
   schedule: daily
 ```
 
-`period` accepts durations like `48 hours`, `30 days`, `12 months`, `2 years`. `schedule` controls how often the cleanup runs — `hourly`, `daily`, `weekly`, `monthly`, `yearly`, or a cron expression.
+`period` accepts durations like `48 hours`, `30 days`, `12 months`, `2 years`. `schedule` controls how often the cleanup runs: `hourly`, `daily`, `weekly`, `monthly`, `yearly`, or a cron expression.
 
 <Warning>
 	Retention drops entire splits, so the actual cutoff floats by the split duration. A document
-	timestamped 30 days ago is not deleted at exactly day 30 — its split survives until every document
+	timestamped 30 days ago is not deleted at exactly day 30. Its split survives until every document
 	in it is past the period. Plan for hours of lag, not seconds.
 </Warning>
 
@@ -174,7 +174,7 @@ Once the index exists in Quickwit:
 
 ## Related
 
-- [Quickwit index configuration reference](https://quickwit.io/docs/configuration/index-config) — the full upstream schema.
-- [Indexes](/indexes) — the bundled `otel-logs-v0_9` schema.
-- [Manage indexes](/configuration/manage-indexes#field-role-mappings) — Rootprint field-role mapping.
-- [Search query syntax](/search/query-language) — what users can query against your fields.
+- [Quickwit index configuration reference](https://quickwit.io/docs/configuration/index-config): the full upstream schema.
+- [Indexes](/indexes): the bundled `otel-logs-v0_9` schema.
+- [Manage indexes](/configuration/manage-indexes#field-role-mappings): Rootprint field-role mapping.
+- [Search query syntax](/search/query-language): what users can query against your fields.

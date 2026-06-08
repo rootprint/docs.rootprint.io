@@ -3,12 +3,12 @@ title: 'Send logs with Fluent Bit'
 description: 'Tail log files on a Linux host with Fluent Bit and ship them to Rootprint over OTLP.'
 ---
 
-[Fluent Bit](https://fluentbit.io) is a lightweight log forwarder built for edge and host-level collection. This page sets up Fluent Bit as a `systemd` service on a Linux host: it tails files under `/var/log/`, batches the records, and ships them to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to — `otel-logs-v0_9` in this guide.
+[Fluent Bit](https://fluentbit.io) is a lightweight log forwarder built for edge and host-level collection. This page sets up Fluent Bit as a `systemd` service on a Linux host: it tails files under `/var/log/`, batches the records, and ships them to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to: `otel-logs-v0_9` in this guide.
 
 <Warning>
 	The `tail` input paths and `systemctl` invocations below assume a Linux host. Fluent Bit itself
 	runs on macOS and Windows, but this page does not cover those platforms. Fluent Bit's
-	`opentelemetry` output reaches OTLP/HTTP parity in 2.x and later — pin to a recent Fluent Bit
+	`opentelemetry` output reaches OTLP/HTTP parity in 2.x and later. Pin to a recent Fluent Bit
 	release if you can.
 </Warning>
 
@@ -16,17 +16,17 @@ description: 'Tail log files on a Linux host with Fluent Bit and ship them to Ro
 
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
-    Logs land in whichever index your ingest token is scoped to — these guides use the built-in
+    Logs land in whichever index your ingest token is scoped to. These guides use the built-in
     `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
-    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once — copy it before
-    clicking **Done**. API keys are scoped to one index — you cannot reuse one across indexes.
+    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once. Copy it before
+    clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
   </Step>
 
 <Step title="Install Fluent Bit">
 	Install the Fluent Bit package for your platform from the [official downloads
 	page](https://docs.fluentbit.io/manual/installation/downloads). Per-distro instructions
-	(Debian/Ubuntu apt, RHEL/Fedora dnf, container images, Windows installer) are maintained upstream
-	— pin to a recent release so the `opentelemetry` output is mature.
+	(Debian/Ubuntu apt, RHEL/Fedora dnf, container images, Windows installer) are maintained upstream.
+	Pin to a recent release so the `opentelemetry` output is mature.
 </Step>
 
   <Step title="Write the Fluent Bit config">
@@ -64,7 +64,7 @@ description: 'Tail log files on a Linux host with Fluent Bit and ship them to Ro
     `Read_from_Head False` skips existing content on first start, so installing Fluent Bit against
     an existing log file does not replay everything that was already there. Flip it to `True` if
     you want a one-time backfill. Without a `DB` parameter (covered below), Fluent Bit re-applies
-    `Read_from_Head` on every restart — fine for the first install, worth revisiting once the
+    `Read_from_Head` on every restart. Fine for the first install, worth revisiting once the
     setup is in production.
 
   </Step>
@@ -92,14 +92,14 @@ description: 'Tail log files on a Linux host with Fluent Bit and ship them to Ro
 
   <Step title="Verify in Rootprint">
     Open Search, pick `otel-logs-v0_9` from the index selector, and query for
-    `hello from fluent-bit`. Records typically appear within 5–10 seconds — the OTLP path commits
+    `hello from fluent-bit`. Records typically appear within 5–10 seconds. The OTLP path commits
     on Quickwit's normal cadence, there is no `commit=wait_for` knob.
   </Step>
 </Steps>
 
 ## Setting `service.name` and `host.name`
 
-The minimum config above does not populate OTLP resource attributes. Fluent Bit's `opentelemetry` output has no resource-attributes parameter — the upstream plugin treats every record-level field as an OTLP log-record attribute, not a resource attribute. The result is that rows show up under **(unknown service)** in the Rootprint service filter, and `host.name` is empty.
+The minimum config above does not populate OTLP resource attributes. Fluent Bit's `opentelemetry` output has no resource-attributes parameter. The upstream plugin treats every record-level field as an OTLP log-record attribute, not a resource attribute. Rows then show up under **(unknown service)** in the Rootprint service filter, and `host.name` is empty.
 
 To fix this, add a `record_modifier` filter that injects the fields. Insert this `[FILTER]` block between `[INPUT]` and `[OUTPUT]`:
 
@@ -113,11 +113,11 @@ To fix this, add a `record_modifier` filter that injects the fields. Insert this
 
 Replace `myapp` with the value you want to see in the Rootprint service filter. `${HOSTNAME}` is expanded from the Fluent Bit process environment; if you run Fluent Bit under `systemd`, set `Environment=HOSTNAME=%H` in the unit override or pass the value through.
 
-These fields land as OTLP log-record attributes rather than resource attributes — Rootprint's service filter falls back to log-record `service.name` when the resource attribute is missing, so the filter populates correctly. If you need a true resource-attribute split (different services multiplexed through the same Fluent Bit instance), an OpenTelemetry Collector sidecar in front of Fluent Bit is the cleaner option.
+These fields land as OTLP log-record attributes rather than resource attributes. Rootprint's service filter falls back to log-record `service.name` when the resource attribute is missing, so the filter populates correctly. If you need a true resource-attribute split (different services multiplexed through the same Fluent Bit instance), an OpenTelemetry Collector sidecar in front of Fluent Bit is the cleaner option.
 
 ## Persisting tail offsets across restarts
 
-By default the wizard config does not persist file offsets, so every Fluent Bit restart re-applies `Read_from_Head` — with `False`, that means lines written between stop and restart are skipped. For production, add a `DB` parameter to the `[INPUT]` block so Fluent Bit checkpoints offsets in SQLite:
+By default the wizard config does not persist file offsets, so every Fluent Bit restart re-applies `Read_from_Head`. With `False`, that means lines written between stop and restart are skipped. For production, add a `DB` parameter to the `[INPUT]` block so Fluent Bit checkpoints offsets in SQLite:
 
 ```ini
 [INPUT]
@@ -138,34 +138,34 @@ If your systemd unit drops privileges to a non-root user, also `sudo chown -R fl
 
 ## Troubleshooting
 
-- **`401` from Rootprint** — the `Authorization` header is missing or malformed. Confirm the value
+- **`401` from Rootprint**: the `Authorization` header is missing or malformed. Confirm the value
   on the `Header` line reads exactly `Authorization Bearer <token>`, with one space between
   `Authorization` and `Bearer` and one between `Bearer` and the token.
-- **`403` from Rootprint** — the API key's index scope does not match `otel-logs-v0_9`, or the key
+- **`403` from Rootprint**: the API key's index scope does not match `otel-logs-v0_9`, or the key
   has been deleted. Mint a fresh ingest API key for `otel-logs-v0_9` in **Settings → API keys**.
-- **`413` from a proxy in front of Rootprint** — a single batch was too large on the wire. Rootprint
+- **`413` from a proxy in front of Rootprint**: a single batch was too large on the wire. Rootprint
   itself sets no OTLP body-size limit, but a reverse proxy may. Lower the output batch size
   by setting `Workers 1` and reducing `Mem_Buf_Limit` on the `[INPUT]` block, or split the
   upstream load across multiple `[INPUT]` instances.
-- **`415` from Rootprint** — wrong output plugin selected. The `Name` line on the `[OUTPUT]` block
+- **`415` from Rootprint**: wrong output plugin selected. The `Name` line on the `[OUTPUT]` block
   must read `opentelemetry`, not `http`. The `http` plugin sends a content type Rootprint's OTLP
   endpoint rejects.
-- **Fluent Bit starts cleanly but no logs appear in Rootprint** — `Read_from_Head False` skipped the
+- **Fluent Bit starts cleanly but no logs appear in Rootprint**: `Read_from_Head False` skipped the
   existing file content. Either append a new line to trigger a read, or set `Read_from_Head True`
   for a one-time replay (Fluent Bit remembers the offset in `DB` after the first read).
-- **`permission denied` reading `/var/log/...`** — the Fluent Bit package installs a `fluent-bit`
+- **`permission denied` reading `/var/log/...`**: the Fluent Bit package installs a `fluent-bit`
   service user that owns the daemon. Either `sudo chmod a+r` the log files, or add `fluent-bit`
   to the group that owns them.
-- **`cannot open database /var/lib/fluent-bit/myapp.db` / `failed initialize input tail.0`** —
+- **`cannot open database /var/lib/fluent-bit/myapp.db` / `failed initialize input tail.0`**:
   you added a `DB` parameter (see [Persisting tail offsets across restarts](#persisting-tail-offsets-across-restarts))
   but the directory does not exist. `sudo mkdir -p /var/lib/fluent-bit` and restart.
-- **Records arrive but `body` is empty** — confirm the `Logs_body_key` value matches the field
+- **Records arrive but `body` is empty**: confirm the `Logs_body_key` value matches the field
   the `tail` input emits. The `tail` input writes the raw line under the key `log`, so
   `Logs_body_key $log` is the correct mapping. If you inserted a parser earlier in the chain that
   renames or unwraps the field, point `Logs_body_key` at the new key.
 
 ## Related
 
-- [OTLP reference](/send-logs/otlp) — endpoint URL, response codes, body limits.
-- [Indexes](/indexes) — the `otel-logs-v0_9` schema, so you know what you can search.
-- [Manage indexes](/configuration/manage-indexes) — API key lifecycle and per-index permissions.
+- [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
+- [Indexes](/indexes): the `otel-logs-v0_9` schema, so you know what you can search.
+- [Manage indexes](/configuration/manage-indexes): API key lifecycle and per-index permissions.

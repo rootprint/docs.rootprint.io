@@ -7,7 +7,7 @@ Rootprint reads indexes from your Quickwit instance and presents them as searcha
 
 ## Built-in OpenTelemetry index
 
-Rootprint ships with `otel-logs-v0_9` as its default OpenTelemetry logs index — the current schema version bundled with Quickwit `v0.9.0-rc`. Older Quickwit releases (0.8.x and earlier) still default to `otel-logs-v0_7`, so check your metastore before assuming an index name. The schema maps directly to the [OpenTelemetry Log Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/) and is ready to use without any configuration.
+Rootprint ships with `otel-logs-v0_9` as its default OpenTelemetry logs index, the current schema version bundled with Quickwit `v0.9.0-rc`. Older Quickwit releases (0.8.x and earlier) still default to `otel-logs-v0_7`, so check your metastore before assuming an index name. The schema maps directly to the [OpenTelemetry Log Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/) and is ready to use without any configuration.
 
 ### Rootprint field defaults
 
@@ -23,7 +23,7 @@ The bundled OTel index uses these paths out of the box. For custom-schema indexe
 
 ### Schema
 
-The index uses `strict` mode — every document must match the schema exactly. Arbitrary fields are not accepted at the top level. Instead, all custom key-value data goes into the `attributes`, `resource_attributes`, or `scope_attributes` JSON fields.
+The index uses `strict` mode: every document must match the schema exactly. Arbitrary fields are not accepted at the top level. Instead, all custom key-value data goes into the `attributes`, `resource_attributes`, or `scope_attributes` JSON fields.
 
 #### Core fields
 
@@ -61,7 +61,7 @@ Fields for correlating logs with distributed traces.
 
 #### Instrumentation scope
 
-Metadata about the library that produced the log. Stored but not indexed — available in results but not searchable.
+Metadata about the library that produced the log. Stored but not indexed, available in results but not searchable.
 
 | Field                            | Type   | Description                      |
 | -------------------------------- | ------ | -------------------------------- |
@@ -74,10 +74,10 @@ Metadata about the library that produced the log. Stored but not indexed — ava
 
 Understanding these two properties helps when querying and designing custom indexes:
 
-- **Indexed** — the field is added to an inverted index and is searchable via text queries. When `indexed: false`, you cannot use the field in search predicates.
-- **Fast** — the field is stored in column-oriented storage (similar to Lucene DocValues). Enables efficient range queries, aggregations, and sorting. A field can be fast without being indexed, and vice versa.
+- **Indexed**: the field is added to an inverted index and is searchable via text queries. When `indexed: false`, you cannot use the field in search predicates.
+- **Fast**: the field is stored in column-oriented storage (similar to Lucene DocValues). Enables efficient range queries, aggregations, and sorting. A field can be fast without being indexed, and vice versa.
 
-For example, `timestamp_nanos` is fast but not indexed — Quickwit uses it for time-range partitioning, not text search.
+For example, `timestamp_nanos` is fast but not indexed. Quickwit uses it for time-range partitioning, not text search.
 
 ### Tokenizers
 
@@ -142,7 +142,7 @@ trace_id:abc123def456...
 
 ## Custom indexes
 
-For non-OpenTelemetry data — audit trails, custom application events, third-party log formats — create an index with the schema your data needs. See [Create a custom index](/configuration/custom-indexes) for the YAML structure, field types, tokenizers, and retention policy. Once it exists, configure how Rootprint maps its fields from the index's [Configuration tab](/configuration/manage-indexes#configuration-tab).
+For non-OpenTelemetry data (audit trails, custom application events, third-party log formats), create an index with the schema your data needs. See [Create a custom index](/configuration/custom-indexes) for the YAML structure, field types, tokenizers, and retention policy. Once it exists, configure how Rootprint maps its fields from the index's [Configuration tab](/configuration/manage-indexes#configuration-tab).
 
 ## Next steps
 

@@ -32,11 +32,11 @@ Rootprint refuses to start if any required variable is missing, empty, or (for U
 
 These variables were honored in earlier (SQLite-era) builds and are no longer read. Setting them has no effect:
 
-- `ROOTPRINT_DATABASE_PATH` — Rootprint now requires PostgreSQL.
-- `ROOTPRINT_AUTH_SECRET` — renamed; use `BETTER_AUTH_SECRET`.
-- `ROOTPRINT_INVITE_EXPIRY_HOURS` — hard-coded to 48 hours.
-- `ROOTPRINT_RATE_LIMIT_*`, `ROOTPRINT_SIGNIN_RATE_LIMIT_MAX`, `ROOTPRINT_QUICKWIT_TIMEOUT_MS` — not currently implemented; will be re-exposed via the admin settings UI in a future release.
-- `HOST`, `BETTER_AUTH_URL`, `ROOTPRINT_SERVE_WEB`, `ROOTPRINT_WEB_ROOT` — replaced by `0.0.0.0` bind, derived from `ORIGIN`, and image-build defaults respectively.
+- `ROOTPRINT_DATABASE_PATH`: Rootprint now requires PostgreSQL.
+- `ROOTPRINT_AUTH_SECRET`: renamed; use `BETTER_AUTH_SECRET`.
+- `ROOTPRINT_INVITE_EXPIRY_HOURS`: hard-coded to 48 hours.
+- `ROOTPRINT_RATE_LIMIT_*`, `ROOTPRINT_SIGNIN_RATE_LIMIT_MAX`, `ROOTPRINT_QUICKWIT_TIMEOUT_MS`: not currently implemented; will be re-exposed via the admin settings UI in a future release.
+- `HOST`, `BETTER_AUTH_URL`, `ROOTPRINT_SERVE_WEB`, `ROOTPRINT_WEB_ROOT`: replaced by `0.0.0.0` bind, derived from `ORIGIN`, and image-build defaults respectively.
 
 ## Docker Compose example
 

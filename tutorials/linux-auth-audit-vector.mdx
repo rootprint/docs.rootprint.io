@@ -3,7 +3,7 @@ title: 'Audit Linux authentication events with Vector'
 description: 'Ship /var/log/auth.log to Rootprint with Vector and search SSH, sudo, and PAM events by user, source IP, and severity.'
 ---
 
-`/var/log/auth.log` carries every authentication event a Debian or Ubuntu host produces — SSH attempts, `sudo` invocations, `su`, PAM, `login`. This tutorial sets up Vector as a `systemd` service that tails the file, parses each line into structured fields (timestamp, severity, source IP, user), and ships the result to Rootprint over OTLP. Records land in `otel-logs-v0_9` and become searchable by program, source address, target user, and severity.
+`/var/log/auth.log` carries every authentication event a Debian or Ubuntu host produces: SSH attempts, `sudo` invocations, `su`, PAM, `login`. This tutorial sets up Vector as a `systemd` service that tails the file, parses each line into structured fields (timestamp, severity, source IP, user), and ships the result to Rootprint over OTLP. Records land in `otel-logs-v0_9` and become searchable by program, source address, target user, and severity.
 
 <Warning>
 	Paths and `systemctl` invocations below assume Debian or Ubuntu. RHEL, Fedora, and their
@@ -14,10 +14,10 @@ description: 'Ship /var/log/auth.log to Rootprint with Vector and search SSH, su
 
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
-    Logs land in whichever index your ingest token is scoped to — this tutorial uses the built-in
+    Logs land in whichever index your ingest token is scoped to. This tutorial uses the built-in
     `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
-    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once — copy it before
-    clicking **Done**. API keys are scoped to one index — you cannot reuse one across indexes.
+    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once. Copy it before
+    clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
   </Step>
 
 <Step title="Install Vector">
@@ -181,7 +181,7 @@ description: 'Ship /var/log/auth.log to Rootprint with Vector and search SSH, su
     sudo true
     ```
 
-    `sudo -k` clears the cached credential, and `sudo true` immediately re-prompts — both write
+    `sudo -k` clears the cached credential, and `sudo true` immediately re-prompts. Both write
     PAM session records to `auth.log`.
 
   </Step>
@@ -198,42 +198,42 @@ Two `remap` transforms run in sequence. The first, `parse_auth`, turns each raw 
 
 `parse_auth` runs four extractions:
 
-- **Syslog framing** — a regex against `.message` peels off `ts`, `hostname`, `program`, and optional `pid`, leaving the human-readable text in `msg`. The original `.message` is replaced with just the message body so downstream queries match against the meaningful part of the line, not the syslog wrapper.
-- **Timestamp** — `parse_timestamp` with format `%+` accepts the ISO 8601 timestamps that modern syslog daemons write. If the parse fails, `.timestamp` is left unset and `to_otlp` falls back to Vector's read time.
-- **Severity** — the message body is lowercased, then matched against two pattern families. Authentication failure phrases (`failed password`, `authentication failure`, `invalid user`, brute-force noise) bump the record to `WARN` (severity 13). Explicit `error` or `fatal` tokens push it to `ERROR` (17). Everything else stays at `INFO` (9).
-- **SSH-specific extractions** — three regexes pull out source IP/port and the target username. These only fire on lines that match (for example, `Failed password for root from 1.2.3.4 port 5555`); on `sudo`, `su`, and PAM lines they leave the fields unset.
+- **Syslog framing**: a regex against `.message` peels off `ts`, `hostname`, `program`, and optional `pid`, leaving the human-readable text in `msg`. The original `.message` is replaced with just the message body so downstream queries match against the meaningful part of the line, not the syslog wrapper.
+- **Timestamp**: `parse_timestamp` with format `%+` accepts the ISO 8601 timestamps that modern syslog daemons write. If the parse fails, `.timestamp` is left unset and `to_otlp` falls back to Vector's read time.
+- **Severity**: the message body is lowercased, then matched against two pattern families. Authentication failure phrases (`failed password`, `authentication failure`, `invalid user`, brute-force noise) bump the record to `WARN` (severity 13). Explicit `error` or `fatal` tokens push it to `ERROR` (17). Everything else stays at `INFO` (9).
+- **SSH-specific extractions**: three regexes pull out source IP/port and the target username. These only fire on lines that match (for example, `Failed password for root from 1.2.3.4 port 5555`); on `sudo`, `su`, and PAM lines they leave the fields unset.
 
-`to_otlp` assembles the OTLP envelope. `service.name` is derived from the parsed `program` so SSH events show as `service:sshd`, sudo as `service:sudo`, and so on — Rootprint's service filter will list every auth program separately. Per-event attributes are pushed conditionally inside `if exists(...)` guards, so the OTLP record never carries empty `stringValue` attributes for SSH-only fields on a `sudo` event.
+`to_otlp` assembles the OTLP envelope. `service.name` is derived from the parsed `program` so SSH events show as `service:sshd`, sudo as `service:sudo`, and so on. Rootprint's service filter will list every auth program separately. Per-event attributes are pushed conditionally inside `if exists(...)` guards, so the OTLP record never carries empty `stringValue` attributes for SSH-only fields on a `sudo` event.
 
 ## Useful searches
 
 Once Vector has been running for a minute or two against an active host, the parsed fields make these queries possible. Run them in the Rootprint search box against `otel-logs-v0_9`.
 
-Everything worth a look — filters out routine session-open/close noise, leaving WARN and ERROR.
+Everything worth a look: filters out routine session-open/close noise, leaving WARN and ERROR.
 
 ```text
 severity_number:>=13
 ```
 
-Failed SSH logins — bad passwords, invalid users, key rejections.
+Failed SSH logins: bad passwords, invalid users, key rejections.
 
 ```text
 attributes.process.name:sshd AND severity_text:WARN
 ```
 
-`sudo` invocations — every privilege escalation on the host, success or failure.
+`sudo` invocations: every privilege escalation on the host, success or failure.
 
 ```text
 attributes.process.name:sudo
 ```
 
-Activity from a single source IP — pivot from a suspect address back to everything it touched. Swap in an IP you spotted in the failed-SSH results.
+Activity from a single source IP: pivot from a suspect address back to everything it touched. Swap in an IP you spotted in the failed-SSH results.
 
 ```text
 attributes.source.address:1.2.3.4
 ```
 
-Auth events targeting a single account — across SSH, `sudo`, and `su`. Useful for surfacing brute-force attempts against high-value usernames.
+Auth events targeting a single account: across SSH, `sudo`, and `su`. Useful for surfacing brute-force attempts against high-value usernames.
 
 ```text
 attributes.user.name:root
@@ -241,14 +241,14 @@ attributes.user.name:root
 
 ## Troubleshooting
 
-- **`permission denied` reading `/var/log/auth.log`** — Vector's `vector` user does not have read access. The cleanest fix on Debian/Ubuntu is `sudo usermod -aG adm vector` (the `adm` group owns `auth.log`) followed by a Vector restart. If that's not available, `sudo chmod a+r /var/log/auth.log` works but loosens permissions for every user on the host.
-- **Records arrive but `attributes.process.name` is missing** — the syslog regex didn't match. Most often this means the line is in RFC 5424 format or your daemon emits a non-standard prefix. Inspect the raw `body.message` in Rootprint to see the shape of the line, then adjust the regex in the `parse_auth` transform.
-- **`severity_text` is always `INFO` even for failures** — the message-pattern match runs against a lowercased copy, so case is not the issue. Check that the failure phrases your daemon actually writes match one of the alternations in the `match(lower, ...)` block; some PAM modules use phrasing the default patterns don't catch. Add the missing pattern to the alternation.
-- **SSH-specific fields (`source_ip`, `ssh_user`) are missing on `sudo` or PAM events** — by design. Those extractions only fire on SSH log lines. The other fields (`process.name`, `host.name`, `severity_text`) populate for every event.
-- **`401`, `403`, `415` from Rootprint** — same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
+- **`permission denied` reading `/var/log/auth.log`**: Vector's `vector` user does not have read access. The cleanest fix on Debian/Ubuntu is `sudo usermod -aG adm vector` (the `adm` group owns `auth.log`) followed by a Vector restart. If that's not available, `sudo chmod a+r /var/log/auth.log` works but loosens permissions for every user on the host.
+- **Records arrive but `attributes.process.name` is missing**: the syslog regex didn't match. Most often this means the line is in RFC 5424 format or your daemon emits a non-standard prefix. Inspect the raw `body.message` in Rootprint to see the shape of the line, then adjust the regex in the `parse_auth` transform.
+- **`severity_text` is always `INFO` even for failures**: the message-pattern match runs against a lowercased copy, so case is not the issue. Check that the failure phrases your daemon actually writes match one of the alternations in the `match(lower, ...)` block; some PAM modules use phrasing the default patterns don't catch. Add the missing pattern to the alternation.
+- **SSH-specific fields (`source_ip`, `ssh_user`) are missing on `sudo` or PAM events**: by design. Those extractions only fire on SSH log lines. The other fields (`process.name`, `host.name`, `severity_text`) populate for every event.
+- **`401`, `403`, `415` from Rootprint**: same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
 
 ## Related
 
-- [Send logs with Vector](/send-logs/log-agents/vector) — general-purpose Vector setup for arbitrary log files.
-- [OTLP reference](/send-logs/otlp) — endpoint URL, response codes, body limits.
-- [Indexes](/indexes) — the `otel-logs-v0_9` schema, so you know what you can search.
+- [Send logs with Vector](/send-logs/log-agents/vector): general-purpose Vector setup for arbitrary log files.
+- [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
+- [Indexes](/indexes): the `otel-logs-v0_9` schema, so you know what you can search.

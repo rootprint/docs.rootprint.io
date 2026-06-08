@@ -1,6 +1,6 @@
 ---
 title: 'Manage indexes'
-description: 'Inspect, configure, and delete Quickwit indexes from the Rootprint admin UI — the index list, per-index field-role mapping and visibility, fields, sources, and deletion.'
+description: 'Inspect, configure, and delete Quickwit indexes from the Rootprint admin UI: the index list, per-index field-role mapping and visibility, fields, sources, and deletion.'
 ---
 
 The **Settings → Indexes** section gives admins a single place to inspect every index Quickwit knows about, configure how it is presented in the search UI, manage the data sources that feed it, and delete indexes that are no longer needed.
@@ -22,7 +22,7 @@ The detail page header shows the index ID and a **Delete** action. Below it are 
 
 ### Configuration tab
 
-The Configuration tab holds the Rootprint-specific presentation settings for the index — a display name, search visibility, and the field-role mappings that tell Rootprint which fields carry the log level, message, stacktrace, and search context. These settings live in Rootprint, not Quickwit, and changing them never touches the underlying index data.
+The Configuration tab holds the Rootprint-specific presentation settings for the index: a display name, search visibility, and the field-role mappings that tell Rootprint which fields carry the log level, message, stacktrace, and search context. These settings live in Rootprint, not Quickwit, and changing them never touches the underlying index data.
 
 #### Display name
 
@@ -49,19 +49,19 @@ These settings tell Rootprint which fields in your index carry specific log data
 | **Traceback field** | `attributes.exception.stacktrace`  | Dot-notation path to stacktrace data. When set and a log entry contains it, a **Traceback** tab appears in the log detail drawer. Optional — clear it if your schema has none. |
 | **Context fields**  | _(none)_                           | Fields used for log-context search. Leave empty to search across all fields. Supports dot-notation; entered as tags (press Enter to add).                                      |
 
-All field settings accept dot-notation paths to reach nested or JSON-object fields. Because the defaults match the OpenTelemetry log schema, the bundled `otel-logs-v0_9` index — and any other index using the same field names — works without configuration. For custom-schema indexes, override the values here so the level, message, and traceback render correctly. If your OTel instrumentation captures exception stacktraces, the default traceback path (`attributes.exception.stacktrace`) enables the Traceback tab with syntax-highlighted stacktrace rendering.
+All field settings accept dot-notation paths to reach nested or JSON-object fields. Because the defaults match the OpenTelemetry log schema, the bundled `otel-logs-v0_9` index (and any other index using the same field names) works without configuration. For custom-schema indexes, override the values here so the level, message, and traceback render correctly. If your OTel instrumentation captures exception stacktraces, the default traceback path (`attributes.exception.stacktrace`) enables the Traceback tab with syntax-highlighted stacktrace rendering.
 
 ### Fields tab
 
-Lists every field in the index schema with its type and a **Fast** indicator (whether the field is stored in column-oriented storage for efficient ranges, aggregations, and sorting). Filter by name to find a specific field. This is a read-only view of what Quickwit reports — to change field definitions you must recreate the index in Quickwit.
+Lists every field in the index schema with its type and a **Fast** indicator (whether the field is stored in column-oriented storage for efficient ranges, aggregations, and sorting). Filter by name to find a specific field. This is a read-only view of what Quickwit reports. To change field definitions you must recreate the index in Quickwit.
 
 ### Sources tab
 
-Data sources are the pipelines Quickwit uses to receive or pull documents for the index — for example the built-in `_ingest-api-source` that backs the HTTP and OTLP ingest endpoints, or an external source that pulls from Amazon Kinesis or files announced over SQS. Each row shows the source ID, its type, and whether it is enabled. Click a row to open the source detail page, or use **Create source** to add a new one.
+Data sources are the pipelines Quickwit uses to receive or pull documents for the index, for example the built-in `_ingest-api-source` that backs the HTTP and OTLP ingest endpoints, or an external source that pulls from Amazon Kinesis or files announced over SQS. Each row shows the source ID, its type, and whether it is enabled. Click a row to open the source detail page, or use **Create source** to add a new one.
 
 #### Built-in sources
 
-Quickwit's own sources — `_ingest-api-source`, `_ingest-cli-source`, and any source whose type is `ingest-api`/`ingest-cli` or whose ID starts with an underscore — are managed by Quickwit. They back the HTTP and OTLP ingest endpoints and can be **viewed** but not edited, disabled, or deleted from Rootprint. Opening one shows a read-only summary of its configuration.
+Quickwit's own sources (`_ingest-api-source`, `_ingest-cli-source`, and any source whose type is `ingest-api`/`ingest-cli` or whose ID starts with an underscore) are managed by Quickwit. They back the HTTP and OTLP ingest endpoints and can be **viewed** but not edited, disabled, or deleted from Rootprint. Opening one shows a read-only summary of its configuration.
 
 #### Creating a source
 
@@ -74,7 +74,7 @@ Click **Create source** on the Sources tab. Rootprint can create two source type
 
 Every source needs a **Source ID** that starts with a letter and is 3–255 characters of letters, digits, `-`, or `_`. The source ID and type are fixed once the source is created.
 
-The form is split into two tabs — **Connection** (where the data comes from) and **Transform (VRL)** (an optional per-document script). The connection fields depend on the source type:
+The form is split into two tabs: **Connection** (where the data comes from) and **Transform (VRL)** (an optional per-document script). The connection fields depend on the source type:
 
 <Tabs>
 <Tab title="Amazon Kinesis">
@@ -113,7 +113,7 @@ Open a Kinesis or file source from the list to edit it in place. The same Connec
 
 #### Transforms (VRL)
 
-The **Transform (VRL)** tab holds an optional Vector Remap Language script that runs on every document before it is indexed — useful for normalizing fields, dropping sensitive keys, or reshaping payloads. For example:
+The **Transform (VRL)** tab holds an optional Vector Remap Language script that runs on every document before it is indexed, useful for normalizing fields, dropping sensitive keys, or reshaping payloads. For example:
 
 ```text
 .message = downcase(string!(.message))
@@ -141,12 +141,12 @@ The **Delete** button in the index header permanently removes the index from Qui
 
 - Field-role and visibility configuration.
 - Per-user preferences, saved queries, views, shared links, and search history tied to the index.
-- Ingest API keys — because each key is scoped to exactly one index, any key pointing at the deleted index is removed.
+- Ingest API keys: because each key is scoped to exactly one index, any key pointing at the deleted index is removed.
 
 To prevent accidents, the modal requires you to type the exact index ID before the **Delete** button becomes active. There is no undo.
 
 ## Related pages
 
-- [Indexes](/indexes) — schema details for the built-in OpenTelemetry index and custom index concepts.
-- [Create a custom index](/configuration/custom-indexes) — the YAML structure for non-OpenTelemetry schemas.
-- [HTTP endpoint](/send-logs/http) — how ingest API keys and the endpoint interact with these sources.
+- [Indexes](/indexes): schema details for the built-in OpenTelemetry index and custom index concepts.
+- [Create a custom index](/configuration/custom-indexes): the YAML structure for non-OpenTelemetry schemas.
+- [HTTP endpoint](/send-logs/http): how ingest API keys and the endpoint interact with these sources.

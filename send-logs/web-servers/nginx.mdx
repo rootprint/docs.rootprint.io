@@ -3,7 +3,7 @@ title: 'Send nginx logs with Vector'
 description: "Tail nginx's default `combined` access logs and error logs with Vector and ship them to Rootprint over OTLP, with the access fields mapped to OpenTelemetry HTTP semantic conventions."
 ---
 
-[nginx](https://nginx.org) writes plain-text logs by default — `combined` format for access logs and a separate text format for error logs. This page sets up Vector as a `systemd` service that tails `/var/log/nginx/access.log` and `/var/log/nginx/error.log`, parses each line with Vector's built-in `parse_nginx_log`, maps the error-log `severity` field to OTel severity, and ships the result to Rootprint's OTLP endpoint with a Bearer token. Records land in the `otel-logs-v0_9` index with `service.name: nginx` and OpenTelemetry HTTP attributes (`http.request.method`, `url.path`, `http.response.status_code`, `client.address`, `user_agent.original`, …) pre-populated.
+[nginx](https://nginx.org) writes plain-text logs by default: `combined` format for access logs and a separate text format for error logs. This page sets up Vector as a `systemd` service that tails `/var/log/nginx/access.log` and `/var/log/nginx/error.log`, parses each line with Vector's built-in `parse_nginx_log`, maps the error-log `severity` field to OTel severity, and ships the result to Rootprint's OTLP endpoint with a Bearer token. Records land in the `otel-logs-v0_9` index with `service.name: nginx` and OpenTelemetry HTTP attributes (`http.request.method`, `url.path`, `http.response.status_code`, `client.address`, `user_agent.original`, …) pre-populated.
 
 <Warning>
 	Paths and `systemctl` invocations below assume Debian or Ubuntu. nginx itself runs on every major
@@ -14,15 +14,15 @@ description: "Tail nginx's default `combined` access logs and error logs with Ve
 
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
-    Logs land in whichever index your ingest token is scoped to — these guides use the built-in
+    Logs land in whichever index your ingest token is scoped to. These guides use the built-in
     `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
-    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once — copy it before
-    clicking **Done**. API keys are scoped to one index — you cannot reuse one across indexes.
+    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once. Copy it before
+    clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
   </Step>
 
 <Step title="Confirm nginx is logging to file">
 	Stock nginx already writes `combined`-format access logs to `/var/log/nginx/access.log` and error
-	logs to `/var/log/nginx/error.log` — the wizard targets those defaults. No `nginx.conf` changes
+	logs to `/var/log/nginx/error.log`. The wizard targets those defaults. No `nginx.conf` changes
 	are required. If you have replaced the default `log_format` with a custom one, the parser below
 	will fall back to leaving the raw line in `body`; either revert to the default `combined` format
 	or extend the `parse_nginx` remap to handle your custom shape.
@@ -248,7 +248,7 @@ description: "Tail nginx's default `combined` access logs and error logs with Ve
   <Step title="Grant Vector read access to /var/log/nginx">
     nginx's Debian/Ubuntu package owns `/var/log/nginx/` as `www-data:adm` with mode `640`,
     so Vector's `vector` user cannot read it. The `adm` group is the read-side convention for
-    log files on those distros — add `vector` to it:
+    log files on those distros. Add `vector` to it:
 
     ```bash
     sudo usermod -aG adm vector
@@ -290,9 +290,9 @@ Two `remap` transforms run in sequence. The first, `parse_nginx`, turns each raw
 
 `parse_nginx`:
 
-- **Format detection** — `parse_nginx_log(format: "combined")` is tried first; if that errors, `parse_nginx_log(format: "error")` runs. Vector's built-in parsers handle escape sequences and optional fields; we chain rather than parse in parallel because every line is unambiguously one or the other and `combined` is overwhelmingly more common. If both fail (custom `log_format`, malformed line) the event falls through with the raw `.message` intact rather than being dropped.
-- **`nginx_format` discriminator** — `"access"` if the parsed object has no `.severity` field, `"error"` otherwise. Lets the OTLP transform branch on a single boolean check instead of re-probing field presence.
-- **Severity** — error-log entries map nginx's `severity` field directly to OTel: `debug` → 5/DEBUG, `info` → 9/INFO, `notice` → 10/NOTICE, `warn` → 13/WARN, `error` → 17/ERROR, `crit` → 19/CRIT, `alert` → 21/ALERT, `emerg` → 23/EMERG. Access entries default to 9/INFO — the combined format has no severity field, every request is implicitly informational. No status-code override; a 5xx access entry stays at INFO. Filter on `attributes.http.response.status_code` for triage.
+- **Format detection**: `parse_nginx_log(format: "combined")` is tried first; if that errors, `parse_nginx_log(format: "error")` runs. Vector's built-in parsers handle escape sequences and optional fields; we chain rather than parse in parallel because every line is unambiguously one or the other and `combined` is overwhelmingly more common. If both fail (custom `log_format`, malformed line) the event falls through with the raw `.message` intact rather than being dropped.
+- **`nginx_format` discriminator**: `"access"` if the parsed object has no `.severity` field, `"error"` otherwise. Lets the OTLP transform branch on a single boolean check instead of re-probing field presence.
+- **Severity**: error-log entries map nginx's `severity` field directly to OTel: `debug` → 5/DEBUG, `info` → 9/INFO, `notice` → 10/NOTICE, `warn` → 13/WARN, `error` → 17/ERROR, `crit` → 19/CRIT, `alert` → 21/ALERT, `emerg` → 23/EMERG. Access entries default to 9/INFO. The combined format has no severity field, every request is implicitly informational. No status-code override; a 5xx access entry stays at INFO. Filter on `attributes.http.response.status_code` for triage.
 
 `to_otlp` assembles the OTLP envelope. `service.name` is hard-coded to `nginx` (resource attribute). The `if fmt == "access"` branch is what makes one VRL block handle both files cleanly: error-log entries get `process.pid`, `thread.id`, `nginx.connection_id`, and (when present) the upstream/server context fields; access-log entries get the full HTTP semantic-convention attribute set. `parse_nginx_log("combined")` returns the request line as a single `.request` field (e.g. `"GET /api/foo HTTP/1.1"`), so the access branch splits it on whitespace to populate `http.request.method`, `url.path`, `network.protocol.name`, and `network.protocol.version` separately. Malformed request lines (`-`, empty) skip those attributes rather than emitting partial data.
 
@@ -329,13 +329,13 @@ Every 5xx response nginx returned, across all sites:
 service.name:nginx AND attributes.http.response.status_code:>=500
 ```
 
-All 4xx responses for one URL prefix — useful for spotting bad clients hammering one endpoint:
+All 4xx responses for one URL prefix, useful for spotting bad clients hammering one endpoint:
 
 ```text
 service.name:nginx AND attributes.url.path:/api/* AND attributes.http.response.status_code:>=400
 ```
 
-Activity from a single source IP — pivot from a suspect address back to everything it touched:
+Activity from a single source IP, pivot from a suspect address back to everything it touched:
 
 ```text
 attributes.client.address:1.2.3.4
@@ -353,7 +353,7 @@ Error-log entries only (skip access logs):
 service.name:nginx AND attributes.nginx.format:error
 ```
 
-Upstream failures — the things that page someone:
+Upstream failures (the things that page someone):
 
 ```text
 service.name:nginx AND attributes.nginx.format:error AND attributes.nginx.upstream:*
@@ -361,15 +361,15 @@ service.name:nginx AND attributes.nginx.format:error AND attributes.nginx.upstre
 
 ## Troubleshooting
 
-- **`permission denied` reading `/var/log/nginx/access.log`** — Vector's `vector` user is not in the `adm` group. Run `sudo usermod -aG adm vector` and restart Vector. If that's not available, `sudo chmod a+r /var/log/nginx/*.log` works but loosens permissions for every user on the host.
-- **Records arrive but `attributes.http.*` are missing** — the entry came from `error.log` (no access fields), by design. Filter access-log entries with `attributes.nginx.format:access`.
-- **`body` looks like a raw nginx line instead of a structured message** — the access log is using a non-default `log_format` directive in `nginx.conf`. The parser expects nginx's stock combined format. Either remove the custom `log_format` or extend the `parse_nginx` remap to handle the alternate shape.
-- **`severity_text` is always `INFO` for access entries even on 5xx** — by design. nginx's combined format has no severity field; this parser trusts the source. Filter on `attributes.http.response.status_code:>=500` to surface server errors.
-- **`401`, `403`, `415` from Rootprint** — same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
+- **`permission denied` reading `/var/log/nginx/access.log`**: Vector's `vector` user is not in the `adm` group. Run `sudo usermod -aG adm vector` and restart Vector. If that's not available, `sudo chmod a+r /var/log/nginx/*.log` works but loosens permissions for every user on the host.
+- **Records arrive but `attributes.http.*` are missing**: the entry came from `error.log` (no access fields), by design. Filter access-log entries with `attributes.nginx.format:access`.
+- **`body` looks like a raw nginx line instead of a structured message**: the access log is using a non-default `log_format` directive in `nginx.conf`. The parser expects nginx's stock combined format. Either remove the custom `log_format` or extend the `parse_nginx` remap to handle the alternate shape.
+- **`severity_text` is always `INFO` for access entries even on 5xx**: by design. nginx's combined format has no severity field; this parser trusts the source. Filter on `attributes.http.response.status_code:>=500` to surface server errors.
+- **`401`, `403`, `415` from Rootprint**: same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
 
 ## Related
 
-- [Send logs with Vector](/send-logs/log-agents/vector) — generic Vector setup for tailing files on a host.
-- [Send Caddy logs with Vector](/send-logs/web-servers/caddy) — sibling page for Caddy.
-- [OTLP reference](/send-logs/otlp) — endpoint URL, response codes, body limits.
-- [Indexes](/indexes) — the `otel-logs-v0_9` schema, so you know what you can search.
+- [Send logs with Vector](/send-logs/log-agents/vector): generic Vector setup for tailing files on a host.
+- [Send Caddy logs with Vector](/send-logs/web-servers/caddy): sibling page for Caddy.
+- [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
+- [Indexes](/indexes): the `otel-logs-v0_9` schema, so you know what you can search.

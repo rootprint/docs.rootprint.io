@@ -3,7 +3,7 @@ title: 'Send logs from Node.js'
 description: 'Ship Node.js logs to Rootprint using the OpenTelemetry SDK, Pino, or Winston over OTLP HTTP.'
 ---
 
-Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain OTEL SDK, or plug OTLP into [Pino](https://getpino.io/) or [Winston](https://github.com/winstonjs/winston) — all three routes ship records through the same endpoint and land in the OTEL logs index pinned by your ingest API key (`otel-logs-v0_9` in these examples).
+Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain OTEL SDK, or plug OTLP into [Pino](https://getpino.io/) or [Winston](https://github.com/winstonjs/winston). All three routes ship records through the same endpoint and land in the OTEL logs index pinned by your ingest API key (`otel-logs-v0_9` in these examples).
 
 ## Setup
 
@@ -38,7 +38,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
     export OTEL_EXPORTER_OTLP_LOGS_HEADERS=Authorization=Bearer%20<your-ingest-token>
     ```
 
-    <Warning>The `%20` after `Bearer` is required — OTEL expects URL-encoded header values.</Warning>
+    <Warning>The `%20` after `Bearer` is required. OTEL expects URL-encoded header values.</Warning>
 
   </Step>
 
@@ -129,7 +129,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
 
 ## Structured logging
 
-Attributes become log-record attributes on the OTEL side — searchable and filterable in Rootprint.
+Attributes become log-record attributes on the OTEL side: searchable and filterable in Rootprint.
 
 ```javascript
 logs.getLogger('app').emit({
@@ -193,11 +193,11 @@ app.listen(3000);
 
 ## Troubleshooting
 
-- **401 / 403** — the Bearer token is missing, malformed, or the `%20` separator is not URL-encoded. Re-check `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.
-- **Nothing in Search** — the batch processor buffers records. For short-lived scripts call `await provider.forceFlush()` (or `await provider.shutdown()`) before exit.
-- **`fetch is not defined`** — upgrade to Node.js 18+ or pass a polyfilled fetch to the exporter.
-- **Pino transport not emitting** — `pino-opentelemetry-transport` reads the `OTEL_*` env vars itself; make sure they are set in the process that spawns the transport worker.
-- **TLS errors against a self-signed endpoint** — set `NODE_EXTRA_CA_CERTS=/path/to/ca.pem`.
+- **401 / 403**: the Bearer token is missing, malformed, or the `%20` separator is not URL-encoded. Re-check `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.
+- **Nothing in Search**: the batch processor buffers records. For short-lived scripts call `await provider.forceFlush()` (or `await provider.shutdown()`) before exit.
+- **`fetch is not defined`**: upgrade to Node.js 18+ or pass a polyfilled fetch to the exporter.
+- **Pino transport not emitting**: `pino-opentelemetry-transport` reads the `OTEL_*` env vars itself; make sure they are set in the process that spawns the transport worker.
+- **TLS errors against a self-signed endpoint**: set `NODE_EXTRA_CA_CERTS=/path/to/ca.pem`.
 
 ## Related
 

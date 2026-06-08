@@ -76,9 +76,9 @@ volumes:
 
 This starts three containers:
 
-- **Rootprint** — the web UI, exposed on port `8282`.
-- **PostgreSQL** — Rootprint application state, stored in the `rootprint-db` Docker volume.
-- **Quickwit** — the search and indexing backend, reachable only from the Compose network by default.
+- **Rootprint**: the web UI, exposed on port `8282`.
+- **PostgreSQL**: Rootprint application state, stored in the `rootprint-db` Docker volume.
+- **Quickwit**: the search and indexing backend, reachable only from the Compose network by default.
 
 Run `docker compose ps` to confirm all containers are healthy, then open [http://localhost:8282](http://localhost:8282).
 
@@ -104,7 +104,7 @@ Set both variables to paths within the same bucket. The bucket must already exis
 
 #### Other storage backends
 
-Quickwit also supports Azure Blob Storage, Google Cloud Storage, and S3-compatible providers (MinIO, Garage, DigitalOcean Spaces). The configuration follows the same shape — a URI scheme on `QW_DEFAULT_INDEX_ROOT_URI` and `QW_METASTORE_URI`, plus credentials.
+Quickwit also supports Azure Blob Storage, Google Cloud Storage, and S3-compatible providers (MinIO, Garage, DigitalOcean Spaces). The configuration follows the same shape: a URI scheme on `QW_DEFAULT_INDEX_ROOT_URI` and `QW_METASTORE_URI`, plus credentials.
 
 | Backend                    | URI scheme                                | Credentials                                                                                   |
 | -------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -128,8 +128,8 @@ ports:
 Quickwit will then be reachable at `http://<host-ip>:7280` from other machines on the same network.
 
 <Warning>
-	Quickwit has no authentication mechanism. Never expose it on a public or untrusted network —
-	restrict access at the network or firewall level and only do this within a private, trusted
+	Quickwit has no authentication mechanism. Never expose it on a public or untrusted network.
+	Restrict access at the network or firewall level and only do this within a private, trusted
 	network.
 </Warning>
 

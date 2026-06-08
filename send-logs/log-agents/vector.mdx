@@ -3,7 +3,7 @@ title: 'Send logs with Vector'
 description: 'Tail log files on a Linux host with Vector and ship them to Rootprint over OTLP.'
 ---
 
-[Vector](https://vector.dev) is a stand-alone log collector that reads files, applies transforms, and ships records to one or more sinks. This page sets up Vector as a `systemd` service on a Linux host: it tails files under `/var/log/`, shapes each line into the OTLP wire format with a `remap` transform, and ships the result to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to — `otel-logs-v0_9` in this guide. Vector's `opentelemetry` sink is currently in beta upstream — stable enough for production logs, but worth tracking the [Vector changelog](https://github.com/vectordotdev/vector/releases) for breaking changes.
+[Vector](https://vector.dev) is a stand-alone log collector that reads files, applies transforms, and ships records to one or more sinks. This page sets up Vector as a `systemd` service on a Linux host: it tails files under `/var/log/`, shapes each line into the OTLP wire format with a `remap` transform, and ships the result to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to: `otel-logs-v0_9` in this guide. Vector's `opentelemetry` sink is currently in beta upstream: stable enough for production logs, but worth tracking the [Vector changelog](https://github.com/vectordotdev/vector/releases) for breaking changes.
 
 <Warning>
 	The `file` source paths and `systemctl` invocations below assume a Linux host. Vector itself runs
@@ -14,10 +14,10 @@ description: 'Tail log files on a Linux host with Vector and ship them to Rootpr
 
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
-    Logs land in whichever index your ingest token is scoped to — these guides use the built-in
+    Logs land in whichever index your ingest token is scoped to. These guides use the built-in
     `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
-    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once — copy it before
-    clicking **Done**. API keys are scoped to one index — you cannot reuse one across indexes.
+    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once. Copy it before
+    clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
   </Step>
 
 <Step title="Install Vector">
@@ -98,7 +98,7 @@ description: 'Tail log files on a Linux host with Vector and ship them to Rootpr
 
     `read_from: end` skips existing content on first start, so installing Vector against an
     existing log file does not replay everything that was already there. Flip it to `beginning`
-    if you want a one-time backfill. `batch.max_bytes` is set to 8 MiB — a conservative size that
+    if you want a one-time backfill. `batch.max_bytes` is set to 8 MiB, a conservative size that
     stays well within typical reverse-proxy and upstream limits even after gzip variance.
 
   </Step>
@@ -126,7 +126,7 @@ description: 'Tail log files on a Linux host with Vector and ship them to Rootpr
 
   <Step title="Verify in Rootprint">
     Open Search, pick `otel-logs-v0_9` from the index selector, and query for
-    `hello from vector`. Records typically appear within 5–10 seconds — the OTLP path commits on
+    `hello from vector`. Records typically appear within 5–10 seconds. The OTLP path commits on
     Quickwit's normal cadence, there is no `commit=wait_for` knob.
   </Step>
 </Steps>
@@ -137,48 +137,48 @@ The OTLP wire format is nested: a `resourceLogs` array, each entry containing a 
 array, each of those containing a `logRecords` array. Vector's `file` source emits a flat event
 with `.message`, `.file`, `.host`, `.source_type`, and `.timestamp` at the top level, so the
 `remap` transform builds the nested envelope itself and then deletes the original top-level
-fields — the `opentelemetry` sink rejects any event with stray fields outside the OTLP shape.
+fields. The `opentelemetry` sink rejects any event with stray fields outside the OTLP shape.
 
 Field-by-field:
 
-- `service.name` (resource attribute) — lands in Quickwit's `service_name` column. Replace the
+- `service.name` (resource attribute): lands in Quickwit's `service_name` column. Replace the
   hard-coded `myapp` with whatever you want shown in the Rootprint service filter.
-- `host.name` (resource attribute) — populated from `get_hostname!()` so it's non-empty without
+- `host.name` (resource attribute): populated from `get_hostname!()` so it's non-empty without
   any further config.
-- `body.stringValue` — the raw log line. Lands in `body.message` in `otel-logs-v0_9`. To parse
+- `body.stringValue`: the raw log line. Lands in `body.message` in `otel-logs-v0_9`. To parse
   structured fields out of the line (JSON, regex), insert another `remap` transform upstream of
   `to_otlp` and assign the parsed fields to `attributes` instead.
-- `severityText` and `severityNumber` — currently hard-coded to `INFO` / `9`. Real configs should
+- `severityText` and `severityNumber`: currently hard-coded to `INFO` / `9`. Real configs should
   derive these from the log line; the simplest derivation is a `remap` that pattern-matches on
   the message and overrides both fields.
-- `timeUnixNano` and `observedTimeUnixNano` — both use the time Vector reads the line, not the
+- `timeUnixNano` and `observedTimeUnixNano`: both use the time Vector reads the line, not the
   timestamp embedded in the line itself. Use a regex or JSON parse to populate `timeUnixNano`
   from your log format if the read time is too coarse for your needs.
 
 ## Troubleshooting
 
-- **`401` from Rootprint** — the `Authorization` header is missing or malformed. Confirm the value
+- **`401` from Rootprint**: the `Authorization` header is missing or malformed. Confirm the value
   under `sinks.rootprint.protocol.request.headers.Authorization` reads exactly `Bearer <token>`,
   with a single space between `Bearer` and the token.
-- **`403` from Rootprint** — the API key's index scope does not match `otel-logs-v0_9`, or the key
+- **`403` from Rootprint**: the API key's index scope does not match `otel-logs-v0_9`, or the key
   has been deleted. Mint a fresh ingest API key for `otel-logs-v0_9` in **Settings → API keys**.
-- **`413` from a proxy in front of Rootprint** — a single batch was too large on the wire. Rootprint
+- **`413` from a proxy in front of Rootprint**: a single batch was too large on the wire. Rootprint
   itself sets no OTLP body-size limit, but a reverse proxy may. Lower
   `sinks.rootprint.protocol.batch.max_bytes`.
-- **`415` from Rootprint** — encoding is misconfigured. The `encoding.codec` value must be `otlp`;
+- **`415` from Rootprint**: encoding is misconfigured. The `encoding.codec` value must be `otlp`;
   any other value sends a content type Rootprint rejects.
-- **Vector starts cleanly but no logs appear in Rootprint** — `read_from: end` skipped the existing
+- **Vector starts cleanly but no logs appear in Rootprint**: `read_from: end` skipped the existing
   file content. Either append a new line to trigger a read, or set `read_from: beginning` for a
   one-time replay (Vector remembers the offset across restarts after the first read).
-- **`permission denied` reading `/var/log/...`** — the Vector package installs a `vector` user
+- **`permission denied` reading `/var/log/...`**: the Vector package installs a `vector` user
   that owns the service. Either `sudo chmod a+r` the log files, or add `vector` to the group
   that owns them.
-- **Records arrive but `body` is empty** — confirm the literal `body.stringValue` assignment in
+- **Records arrive but `body` is empty**: confirm the literal `body.stringValue` assignment in
   the `to_otlp` remap reads the same field the `file` source emits (default: `.message`). If you
   reordered the remap, make sure `del(.message)` runs after the assignment, not before.
 
 ## Related
 
-- [OTLP reference](/send-logs/otlp) — endpoint URL, response codes, body limits.
-- [Indexes](/indexes) — the `otel-logs-v0_9` schema, so you know what you can search.
-- [Manage indexes](/configuration/manage-indexes) — API key lifecycle and per-index permissions.
+- [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
+- [Indexes](/indexes): the `otel-logs-v0_9` schema, so you know what you can search.
+- [Manage indexes](/configuration/manage-indexes): API key lifecycle and per-index permissions.

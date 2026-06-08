@@ -4,8 +4,7 @@ description: 'Run Rootprint with a larger Quickwit deployment, and know which pa
 ---
 
 The bundled Docker Compose is optimized for one active Rootprint container, one Quickwit
-container, local-disk Quickwit storage, and Quickwit's file-backed metastore. That setup is a
-good starting point and can handle meaningful ingest on modest hardware.
+container, local-disk Quickwit storage, and Quickwit's file-backed metastore. That setup handles substantial ingest on modest hardware.
 
 Scaling Rootprint means keeping Rootprint single-node and moving scale-sensitive work into
 Quickwit. Quickwit is the distributed search and indexing layer; Rootprint is the UI, auth, ingest
@@ -64,8 +63,8 @@ See [Quickwit metastore configuration](https://quickwit.io/docs/main-branch/conf
 ## Move index storage to object storage
 
 Quickwit decouples compute from storage: indexers and searchers are stateless and share their state
-through object storage and the metastore, not a local disk. That decoupling is what lets the cluster
-scale — but it only works once index data lives somewhere every node can reach.
+through object storage and the metastore, not a local disk. That decoupling lets the cluster
+scale, but it only works once index data lives somewhere every node can reach.
 
 The bundled Compose keeps index data in a local Docker volume, which is single-node only. For any
 multi-node cluster, move it to shared object storage:
@@ -80,14 +79,14 @@ covers the other backends.
 
 ## Scale the Quickwit cluster to your load
 
-Quickwit ships as a single binary that runs any combination of services — indexers, searchers, a
-control plane, a metastore service, and a janitor — selected per node with `quickwit run --service ...`
+Quickwit ships as a single binary that runs any combination of services (indexers, searchers, a
+control plane, a metastore service, and a janitor), selected per node with `quickwit run --service ...`
 or `QW_ENABLED_SERVICES`. Because nodes coordinate through PostgreSQL and object storage, you grow
 the cluster by adding nodes, not by resizing one machine.
 
-How far you scale is up to you and driven by your workload: add **indexers** when ingest throughput
+How far you scale is driven by your workload: add **indexers** when ingest throughput
 is the bottleneck, and add **searchers** (stateless, sized by query concurrency) when search or
-aggregations are. The control plane, metastore service, and janitor are lightweight — one of each is
+aggregations are. The control plane, metastore service, and janitor are lightweight. One of each is
 usually enough. For Kubernetes, start from the official
 [Quickwit Helm chart](https://quickwit.io/docs/main-branch/deployment/kubernetes/helm).
 
@@ -104,7 +103,7 @@ Use these as starting points and measure. Quickwit's cluster sizing guide is the
 | Searcher disk | Searchers do not need disk unless you enable the searcher split cache. |
 | PostgreSQL metastore | For most Quickwit clusters, Quickwit recommends a PostgreSQL instance with `1` core and `4 GB` RAM. |
 
-Size searchers by query concurrency and aggregation load, not by total data volume — adding or
+Size searchers by query concurrency and aggregation load, not by total data volume. Adding or
 removing them never moves index data.
 
 ## Related

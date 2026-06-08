@@ -1,6 +1,6 @@
 ---
 title: 'Search query syntax'
-description: 'Build precise log searches with Lucene query syntax — terms, phrases, ranges, booleans, and field paths.'
+description: 'Build precise log searches with Lucene query syntax: terms, phrases, ranges, booleans, and field paths.'
 ---
 
 The Rootprint search box accepts [Lucene query syntax](https://quickwit.io/docs/reference/query-language). Queries combine field-scoped clauses with boolean operators, and the same syntax works whether you type it in the UI or pass it to the search API.
@@ -61,18 +61,18 @@ How a field was tokenized at index time decides how queries against it match. Th
 | `raw`     | `severity_text`, `service_name`, `attributes.*` | The whole value is one token. Case-sensitive, exact match only.     |
 | `default` | `body`                                          | Splits on whitespace and punctuation, lowercases. Free-text search. |
 
-This means `severity_text:error` will **not** match a document with `"severity_text": "ERROR"` — the index stored `ERROR` as a single token. Match the case your shipper sends, or filter via the UI quick-filters which know each field's casing.
+This means `severity_text:error` will **not** match a document with `"severity_text": "ERROR"`. The index stored `ERROR` as a single token. Match the case your shipper sends, or filter via the UI quick-filters which know each field's casing.
 
 <Tip>
 	If you query a custom index and exact-match terms are missing, the field is probably tokenized
-	differently than you expect. Tokenizers are set in the index's Quickwit configuration — see
+	differently than you expect. Tokenizers are set in the index's Quickwit configuration. See
 	[Create a custom index](/configuration/custom-indexes). The same value indexed with `default` and
 	`raw` produces different match behavior.
 </Tip>
 
 ## Time ranges
 
-The Rootprint UI exposes a time picker that bounds every query to a time window — you don't write the timestamp clause yourself. If you call the search API directly, pass `startTs` and `endTs` as **seconds** (regardless of the field's precision). The index is determined by your search API key, not the URL:
+The Rootprint UI exposes a time picker that bounds every query to a time window. You don't write the timestamp clause yourself. If you call the search API directly, pass `startTs` and `endTs` as **seconds** (regardless of the field's precision). The index is determined by your search API key, not the URL:
 
 ```http
 GET /api/search/logs?q=severity_text:ERROR&startTs=1776340000&endTs=1776343600
@@ -108,16 +108,16 @@ These characters are reserved by the query parser and must be backslash-escaped 
 + ^ ` { } " [ ] ( ) ~ ! \ * <space>
 ```
 
-For example, to search for the literal string `(test)` in a phrase, wrap it in quotes — the inside of a phrase doesn't need escaping. To search a single term containing parentheses, escape them: `body.message:\(test\)`.
+For example, to search for the literal string `(test)` in a phrase, wrap it in quotes. The inside of a phrase doesn't need escaping. To search a single term containing parentheses, escape them: `body.message:\(test\)`.
 
 ## Limits
 
 - A wildcard cannot be the first character of a term (`*timeout` is not allowed). Use a phrase or full-text query against the body instead.
 - Phrase queries require the field to be indexed with `record: position`. The bundled `body` field meets this; most `raw`-tokenized fields do not.
-- IP fields accept individual addresses. CIDR ranges are not supported — use a numeric range on a parsed component if you need them.
+- IP fields accept individual addresses. CIDR ranges are not supported. Use a numeric range on a parsed component if you need them.
 
 ## Related
 
-- [Lucene query syntax reference](https://quickwit.io/docs/reference/query-language) — the upstream specification.
-- [Indexes](/indexes) — fields, tokenizers, and the bundled OTel schema.
-- [Manage indexes](/configuration/manage-indexes#field-role-mappings) — map message, level, and traceback for custom indexes.
+- [Lucene query syntax reference](https://quickwit.io/docs/reference/query-language): the upstream specification.
+- [Indexes](/indexes): fields, tokenizers, and the bundled OTel schema.
+- [Manage indexes](/configuration/manage-indexes#field-role-mappings): map message, level, and traceback for custom indexes.

@@ -6,19 +6,19 @@ description: 'Ship every container on a Linux host to Rootprint with a Vector si
 Run a Vector sidecar next to your other containers. It reads each container's logs from the Docker daemon socket, picks up `container.id`, `container.name`, `container.image.name`, and `container.image.id` automatically, infers a severity level from the message, packs the result into an OTLP record, and ships to Rootprint over HTTPS.
 
 <Warning>
-	Mounting `/var/run/docker.sock` into a container grants it the ability to enumerate and inspect
-	every container on the host. This is standard for log collectors that use the Docker API, but
-	worth being explicit about. The mount below is read-only (`:ro`).
+	Mounting `/var/run/docker.sock` into a container lets it enumerate and inspect
+	every container on the host. This is standard for log collectors that use the Docker API. The
+	mount below is read-only (`:ro`).
 </Warning>
 
 ## Setup
 
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
-    Logs land in whichever index your ingest token is scoped to — these guides use the built-in
+    Logs land in whichever index your ingest token is scoped to. These guides use the built-in
     `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
-    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once — copy it before
-    clicking **Done**. API keys are scoped to one index — you cannot reuse one across indexes.
+    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once. Copy it before
+    clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
   </Step>
 
   <Step title="Create the Vector config">
@@ -125,7 +125,7 @@ Run a Vector sidecar next to your other containers. It reads each container's lo
 
   <Step title="Add the Vector service to your compose file">
     Drop this service alongside your existing ones. The Vector container reads every other
-    container's logs through the Docker socket — no changes needed to your application services.
+    container's logs through the Docker socket. No changes needed to your application services.
 
     ```yaml
     services:
@@ -138,7 +138,7 @@ Run a Vector sidecar next to your other containers. It reads each container's lo
           - /var/run/docker.sock:/var/run/docker.sock:ro
     ```
 
-    The `container_name` and the `exclude_containers` value in `vector.yaml` must match — that's
+    The `container_name` and the `exclude_containers` value in `vector.yaml` must match. That's
     how Vector skips its own logs. Change one, change the other.
 
   </Step>
@@ -180,7 +180,7 @@ The message body is lowercased and matched against two pattern families:
 - `warn` / `warning`, `deprecated`, or `retry` → `severityText: WARN` (13).
 - Everything else → `severityText: INFO` (9).
 
-`DEBUG` is not inferred — `\bdebug\b` against arbitrary container output false-positives constantly. Apps that need debug-level visibility should emit it via an OpenTelemetry SDK that sets `severityNumber` itself; the OTLP record will carry that through unchanged because the SDK writes to the same endpoint.
+`DEBUG` is not inferred. `\bdebug\b` against arbitrary container output false-positives constantly. Apps that need debug-level visibility should emit it via an OpenTelemetry SDK that sets `severityNumber` itself; the OTLP record will carry that through unchanged because the SDK writes to the same endpoint.
 
 ### Attributes
 
@@ -197,7 +197,7 @@ Per-event attributes:
 | `container.runtime`    | literal `docker`                       |
 | `log.iostream`         | `stdout` or `stderr`                   |
 
-Container labels are not promoted by default — they're user-defined and unbounded, and adding all of them risks attribute-cardinality issues. To promote a specific label, add one line to the `to_otlp` remap before the `. = { ... }` assignment:
+Container labels are not promoted by default. They're user-defined and unbounded, and adding all of them risks attribute-cardinality issues. To promote a specific label, add one line to the `to_otlp` remap before the `. = { ... }` assignment:
 
 ```vrl
 if exists(.label."com.example.team") {
@@ -207,17 +207,17 @@ if exists(.label."com.example.team") {
 
 ### Apps that emit JSON
 
-If a container writes structured JSON to stdout, the body arrives as a string but its content is JSON. Add a `parse_json` step in `enrich` and assign parsed fields to attributes — the OTLP attribute list takes them as-is.
+If a container writes structured JSON to stdout, the body arrives as a string but its content is JSON. Add a `parse_json` step in `enrich` and assign parsed fields to attributes. The OTLP attribute list takes them as-is.
 
 ## Troubleshooting
 
-- **`permission denied` opening `/var/run/docker.sock`** — rootless Docker uses `$XDG_RUNTIME_DIR/docker.sock` (typically `/run/user/<uid>/docker.sock`). Adjust the volume mount on the `rootprint-vector` service accordingly.
-- **Vector's own logs flooding back** — `exclude_containers` in `vector.yaml` does not match the compose service's `container_name`. Both must be the same string. If you renamed the service in your compose file, update `exclude_containers` to match.
-- **`service.name` shows as `unknown_service`** — the Vector compose service was started without `container_name` set, so Docker assigned a generated name like `<project>_rootprint-vector_1`. Pin `container_name` on every service whose `service.name` you want to read cleanly.
-- **`401`, `403`, `415` from Rootprint** — same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
+- **`permission denied` opening `/var/run/docker.sock`**: rootless Docker uses `$XDG_RUNTIME_DIR/docker.sock` (typically `/run/user/<uid>/docker.sock`). Adjust the volume mount on the `rootprint-vector` service accordingly.
+- **Vector's own logs flooding back**: `exclude_containers` in `vector.yaml` does not match the compose service's `container_name`. Both must be the same string. If you renamed the service in your compose file, update `exclude_containers` to match.
+- **`service.name` shows as `unknown_service`**: the Vector compose service was started without `container_name` set, so Docker assigned a generated name like `<project>_rootprint-vector_1`. Pin `container_name` on every service whose `service.name` you want to read cleanly.
+- **`401`, `403`, `415` from Rootprint**: same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
 
 ## Related
 
-- [Send logs with Vector](/send-logs/log-agents/vector) — generic Vector setup for tailing files on a host.
-- [OTLP reference](/send-logs/otlp) — endpoint URL, response codes, body limits.
-- [Indexes](/indexes) — the `otel-logs-v0_9` schema.
+- [Send logs with Vector](/send-logs/log-agents/vector): generic Vector setup for tailing files on a host.
+- [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
+- [Indexes](/indexes): the `otel-logs-v0_9` schema.

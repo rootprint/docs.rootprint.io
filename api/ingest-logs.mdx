@@ -3,7 +3,7 @@ title: 'POST /api/ingest/ndjson - ingest log events'
 description: 'Send newline-delimited JSON log events to the Quickwit index attached to your ingest API key. Requires a bearer API key.'
 ---
 
-The ingest endpoint accepts a batch of log events as NDJSON and forwards them to the Quickwit index attached to your ingest API key. Rootprint acts as an authenticated endpoint in front of Quickwit - your log shippers send data here instead of directly to Quickwit, so you can keep Quickwit private and manage access with per-index API keys.
+The ingest endpoint accepts a batch of log events as NDJSON and forwards them to the Quickwit index attached to your ingest API key. Rootprint acts as an authenticated endpoint in front of Quickwit: your log shippers send data here instead of directly to Quickwit, so you can keep Quickwit private and manage access with per-index API keys.
 
 If you want the full setup flow, see [Send Logs](/send-logs/overview).
 

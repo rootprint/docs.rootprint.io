@@ -5,7 +5,7 @@ description: "Tail Caddy's JSON access and error logs with Vector and ship them 
 
 [Caddy](https://caddyserver.com) writes structured JSON logs by default. Vector parses each line with `parse_json`, maps Caddy's `level` field to OTel severity, and ships the result to Rootprint's OTLP endpoint with a Bearer token. Records land in the `otel-logs-v0_9` index with `service.name: caddy` and OpenTelemetry HTTP attributes (`http.request.method`, `url.path`, `http.response.status_code`, `client.address`, `user_agent.original`, …) pre-populated.
 
-Two setup paths are documented below. **Bare-metal** runs Vector as a `systemd` service that tails `/var/log/caddy/*.log` — pick this if Caddy is installed via your distro's package manager. **Docker** runs Vector as a sidecar container that reads Caddy's stdout via the Docker socket — pick this if Caddy runs as a container.
+Two setup paths are documented below. **Bare-metal** runs Vector as a `systemd` service that tails `/var/log/caddy/*.log`. Pick this if Caddy is installed via your distro's package manager. **Docker** runs Vector as a sidecar container that reads Caddy's stdout via the Docker socket. Pick this if Caddy runs as a container.
 
 <Warning>
 	Bare-metal paths and `systemctl` invocations below assume Debian or Ubuntu. The Docker setup
@@ -16,16 +16,16 @@ Two setup paths are documented below. **Bare-metal** runs Vector as a `systemd` 
 
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
-    Logs land in whichever index your ingest token is scoped to — these guides use the built-in
+    Logs land in whichever index your ingest token is scoped to: these guides use the built-in
     `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
-    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once — copy it before
-    clicking **Done**. API keys are scoped to one index — you cannot reuse one across indexes.
+    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once. Copy it before
+    clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
   </Step>
 
   <Step title="Enable Caddy file logging">
     Stock Caddy installs log to `journald`. Add the following to `/etc/caddy/Caddyfile` so Caddy
     writes JSON to file instead, then reload Caddy. The `log` block has to be added to every
-    site whose access log you want shipped — Caddy's default JSON encoder is what the parser
+    site whose access log you want shipped. Caddy's default JSON encoder is what the parser
     expects, so do not add a `format` directive.
 
     ```caddyfile
@@ -263,7 +263,7 @@ Two setup paths are documented below. **Bare-metal** runs Vector as a `systemd` 
 
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
-    Same as the bare-metal setup — see step 1 above. The API key works identically across both
+    Same as the bare-metal setup. See step 1 above. The API key works identically across both
     paths.
   </Step>
 
@@ -287,7 +287,7 @@ Two setup paths are documented below. **Bare-metal** runs Vector as a `systemd` 
 
   <Step title="Add the Vector sidecar to your compose file">
     Drop this service alongside your existing ones. Vector reads every container's logs through
-    the Docker socket — no changes needed to your application services.
+    the Docker socket. No changes needed to your application services.
 
     ```yaml
     services:
@@ -517,12 +517,12 @@ Two `remap` transforms run in sequence. The first, `parse_caddy`, turns each raw
 
 `parse_caddy`:
 
-- **JSON parse** — `parse_json(.message)` returns Caddy's structured object; `merge!` lifts every key (`ts`, `level`, `logger`, `msg`, `request`, `status`, `size`, …) onto the event. If parsing fails (transitional config, non-JSON output), the line falls through with the raw `.message` intact rather than being dropped.
-- **Severity** — Caddy's `level` field maps directly to OTel severity: `debug` → 5/DEBUG, `info` → 9/INFO, `warn` → 13/WARN, `error` → 17/ERROR, `panic`/`fatal` → 21/FATAL. No status-code override; a 5xx access-log entry stays at `severity_text: INFO` because Caddy logs every access at info level. Filter on `attributes.http.response.status_code` for triage.
+- **JSON parse**: `parse_json(.message)` returns Caddy's structured object; `merge!` lifts every key (`ts`, `level`, `logger`, `msg`, `request`, `status`, `size`, …) onto the event. If parsing fails (transitional config, non-JSON output), the line falls through with the raw `.message` intact rather than being dropped.
+- **Severity**: Caddy's `level` field maps directly to OTel severity: `debug` → 5/DEBUG, `info` → 9/INFO, `warn` → 13/WARN, `error` → 17/ERROR, `panic`/`fatal` → 21/FATAL. No status-code override; a 5xx access-log entry stays at `severity_text: INFO` because Caddy logs every access at info level. Filter on `attributes.http.response.status_code` for triage.
 
 `to_otlp` assembles the OTLP envelope. `service.name` is hard-coded to `caddy` (resource attribute). The `if exists(.request)` branch is what makes one VRL block handle both access and error logs cleanly: error-log entries (no `.request` block) get only `log.file.path` and `caddy.logger`, while access-log entries get the full HTTP semantic-convention attribute set.
 
-The Docker setup additionally attaches Vector's `docker_logs` metadata as `container.id`, `container.name`, `container.image.name`, `container.runtime: "docker"`, and `log.iostream` (`stdout`/`stderr`) — `log.file.path` is omitted because the source is the Docker daemon, not a file on disk.
+The Docker setup additionally attaches Vector's `docker_logs` metadata as `container.id`, `container.name`, `container.image.name`, `container.runtime: "docker"`, and `log.iostream` (`stdout`/`stderr`). `log.file.path` is omitted because the source is the Docker daemon, not a file on disk.
 
 | OTLP key                                                                                      | Source field                                          |
 | --------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -552,13 +552,13 @@ Every 5xx response Caddy returned, across all sites:
 service.name:caddy AND attributes.http.response.status_code:>=500
 ```
 
-All 4xx responses for one URL prefix — useful for spotting bad clients hammering one endpoint:
+All 4xx responses for one URL prefix, useful for spotting bad clients hammering one endpoint:
 
 ```text
 service.name:caddy AND attributes.url.path:/api/* AND attributes.http.response.status_code:>=400
 ```
 
-Activity from a single source IP — pivot from a suspect address back to everything it touched:
+Activity from a single source IP, pivot from a suspect address back to everything it touched:
 
 ```text
 attributes.client.address:1.2.3.4
@@ -570,7 +570,7 @@ Failed POSTs only:
 service.name:caddy AND attributes.http.request.method:POST AND attributes.http.response.status_code:>=400
 ```
 
-Filter to one Caddy container by name — handy when multiple Caddy instances ship to the same
+Filter to one Caddy container by name, handy when multiple Caddy instances ship to the same
 index from different hosts. Replace `<your-caddy-container-name>` with the actual name from
 `docker ps --format '{{.Names}}'`:
 
@@ -586,17 +586,17 @@ service.name:caddy AND attributes.caddy.logger:http.log.access
 
 ## Troubleshooting
 
-- **`permission denied` reading `/var/log/caddy/access.log`** — Vector's `vector` user is not in the `caddy` group. Run `sudo usermod -aG caddy vector` and restart Vector. If that's not available, `sudo chmod a+r /var/log/caddy/*.log` works but loosens permissions for every user on the host.
-- **Records arrive but `attributes.http.*` are missing** — the entry came from `error.log` (no `.request` block), by design. Filter access-log entries with `attributes.caddy.logger:http.log.access`.
-- **`body` looks like raw JSON instead of just the message** — the access log is using a non-default `format` directive in the Caddyfile. The parser expects Caddy's default JSON encoder. Either remove the `format` directive or extend the `parse_caddy` remap to handle the alternate shape.
-- **`severity_text` is always `INFO` even for 5xx responses** — by design. Caddy emits every HTTP access at `level: info` regardless of status code; this parser trusts the source. Filter on `attributes.http.response.status_code:>=500` to surface server errors.
-- **`401`, `403`, `415` from Rootprint** — same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
-- **Docker setup ships zero logs** — `include_containers` does not match the Caddy container's actual name. Run `docker ps --format '{{.Names}}'` to see the real names. Either set `container_name: caddy` on your Caddy compose service or update `include_containers` in `vector.yaml`.
-- **Vector container exits with `permission denied` on `/var/run/docker.sock`** — rootless Docker or SELinux. Either run Docker rootful, add `:z` to the socket mount on SELinux hosts, or grant the Vector image's user access to the docker group inside the image.
-- **`host.name` always reads the Vector container ID** — by default `get_hostname!()` returns the container's hostname, which Docker sets to the container ID. Set `hostname: <your-host>` on the `rootprint-vector` compose service to override.
+- **`permission denied` reading `/var/log/caddy/access.log`**: Vector's `vector` user is not in the `caddy` group. Run `sudo usermod -aG caddy vector` and restart Vector. If that's not available, `sudo chmod a+r /var/log/caddy/*.log` works but loosens permissions for every user on the host.
+- **Records arrive but `attributes.http.*` are missing**: the entry came from `error.log` (no `.request` block), by design. Filter access-log entries with `attributes.caddy.logger:http.log.access`.
+- **`body` looks like raw JSON instead of just the message**: the access log is using a non-default `format` directive in the Caddyfile. The parser expects Caddy's default JSON encoder. Either remove the `format` directive or extend the `parse_caddy` remap to handle the alternate shape.
+- **`severity_text` is always `INFO` even for 5xx responses**: by design. Caddy emits every HTTP access at `level: info` regardless of status code; this parser trusts the source. Filter on `attributes.http.response.status_code:>=500` to surface server errors.
+- **`401`, `403`, `415` from Rootprint**: same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
+- **Docker setup ships zero logs**: `include_containers` does not match the Caddy container's actual name. Run `docker ps --format '{{.Names}}'` to see the real names. Either set `container_name: caddy` on your Caddy compose service or update `include_containers` in `vector.yaml`.
+- **Vector container exits with `permission denied` on `/var/run/docker.sock`**: rootless Docker or SELinux. Either run Docker rootful, add `:z` to the socket mount on SELinux hosts, or grant the Vector image's user access to the docker group inside the image.
+- **`host.name` always reads the Vector container ID**: by default `get_hostname!()` returns the container's hostname, which Docker sets to the container ID. Set `hostname: <your-host>` on the `rootprint-vector` compose service to override.
 
 ## Related
 
-- [Send logs with Vector](/send-logs/log-agents/vector) — generic Vector setup for tailing files on a host.
-- [OTLP reference](/send-logs/otlp) — endpoint URL, response codes, body limits.
-- [Indexes](/indexes) — the `otel-logs-v0_9` schema, so you know what you can search.
+- [Send logs with Vector](/send-logs/log-agents/vector): generic Vector setup for tailing files on a host.
+- [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
+- [Indexes](/indexes): the `otel-logs-v0_9` schema, so you know what you can search.

@@ -32,7 +32,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Go SDK's `otlploghttp` 
     export OTEL_EXPORTER_OTLP_LOGS_HEADERS=Authorization=Bearer%20<your-ingest-token>
     ```
 
-    <Warning>The `%20` after `Bearer` is required — OTEL expects URL-encoded header values.</Warning>
+    <Warning>The `%20` after `Bearer` is required. OTEL expects URL-encoded header values.</Warning>
 
   </Step>
 
@@ -75,7 +75,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Go SDK's `otlploghttp` 
 
 ## Structured logging
 
-Pass key/value pairs directly through `slog` — the bridge turns them into log-record attributes.
+Pass key/value pairs directly through `slog`: the bridge turns them into log-record attributes.
 
 ```go
 logger.Info("user signed up",
@@ -138,10 +138,10 @@ func main() {
 
 ## Troubleshooting
 
-- **401 / 403** — the Bearer token is missing, malformed, or the `%20` separator is not URL-encoded. Re-check `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.
-- **Nothing in Search** — the batch processor buffers records. Short-lived programs must call `provider.Shutdown(ctx)` or `provider.ForceFlush(ctx)` before exit (the example above does so via `defer`).
-- **`otlploghttp.New` returns `context deadline exceeded`** — the process cannot reach the endpoint. Check DNS/TLS/firewall; try `curl -X POST $OTEL_EXPORTER_OTLP_LOGS_ENDPOINT -H "Authorization: Bearer <token>"` to isolate.
-- **TLS errors against a self-signed endpoint** — set `OTEL_EXPORTER_OTLP_CERTIFICATE=/path/to/ca.pem`.
+- **401 / 403**: the Bearer token is missing, malformed, or the `%20` separator is not URL-encoded. Re-check `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.
+- **Nothing in Search**: the batch processor buffers records. Short-lived programs must call `provider.Shutdown(ctx)` or `provider.ForceFlush(ctx)` before exit (the example above does so via `defer`).
+- **`otlploghttp.New` returns `context deadline exceeded`**: the process cannot reach the endpoint. Check DNS/TLS/firewall; try `curl -X POST $OTEL_EXPORTER_OTLP_LOGS_ENDPOINT -H "Authorization: Bearer <token>"` to isolate.
+- **TLS errors against a self-signed endpoint**: set `OTEL_EXPORTER_OTLP_CERTIFICATE=/path/to/ca.pem`.
 
 ## Related
 

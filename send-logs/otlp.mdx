@@ -1,9 +1,9 @@
 ---
 title: 'OTLP reference'
-description: 'Rootprint OTLP HTTP endpoint — URL, authentication, content types, limits, and response codes.'
+description: 'Rootprint OTLP HTTP endpoint: URL, authentication, content types, limits, and response codes.'
 ---
 
-Rootprint exposes an OTLP HTTP endpoint that accepts OpenTelemetry logs, authenticates them with an ingest API key, and forwards them to Quickwit's OTLP endpoint. The target index is fixed by the API key — the exporter does not choose it.
+Rootprint exposes an OTLP HTTP endpoint that accepts OpenTelemetry logs, authenticates them with an ingest API key, and forwards them to Quickwit's OTLP endpoint. The target index is fixed by the API key. The exporter does not choose it.
 
 ## Endpoint
 
@@ -24,7 +24,7 @@ OTEL_EXPORTER_OTLP_LOGS_HEADERS=Authorization=Bearer%20<your-ingest-token>
 ```
 
 <Warning>
-	The `%20` between `Bearer` and the token is required — OTEL SDKs expect header values in
+	The `%20` between `Bearer` and the token is required. OTEL SDKs expect header values in
 	URL-encoded form.
 </Warning>
 
@@ -32,11 +32,11 @@ OTEL_EXPORTER_OTLP_LOGS_HEADERS=Authorization=Bearer%20<your-ingest-token>
 
 Rootprint accepts `application/x-protobuf` only. Any other `Content-Type` returns **415 Unsupported Media Type**.
 
-Quickwit's upstream OTLP endpoint does not accept JSON, and Rootprint does not transcode JSON to protobuf. Every major OTEL SDK already defaults to protobuf for HTTP logs — with one exception: the JavaScript package `@opentelemetry/exporter-logs-otlp-http` defaults to JSON. If you are using that package, switch to `@opentelemetry/exporter-logs-otlp-proto` (same `OTLPLogExporter` API).
+Quickwit's upstream OTLP endpoint does not accept JSON, and Rootprint does not transcode JSON to protobuf. Every major OTEL SDK already defaults to protobuf for HTTP logs, with one exception: the JavaScript package `@opentelemetry/exporter-logs-otlp-http` defaults to JSON. If you are using that package, switch to `@opentelemetry/exporter-logs-otlp-proto` (same `OTLPLogExporter` API).
 
 ## Size and encoding
 
-- Rootprint does not impose its own body-size limit on OTLP requests. The effective ceiling comes from Quickwit's OTLP endpoint and any reverse proxy you place in front of Rootprint — size requests there if you need a hard limit.
+- Rootprint does not impose its own body-size limit on OTLP requests. The effective ceiling comes from Quickwit's OTLP endpoint and any reverse proxy you place in front of Rootprint. Size requests there if you need a hard limit.
 - `Content-Encoding: gzip` is forwarded to Quickwit unchanged.
 
 ## Response codes
