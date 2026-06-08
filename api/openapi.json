@@ -14016,7 +14016,7 @@
 	"servers": [
 		{
 			"description": "Same-origin API",
-			"url": "/"
+			"url": "https://example.com"
 		}
 	]
 }
