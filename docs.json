@@ -199,11 +199,29 @@
               "GET /api/indexes/{indexId}/logs/histogram",
               "GET /api/indexes/{indexId}/fields/{field}/values",
               "GET /api/indexes/{indexId}/fields/values",
-              "GET /api/indexes/{indexId}/logs/export",
+              "GET /api/indexes/{indexId}/logs/export"
+            ]
+          },
+          {
+            "group": "Saved views",
+            "openapi": {
+              "source": "api/openapi.json",
+              "directory": "api/reference"
+            },
+            "pages": [
               "GET /api/indexes/{indexId}/views",
               "POST /api/indexes/{indexId}/views",
               "PATCH /api/indexes/{indexId}/views/{viewId}",
-              "DELETE /api/indexes/{indexId}/views/{viewId}",
+              "DELETE /api/indexes/{indexId}/views/{viewId}"
+            ]
+          },
+          {
+            "group": "Share links",
+            "openapi": {
+              "source": "api/openapi.json",
+              "directory": "api/reference"
+            },
+            "pages": [
               "POST /api/shares",
               "GET /api/shares/{code}"
             ]
@@ -222,18 +240,27 @@
               "GET /api/indexes/{indexId}/fields",
               "GET /api/indexes/{indexId}/config",
               "GET /api/indexes/{indexId}/stats",
-              "POST /api/indexes/{indexId}/sources",
-              "GET /api/indexes/{indexId}/sources/{sourceId}",
-              "PUT /api/indexes/{indexId}/sources/{sourceId}",
-              "PATCH /api/indexes/{indexId}/sources/{sourceId}",
-              "POST /api/indexes/{indexId}/sources/{sourceId}/reset-checkpoint",
-              "DELETE /api/indexes/{indexId}/sources/{sourceId}",
               "GET /api/indexes/{indexId}/preferences",
               "PUT /api/indexes/{indexId}/preferences"
             ]
           },
           {
-            "group": "API keys",
+            "group": "Index sources API",
+            "openapi": {
+              "source": "api/openapi.json",
+              "directory": "api/reference"
+            },
+            "pages": [
+              "POST /api/indexes/{indexId}/sources",
+              "GET /api/indexes/{indexId}/sources/{sourceId}",
+              "PUT /api/indexes/{indexId}/sources/{sourceId}",
+              "PATCH /api/indexes/{indexId}/sources/{sourceId}",
+              "POST /api/indexes/{indexId}/sources/{sourceId}/reset-checkpoint",
+              "DELETE /api/indexes/{indexId}/sources/{sourceId}"
+            ]
+          },
+          {
+            "group": "API key administration",
             "openapi": {
               "source": "api/openapi.json",
               "directory": "api/reference"

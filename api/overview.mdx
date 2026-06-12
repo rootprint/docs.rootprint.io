@@ -7,18 +7,6 @@ The Rootprint API is the HTTP surface behind your self-hosted instance. Start wi
 
 If you are setting up log collection for the first time, start with [Send logs](/send-logs/overview). If you already know the endpoint you need, use the generated endpoint reference in the sidebar.
 
-<CardGroup cols={3}>
-  <Card title="Send logs" icon="send" href="/send-logs/overview">
-    Choose OTLP or the HTTP endpoint and create the right ingest API key.
-  </Card>
-  <Card title="NDJSON ingest" icon="braces" href="/api/ingest-logs">
-    Push newline-delimited JSON logs through Rootprint to Quickwit.
-  </Card>
-  <Card title="Query logs" icon="search" href="/api/query-logs">
-    Read logs from external tools and AI agents with a personal API key.
-  </Card>
-</CardGroup>
-
 ## Base URL
 
 All API requests go to your Rootprint instance. Replace the host below with your deployment URL.
@@ -52,17 +40,20 @@ Ingest API keys (prefix `lwit_`) are scoped to one index; that index is fixed by
 
 The generated endpoint reference is arranged around the audience for each endpoint.
 
-| Group                 | What it contains                                               |
-| --------------------- | -------------------------------------------------------------- |
-| Log ingest API        | NDJSON and OTLP endpoints for log producers                    |
-| Log explorer API      | Search, histograms, field values, exports, shares, and saved views. The read-only query endpoints also accept a personal API key. |
-| Index management API  | Index metadata, field discovery, sources, preferences, and stats |
-| Personal API keys     | Self-service create, list, and revoke for personal (read) keys |
-| API keys              | Create and delete ingest API keys; admin oversight of personal keys |
-| User and invite API   | Users, roles, password resets, invites, and invite acceptance  |
-| Authentication API    | Setup, sign-in, sessions, sign-out, and password changes       |
-| Auth settings API     | Google and GitHub OAuth credentials, allowed domains, and allowed organizations |
-| System monitoring API | Health, cluster overview, activity, and metrics                |
+| Group                  | What it contains                                               |
+| ---------------------- | ------------------------------------------------------------- |
+| Log ingest API         | NDJSON and OTLP endpoints for log producers                   |
+| Log explorer API       | Search, histograms, field values, and exports. The read-only query endpoints also accept a personal API key. |
+| Saved views            | Create, list, update, and delete saved searches scoped to an index |
+| Share links            | Create and resolve public share links for log views           |
+| Index management API   | Index metadata, field discovery, preferences, and stats       |
+| Index sources API      | Configure the log sources feeding an index, including enable state and checkpoints |
+| API key administration | Create and delete ingest API keys; admin oversight of personal keys |
+| Personal API keys      | Self-service create, list, and revoke for personal (read) keys |
+| User and invite API    | Users, roles, password resets, invites, and invite acceptance |
+| Authentication API     | Setup, sign-in, sessions, sign-out, and password changes      |
+| Auth settings API      | Google and GitHub OAuth credentials, allowed domains, and allowed organizations |
+| System monitoring API  | Health, cluster overview, activity, and metrics               |
 
 ## Common content types
 
@@ -120,10 +111,6 @@ Most app-level endpoints return JSON errors with a stable `error` object.
 | `503`  | Quickwit or another upstream dependency is down    |
 
 OTLP endpoints follow OTLP-style error responses instead of the app JSON error shape.
-
-## Playground notes
-
-The generated endpoint pages include an interactive playground. For token-based endpoints, paste the token value into the bearer auth field. For session-cookie endpoints, use the playground against a Rootprint instance where you are signed in, or treat the page as a contract reference instead of an interactive client.
 
 <Note>
   Rootprint does not apply an application-level rate limit to ingest endpoints. Apply rate limiting at

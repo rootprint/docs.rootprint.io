@@ -6338,8 +6338,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Create personal API key",
 				"tags": [
-					"Api-key"
+					"Personal API keys"
 				]
 			}
 		},
@@ -6487,8 +6488,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Delete personal API key",
 				"tags": [
-					"Api-key"
+					"Personal API keys"
 				]
 			}
 		},
@@ -6740,8 +6742,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Get personal API key",
 				"tags": [
-					"Api-key"
+					"Personal API keys"
 				]
 			}
 		},
@@ -6999,8 +7002,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "List personal API keys",
 				"tags": [
-					"Api-key"
+					"Personal API keys"
 				]
 			}
 		},
@@ -7335,8 +7339,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Update personal API key",
 				"tags": [
-					"Api-key"
+					"Personal API keys"
 				]
 			}
 		},
@@ -7986,8 +7991,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Change password",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -8725,8 +8731,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Get current session",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			},
 			"post": {
@@ -11102,8 +11109,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Sign in with email",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -11532,8 +11540,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Sign out",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
