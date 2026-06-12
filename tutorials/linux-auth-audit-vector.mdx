@@ -15,8 +15,8 @@ description: 'Ship /var/log/auth.log to Rootprint with Vector and search SSH, su
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
     Logs land in whichever index your ingest token is scoped to. This tutorial uses the built-in
-    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
-    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once. Copy it before
+    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick
+    `otel-logs-v0_9`. The value is shown once. Copy it before
     clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
   </Step>
 
@@ -203,7 +203,7 @@ Two `remap` transforms run in sequence. The first, `parse_auth`, turns each raw 
 - **Severity**: the message body is lowercased, then matched against two pattern families. Authentication failure phrases (`failed password`, `authentication failure`, `invalid user`, brute-force noise) bump the record to `WARN` (severity 13). Explicit `error` or `fatal` tokens push it to `ERROR` (17). Everything else stays at `INFO` (9).
 - **SSH-specific extractions**: three regexes pull out source IP/port and the target username. These only fire on lines that match (for example, `Failed password for root from 1.2.3.4 port 5555`); on `sudo`, `su`, and PAM lines they leave the fields unset.
 
-`to_otlp` assembles the OTLP envelope. `service.name` is derived from the parsed `program` so SSH events show as `service:sshd`, sudo as `service:sudo`, and so on. Rootprint's service filter will list every auth program separately. Per-event attributes are pushed conditionally inside `if exists(...)` guards, so the OTLP record never carries empty `stringValue` attributes for SSH-only fields on a `sudo` event.
+`to_otlp` assembles the OTLP envelope. `service.name` is derived from the parsed `program` so SSH events show as `service_name:sshd`, sudo as `service_name:sudo`, and so on. Rootprint's service filter will list every auth program separately. Per-event attributes are pushed conditionally inside `if exists(...)` guards, so the OTLP record never carries empty `stringValue` attributes for SSH-only fields on a `sudo` event.
 
 ## Useful searches
 

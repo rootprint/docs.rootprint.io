@@ -18,8 +18,8 @@ Rootprint exposes an authenticated HTTP endpoint at `/api/ingest/ndjson`. Each i
   </Step>
 
 <Step title="Create an ingest API key">
-	In **Settings → API keys**, click **Create API key**, pick the target index, and choose the
-	**Ingest** role. Copy the value shown on creation. API keys are scoped to one index. You cannot
+	In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the target
+	index. Copy the value shown on creation. API keys are scoped to one index. You cannot
 	reuse one across indexes.
 </Step>
 
@@ -47,13 +47,13 @@ Rootprint exposes an authenticated HTTP endpoint at `/api/ingest/ndjson`. Each i
 
 ## Payload format
 
-Rootprint forwards the body unchanged. You must send the format your API key's Quickwit index expects: typically NDJSON with `Content-Type: application/x-ndjson`. The payload must match the target index schema; Quickwit rejects documents that don't. See [Indexes](/indexes) for the built-in `otel-logs-v0_9` schema, or the index's [Configuration tab](/configuration/manage-indexes#field-role-mappings) for Rootprint's display mapping over your custom schema.
+Rootprint forwards the body unchanged. You must send the format your API key's Quickwit index expects: typically NDJSON with `Content-Type: application/x-ndjson` (the endpoint also accepts `application/json`). The payload must match the target index schema; Quickwit rejects documents that don't. See [Indexes](/indexes) for the built-in `otel-logs-v0_9` schema, or the index's [Configuration tab](/configuration/manage-indexes#field-role-mappings) for Rootprint's display mapping over your custom schema.
 
 ## Troubleshooting
 
 - **401**: missing or malformed Bearer token.
 - **403**: the API key is invalid or revoked. Create a new ingest API key for that index in **Settings → API keys**.
-- **400**: NDJSON parse error. Common causes: trailing comma between objects, a JSON array instead of one-object-per-line, wrong `Content-Type`.
+- **400**: NDJSON parse error. Common causes: a trailing comma between objects, or a JSON array instead of one object per line.
 - **Accepted but not visible in Search**: Quickwit has not flushed the new documents yet. Wait a few seconds and search again.
 
 ## Related

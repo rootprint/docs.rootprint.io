@@ -17,8 +17,8 @@ Two setup paths are documented below. **Bare-metal** runs Vector as a `systemd` 
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
     Logs land in whichever index your ingest token is scoped to: these guides use the built-in
-    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
-    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once. Copy it before
+    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick
+    `otel-logs-v0_9`. The value is shown once. Copy it before
     clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
   </Step>
 
@@ -255,7 +255,7 @@ Two setup paths are documented below. **Bare-metal** runs Vector as a `systemd` 
 
   <Step title="Verify in Rootprint">
     Open Search, pick `otel-logs-v0_9` from the index selector, and query
-    `service.name:caddy`. Records typically appear within 5–10 seconds.
+    `service_name:caddy`. Records typically appear within 5–10 seconds.
   </Step>
 </Steps>
 
@@ -281,7 +281,7 @@ Two setup paths are documented below. **Bare-metal** runs Vector as a `systemd` 
     }
     ```
 
-    If you change the `Caddyfile`, restart the Caddy container in step 4 below.
+    If you change the `Caddyfile`, restart the Caddy container in step 5 below.
 
   </Step>
 
@@ -483,12 +483,12 @@ Two setup paths are documented below. **Bare-metal** runs Vector as a `systemd` 
     ```bash
     docker compose up -d rootprint-vector
 
-    # If you changed the Caddyfile in step 1, also restart Caddy:
+    # If you changed the Caddyfile in step 2, also restart Caddy:
     docker compose restart <your-caddy-service-name>
     ```
 
     Replace `<your-caddy-service-name>` with the Compose service key for Caddy. That's the name
-    under `services:`, which can differ from `container_name`. If you skipped step 1 because
+    under `services:`, which can differ from `container_name`. If you skipped step 2 because
     access logs are already enabled, you only need to start Vector here.
 
   </Step>
@@ -504,7 +504,7 @@ Two setup paths are documented below. **Bare-metal** runs Vector as a `systemd` 
   </Step>
 
   <Step title="Verify in Rootprint">
-    Open Search, pick `otel-logs-v0_9` from the index selector, and query `service.name:caddy`.
+    Open Search, pick `otel-logs-v0_9` from the index selector, and query `service_name:caddy`.
     Records typically appear within 5–10 seconds. `attributes.container.name` reads whatever
     Docker reports for your Caddy container. If you set `container_name: caddy`, it reads
     `caddy`. `attributes.container.image.name` reads whichever Caddy image you're running.
@@ -517,7 +517,7 @@ Two `remap` transforms run in sequence. The first, `parse_caddy`, turns each raw
 
 `parse_caddy`:
 
-- **JSON parse**: `parse_json(.message)` returns Caddy's structured object; `merge!` lifts every key (`ts`, `level`, `logger`, `msg`, `request`, `status`, `size`, …) onto the event. If parsing fails (transitional config, non-JSON output), the line falls through with the raw `.message` intact rather than being dropped.
+- **JSON parse**: `parse_json(.message)` returns Caddy's structured object; the `merge(., object!(parsed))` call lifts every key (`ts`, `level`, `logger`, `msg`, `request`, `status`, `size`, …) onto the event. If parsing fails (transitional config, non-JSON output), the line falls through with the raw `.message` intact rather than being dropped.
 - **Severity**: Caddy's `level` field maps directly to OTel severity: `debug` → 5/DEBUG, `info` → 9/INFO, `warn` → 13/WARN, `error` → 17/ERROR, `panic`/`fatal` → 21/FATAL. No status-code override; a 5xx access-log entry stays at `severity_text: INFO` because Caddy logs every access at info level. Filter on `attributes.http.response.status_code` for triage.
 
 `to_otlp` assembles the OTLP envelope. `service.name` is hard-coded to `caddy` (resource attribute). The `if exists(.request)` branch is what makes one VRL block handle both access and error logs cleanly: error-log entries (no `.request` block) get only `log.file.path` and `caddy.logger`, while access-log entries get the full HTTP semantic-convention attribute set.
@@ -549,13 +549,13 @@ Run these in the Rootprint search box against `otel-logs-v0_9`.
 Every 5xx response Caddy returned, across all sites:
 
 ```text
-service.name:caddy AND attributes.http.response.status_code:>=500
+service_name:caddy AND attributes.http.response.status_code:>=500
 ```
 
 All 4xx responses for one URL prefix, useful for spotting bad clients hammering one endpoint:
 
 ```text
-service.name:caddy AND attributes.url.path:/api/* AND attributes.http.response.status_code:>=400
+service_name:caddy AND attributes.url.path:/api/* AND attributes.http.response.status_code:>=400
 ```
 
 Activity from a single source IP, pivot from a suspect address back to everything it touched:
@@ -567,7 +567,7 @@ attributes.client.address:1.2.3.4
 Failed POSTs only:
 
 ```text
-service.name:caddy AND attributes.http.request.method:POST AND attributes.http.response.status_code:>=400
+service_name:caddy AND attributes.http.request.method:POST AND attributes.http.response.status_code:>=400
 ```
 
 Filter to one Caddy container by name, handy when multiple Caddy instances ship to the same
@@ -575,13 +575,13 @@ index from different hosts. Replace `<your-caddy-container-name>` with the actua
 `docker ps --format '{{.Names}}'`:
 
 ```text
-service.name:caddy AND attributes.container.name:<your-caddy-container-name>
+service_name:caddy AND attributes.container.name:<your-caddy-container-name>
 ```
 
 Access-log entries only (skip Caddy's runtime/error logger):
 
 ```text
-service.name:caddy AND attributes.caddy.logger:http.log.access
+service_name:caddy AND attributes.caddy.logger:http.log.access
 ```
 
 ## Troubleshooting

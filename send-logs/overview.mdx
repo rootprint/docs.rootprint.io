@@ -14,7 +14,7 @@ Rootprint accepts logs two ways:
 | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | An app in Python, Node.js, Go, Java, or .NET | The matching [language page](#languages) (OTLP SDK)                                      |
 | Container logs on a Linux host               | [Docker](/send-logs/platforms/docker) (OTEL Collector)                                   |
-| Logs already on disk on a Linux host         | [Fluent Bit](/send-logs/log-agents/fluent-bit) or [Vector](/send-logs/log-agents/vector) |
+| Logs already on disk on a Linux host         | [OpenTelemetry Collector](/send-logs/log-agents/otel-collector), [Fluent Bit](/send-logs/log-agents/fluent-bit), or [Vector](/send-logs/log-agents/vector) |
 | Existing pipeline that emits your own schema | [HTTP endpoint](/send-logs/http)                                                        |
 | Something else that speaks OTLP              | [OTLP reference](/send-logs/otlp)                                                        |
 
@@ -37,6 +37,7 @@ Rootprint accepts logs two ways:
 ### Log Agents
 
 <CardGroup cols={3}>
+	<Card title="OpenTelemetry Collector" icon="radar" href="/send-logs/log-agents/otel-collector" />
 	<Card title="Fluent Bit" icon="bug" href="/send-logs/log-agents/fluent-bit" />
 	<Card title="Vector" icon="bolt" href="/send-logs/log-agents/vector" />
 </CardGroup>

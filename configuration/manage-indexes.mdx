@@ -140,7 +140,7 @@ The source detail page header offers three actions for editable sources:
 The **Delete** button in the index header permanently removes the index from Quickwit along with every document, split, and source configured on it. After the Quickwit delete succeeds, Rootprint also cleans up its own records for the index:
 
 - Field-role and visibility configuration.
-- Per-user preferences, saved queries, views, shared links, and search history tied to the index.
+- Per-user preferences, saved views, shared links, and search audit records tied to the index.
 - Ingest API keys: because each key is scoped to exactly one index, any key pointing at the deleted index is removed.
 
 To prevent accidents, the modal requires you to type the exact index ID before the **Delete** button becomes active. There is no undo.

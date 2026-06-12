@@ -1,0 +1,60 @@
+---
+title: 'Query logs with a personal API key'
+description: 'Read logs and explore indexes from external tools, scripts, and AI agents using a read-only personal API key that authenticates as you.'
+---
+
+A **personal API key** lets a tool, script, or AI agent call Rootprint's read-only log endpoints on your behalf, without a browser session. The key authenticates as the user who created it: it is read-only and sees exactly the indexes and logs that user can see in the web app.
+
+## How personal keys work
+
+- **Prefix `rpk_`.** The full key value is shown once, at creation. Store it like a password; Rootprint only keeps a short display fragment afterwards.
+- **Read-only.** A personal key grants `logs: read`. Management endpoints (creating or editing indexes, sources, users, settings, or keys) reject it with `401`.
+- **Scoped to the owner, not an index.** The key inherits its owner's visibility. There is no per-index personal key; one key reads every index the owner has access to.
+- **No expiry.** Personal keys do not expire. Revoke a key to cut off access.
+
+## Create a key
+
+You can also create, list, and revoke your own keys from the Rootprint web app under **Settings → API keys**.
+
+## Authenticate
+
+Send the key as a bearer token.
+
+```http
+Authorization: Bearer rpk_abcdef0123456789...
+```
+
+## Read logs
+
+The key works on every read-only log explorer endpoint.
+
+```bash
+curl 'https://your-rootprint-host/api/indexes/{indexId}/logs?q=severity_text:ERROR&limit=50' \
+  -H 'Authorization: Bearer rpk_abcdef0123456789...'
+```
+
+To discover the index IDs your key can read, list indexes first:
+
+```bash
+curl 'https://your-rootprint-host/api/indexes' \
+  -H 'Authorization: Bearer rpk_abcdef0123456789...'
+```
+
+### Endpoints that accept a personal key
+
+| Endpoint                                              | Purpose                          |
+| ----------------------------------------------------- | -------------------------------- |
+| `GET /api/indexes`                                    | List indexes the owner can see   |
+| `GET /api/indexes/{indexId}/logs`                     | Search logs                      |
+| `GET /api/indexes/{indexId}/logs/histogram`           | Time-bucketed counts             |
+| `GET /api/indexes/{indexId}/config`                   | Index field configuration        |
+| `GET /api/indexes/{indexId}/fields`                   | Discover fields                  |
+| `GET /api/indexes/{indexId}/fields/values`            | Top values across fields         |
+| `GET /api/indexes/{indexId}/fields/{field}/values`    | Top values for one field         |
+
+See [Query language](/search/query-language) for the `q` syntax, and the endpoint reference in the sidebar for every query parameter.
+
+<Note>
+  Management routes (creating indexes, editing sources, changing settings) and the key-management
+  endpoints reject a personal key with `401`. 
+</Note>

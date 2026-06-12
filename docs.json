@@ -145,6 +145,7 @@
               {
                 "group": "Log Agents",
                 "pages": [
+                  "send-logs/log-agents/otel-collector",
                   "send-logs/log-agents/fluent-bit",
                   "send-logs/log-agents/vector"
                 ]
@@ -177,7 +178,7 @@
         "groups": [
           {
             "group": "Overview",
-            "pages": ["api/overview"]
+            "pages": ["api/overview", "api/query-logs"]
           },
           {
             "group": "Log ingest API",
@@ -186,14 +187,6 @@
               "directory": "api/reference"
             },
             "pages": ["POST /api/ingest/ndjson", "POST /v1/logs"]
-          },
-          {
-            "group": "Search API",
-            "openapi": {
-              "source": "api/openapi.json",
-              "directory": "api/reference"
-            },
-            "pages": ["GET /api/search/logs"]
           },
           {
             "group": "Log explorer API",
@@ -207,10 +200,10 @@
               "GET /api/indexes/{indexId}/fields/{field}/values",
               "GET /api/indexes/{indexId}/fields/values",
               "GET /api/indexes/{indexId}/logs/export",
-              "GET /api/indexes/{indexId}/saved-queries",
-              "POST /api/indexes/{indexId}/saved-queries",
-              "PATCH /api/indexes/{indexId}/saved-queries/{savedQueryId}",
-              "DELETE /api/indexes/{indexId}/saved-queries/{savedQueryId}",
+              "GET /api/indexes/{indexId}/views",
+              "POST /api/indexes/{indexId}/views",
+              "PATCH /api/indexes/{indexId}/views/{viewId}",
+              "DELETE /api/indexes/{indexId}/views/{viewId}",
               "POST /api/shares",
               "GET /api/shares/{code}"
             ]
@@ -249,7 +242,23 @@
               "GET /api/api-keys",
               "POST /api/api-keys",
               "GET /api/api-keys/{apiKeyId}",
-              "DELETE /api/api-keys/{apiKeyId}"
+              "DELETE /api/api-keys/{apiKeyId}",
+              "GET /api/api-keys/personal",
+              "DELETE /api/api-keys/personal/{id}"
+            ]
+          },
+          {
+            "group": "Personal API keys",
+            "openapi": {
+              "source": "api/openapi.json",
+              "directory": "api/reference"
+            },
+            "pages": [
+              "POST /api/auth/api-key/create",
+              "GET /api/auth/api-key/list",
+              "GET /api/auth/api-key/get",
+              "POST /api/auth/api-key/update",
+              "POST /api/auth/api-key/delete"
             ]
           },
           {

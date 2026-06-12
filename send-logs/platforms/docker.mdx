@@ -16,8 +16,8 @@ Run a Vector sidecar next to your other containers. It reads each container's lo
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
     Logs land in whichever index your ingest token is scoped to. These guides use the built-in
-    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
-    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once. Copy it before
+    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick
+    `otel-logs-v0_9`. The value is shown once. Copy it before
     clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
   </Step>
 
@@ -184,7 +184,7 @@ The message body is lowercased and matched against two pattern families:
 
 ### Attributes
 
-`service.name` is derived from the container's name (with the leading `/` Docker prefixes stripped), so a query for `service:my-api` filters Rootprint to one container's events. `host.name` comes from the Vector container's hostname.
+`service.name` is derived from the container's name (with the leading `/` Docker prefixes stripped), so a query for `service_name:my-api` filters Rootprint to one container's events. `host.name` comes from the Vector container's hostname.
 
 Per-event attributes:
 

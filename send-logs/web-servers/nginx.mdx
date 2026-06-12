@@ -15,14 +15,14 @@ description: "Tail nginx's default `combined` access logs and error logs with Ve
 <Steps>
   <Step title="Pick the target index and create an ingest API key">
     Logs land in whichever index your ingest token is scoped to. These guides use the built-in
-    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
-    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once. Copy it before
+    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick
+    `otel-logs-v0_9`. The value is shown once. Copy it before
     clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
   </Step>
 
 <Step title="Confirm nginx is logging to file">
 	Stock nginx already writes `combined`-format access logs to `/var/log/nginx/access.log` and error
-	logs to `/var/log/nginx/error.log`. The wizard targets those defaults. No `nginx.conf` changes
+	logs to `/var/log/nginx/error.log`. This guide assumes those defaults. No `nginx.conf` changes
 	are required. If you have replaced the default `log_format` with a custom one, the parser below
 	will fall back to leaving the raw line in `body`; either revert to the default `combined` format
 	or extend the `parse_nginx` remap to handle your custom shape.
@@ -280,7 +280,7 @@ description: "Tail nginx's default `combined` access logs and error logs with Ve
 
   <Step title="Verify in Rootprint">
     Open Search, pick `otel-logs-v0_9` from the index selector, and query
-    `service.name:nginx`. Records typically appear within 5–10 seconds.
+    `service_name:nginx`. Records typically appear within 5–10 seconds.
   </Step>
 </Steps>
 
@@ -326,13 +326,13 @@ Run these in the Rootprint search box against `otel-logs-v0_9`.
 Every 5xx response nginx returned, across all sites:
 
 ```text
-service.name:nginx AND attributes.http.response.status_code:>=500
+service_name:nginx AND attributes.http.response.status_code:>=500
 ```
 
 All 4xx responses for one URL prefix, useful for spotting bad clients hammering one endpoint:
 
 ```text
-service.name:nginx AND attributes.url.path:/api/* AND attributes.http.response.status_code:>=400
+service_name:nginx AND attributes.url.path:/api/* AND attributes.http.response.status_code:>=400
 ```
 
 Activity from a single source IP, pivot from a suspect address back to everything it touched:
@@ -344,19 +344,19 @@ attributes.client.address:1.2.3.4
 Failed POSTs only:
 
 ```text
-service.name:nginx AND attributes.http.request.method:POST AND attributes.http.response.status_code:>=400
+service_name:nginx AND attributes.http.request.method:POST AND attributes.http.response.status_code:>=400
 ```
 
 Error-log entries only (skip access logs):
 
 ```text
-service.name:nginx AND attributes.nginx.format:error
+service_name:nginx AND attributes.nginx.format:error
 ```
 
 Upstream failures (the things that page someone):
 
 ```text
-service.name:nginx AND attributes.nginx.format:error AND attributes.nginx.upstream:*
+service_name:nginx AND attributes.nginx.format:error AND attributes.nginx.upstream:*
 ```
 
 ## Troubleshooting

@@ -72,10 +72,10 @@ This means `severity_text:error` will **not** match a document with `"severity_t
 
 ## Time ranges
 
-The Rootprint UI exposes a time picker that bounds every query to a time window. You don't write the timestamp clause yourself. If you call the search API directly, pass `startTs` and `endTs` as **seconds** (regardless of the field's precision). The index is determined by your search API key, not the URL:
+The Rootprint UI exposes a time picker that bounds every query to a time window. You don't write the timestamp clause yourself. If you call the log endpoint directly, pass `startTs` and `endTs` as **seconds** (regardless of the field's precision). The index is part of the URL, and you authenticate with a [personal API key](/api/query-logs):
 
 ```http
-GET /api/search/logs?q=severity_text:ERROR&startTs=1776340000&endTs=1776343600
+GET /api/indexes/{indexId}/logs?q=severity_text:ERROR&startTs=1776340000&endTs=1776343600
 ```
 
 ## Common log search recipes

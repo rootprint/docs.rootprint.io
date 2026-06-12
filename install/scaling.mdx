@@ -16,7 +16,7 @@ gateway, and API layer in front of it.
 | --------- | --------------- | ----- |
 | Rootprint | No | Run one active Rootprint instance. Do not add load-balanced Rootprint replicas and do not build a shared filesystem for Rootprint. |
 | Quickwit | Yes | Quickwit is designed as a horizontally scalable cluster. Add nodes to grow ingest and search capacity. |
-| Rootprint database | External Postgres | Rootprint stores users, API keys, saved queries, preferences, and activity state in Postgres. This is separate from Quickwit's metastore, even if both databases run on the same Postgres server. |
+| Rootprint database | External Postgres | Rootprint stores users, API keys, saved views, preferences, and activity state in Postgres. This is separate from Quickwit's metastore, even if both databases run on the same Postgres server. |
 
 If you need a bigger deployment, keep one Rootprint instance and point `QUICKWIT_URL` at a
 Quickwit REST endpoint, load balancer, or Kubernetes service. Quickwit nodes serve the REST API and

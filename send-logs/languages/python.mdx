@@ -10,7 +10,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP (`proto-http`). The Python S
 <Steps>
   <Step title="Install the OpenTelemetry SDK">
     ```bash
-    pip install opentelemetry-sdk opentelemetry-exporter-otlp-proto-http opentelemetry-instrumentation-logging
+    pip install opentelemetry-sdk opentelemetry-exporter-otlp-proto-http
     ```
 
     Python 3.8+ is required. For async apps, add `opentelemetry-instrumentation-asyncio`.
@@ -32,8 +32,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP (`proto-http`). The Python S
     ```python
     import logging
     from opentelemetry._logs import set_logger_provider
-    from opentelemetry.instrumentation.logging.handler import LoggingHandler
-    from opentelemetry.sdk._logs import LoggerProvider
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
     from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
     from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 
@@ -77,8 +76,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import logging
 from opentelemetry._logs import set_logger_provider
-from opentelemetry.instrumentation.logging.handler import LoggingHandler
-from opentelemetry.sdk._logs import LoggerProvider
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 

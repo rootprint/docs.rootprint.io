@@ -1,0 +1,130 @@
+---
+title: 'Send logs with the OpenTelemetry Collector'
+description: 'Tail log files on a Linux host with the OpenTelemetry Collector and ship them to Rootprint over OTLP.'
+---
+
+The [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) reads, processes, and exports telemetry without an SDK in your application. This page runs it as a `systemd` service on a Linux host: the `filelog` receiver tails files under `/var/log/`, and the `otlphttp` exporter ships each record to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to: `otel-logs-v0_9` in this guide.
+
+Use the **Contrib** distribution (`otelcol-contrib`). The `filelog` receiver lives in Contrib, not in the core release.
+
+<Warning>
+	The `filelog` paths and `systemctl` invocations below assume a Linux host. The Collector runs on
+	macOS and Windows too, but this page does not cover those platforms.
+</Warning>
+
+## Setup
+
+<Steps>
+  <Step title="Pick the target index and create an ingest API key">
+    Logs land in whichever index your ingest token is scoped to. This guide uses the built-in
+    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click
+    **Create ingest key**, give it a name, and pick `otel-logs-v0_9`. The
+    value is shown once. Copy it before clicking **Done**. API keys are scoped to one index. You
+    cannot reuse one across indexes.
+  </Step>
+
+  <Step title="Install the Collector">
+    Install the Contrib distribution (`otelcol-contrib`) for your platform. Per-platform packages
+    (Debian/Ubuntu apt, RHEL/Fedora rpm, container images) are maintained upstream on the
+    [Collector installation page](https://opentelemetry.io/docs/collector/installation/). The
+    package installs `otelcol-contrib` as a `systemd` service.
+  </Step>
+
+  <Step title="Write /etc/otelcol-contrib/config.yaml">
+    Save the following at `/etc/otelcol-contrib/config.yaml`. Replace `<your-rootprint>` with your
+    Rootprint base URL, `<your-ingest-token>` with the API key you copied in step 1, and
+    `/var/log/myapp/*.log` with the glob that matches your application's log files.
+
+    ```yaml
+    receivers:
+      filelog:
+        include:
+          - /var/log/myapp/*.log
+        start_at: end
+
+    processors:
+      batch: {}
+
+    exporters:
+      otlphttp:
+        logs_endpoint: https://<your-rootprint>/v1/logs
+        compression: gzip
+        headers:
+          Authorization: "Bearer <your-ingest-token>"
+
+    service:
+      pipelines:
+        logs:
+          receivers: [filelog]
+          processors: [batch]
+          exporters: [otlphttp]
+    ```
+
+    `start_at: end` skips existing content on first start, so pointing the Collector at an existing
+    log file does not replay everything already in it. Set it to `beginning` for a one-time backfill.
+  </Step>
+
+  <Step title="Restart the Collector">
+    ```bash
+    sudo systemctl restart otelcol-contrib
+    sudo systemctl status otelcol-contrib
+    ```
+
+    The status output should show `active (running)`, and the most recent log lines should not
+    contain config-parse or exporter errors.
+  </Step>
+
+  <Step title="Send a test log line">
+    Create the application log directory if it doesn't exist yet and append a single line:
+
+    ```bash
+    sudo mkdir -p /var/log/myapp
+    echo "$(date -Iseconds) hello from the otel collector" | sudo tee -a /var/log/myapp/test.log
+    ```
+  </Step>
+
+  <Step title="Verify in Rootprint">
+    Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+    `hello from the otel collector`. Records typically appear within 5–10 seconds. The OTLP path
+    commits on Quickwit's normal cadence; there is no `commit=wait_for` knob.
+  </Step>
+</Steps>
+
+## What the config does
+
+- **`filelog` receiver**: tails the files matched by `include` and emits one OTLP log record per
+  line. The raw line lands in `body`, and the receiver populates `observedTimeUnixNano` with the
+  time it read the line. To split structured fields out of the line, add the receiver's `operators`
+  (a `json_parser` or `regex_parser`); without them the whole line is kept verbatim.
+- **`logs_endpoint`**: the full logs URL, including `/v1/logs`. Set this rather than `endpoint`,
+  which would append the path itself. The `otlphttp` exporter sends OTLP over HTTP as protobuf,
+  which is the only content type Rootprint's OTLP endpoint accepts.
+- **`compression: gzip`**: gzips each request body. Rootprint forwards the `Content-Encoding`
+  header to Quickwit unchanged.
+- **`batch` processor**: groups records before export to cut request count. Tune `send_batch_size`
+  and `timeout` if you need tighter latency or larger batches.
+
+## Troubleshooting
+
+- **`401` from Rootprint**: the `Authorization` header is missing or malformed. Confirm the
+  `headers.Authorization` value reads exactly `Bearer <token>`, with a single space.
+- **`403` from Rootprint**: the API key's index scope does not match `otel-logs-v0_9`, or the key
+  has been deleted. Mint a fresh ingest API key for `otel-logs-v0_9` in **Settings → API keys**.
+- **`404 unrecognized receiver "filelog"`** on startup: you are running the core Collector, not
+  Contrib. Install `otelcol-contrib`.
+- **`413` from a proxy in front of Rootprint**: a single batch was too large on the wire. Rootprint
+  sets no OTLP body-size limit, but a reverse proxy may. Lower the `batch` processor's
+  `send_batch_size`.
+- **`415` from Rootprint**: the request is not protobuf. Use the `otlphttp` exporter (not a custom
+  HTTP exporter that sends JSON); `otlphttp` defaults to protobuf.
+- **Collector starts cleanly but no logs appear**: `start_at: end` skipped the existing file
+  content. Append a new line to trigger a read, or set `start_at: beginning` for a one-time replay.
+- **`permission denied` reading `/var/log/...`**: the package installs an `otelcol-contrib` user
+  that owns the service. Either `sudo chmod a+r` the log files, or add that user to the group that
+  owns them.
+
+## Related
+
+- [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
+- [Indexes](/indexes): the `otel-logs-v0_9` schema, so you know what you can search.
+- [Manage indexes](/configuration/manage-indexes): API key lifecycle and per-index permissions.
