@@ -17,14 +17,14 @@ https://your-rootprint-host
 
 ## Authentication
 
-Rootprint uses three authentication modes, depending on the endpoint.
+Rootprint uses these authentication modes, depending on the endpoint.
 
-| Use case                                 | Auth method                | Where to get it                       |
-| ---------------------------------------- | -------------------------- | ------------------------------------- |
-| Send logs over NDJSON or OTLP            | Ingest API key (bearer)    | **Settings → API keys**               |
-| Read logs from an external tool          | Personal API key (bearer)  | Create one as the signed-in user; see [Query logs](/api/query-logs) |
-| Manage indexes, users, settings, UI data | Better Auth session cookie | Sign in through the Rootprint web app  |
-| Check health                             | None                       | `GET /api/health` is public           |
+| Use case                                 | Auth method                                      | Where to get it                       |
+| ---------------------------------------- | ------------------------------------------------ | ------------------------------------- |
+| Send logs over NDJSON or OTLP            | Ingest API key (bearer, prefix `lwit_`)          | **Settings → API keys**               |
+| Read logs from an external tool          | Query API key (bearer, prefix `rpk_`)            | **Settings → Profile** or **Settings → Service accounts** |
+| Manage indexes, users, settings, UI data | Better Auth session cookie                       | Sign in through the Rootprint web app |
+| Check health                             | None                                             | `GET /api/health` is public           |
 
 Bearer-token endpoints use the standard `Authorization` header.
 
@@ -32,9 +32,7 @@ Bearer-token endpoints use the standard `Authorization` header.
 Authorization: Bearer <token>
 ```
 
-Ingest API keys (prefix `lwit_`) are scoped to one index; that index is fixed by the key and cannot be changed per request. Personal API keys (prefix `rpk_`) are not index-scoped: they authenticate as the user who created them and are read-only, so they see exactly the indexes and logs their owner can see in the web app.
-
-
+Ingest API keys are scoped to one index; that index is fixed by the key and cannot be changed per request. Query API keys are read-only and not index-scoped. A personal API key, also called a personal access token (PAT), authenticates as the user who created it. A service account API key authenticates as the service account.
 
 ## Endpoint groups
 
@@ -43,13 +41,14 @@ The generated endpoint reference is arranged around the audience for each endpoi
 | Group                  | What it contains                                               |
 | ---------------------- | ------------------------------------------------------------- |
 | Log ingest API         | NDJSON and OTLP endpoints for log producers                   |
-| Log explorer API       | Search, histograms, field values, and exports. The read-only query endpoints also accept a personal API key. |
+| Log explorer API       | Search, histograms, field values, and exports. Query API keys work on search, histogram, field-value, and field-discovery endpoints. |
 | Saved views            | Create, list, update, and delete saved searches scoped to an index |
 | Share links            | Create and resolve public share links for log views           |
 | Index management API   | Index metadata, field discovery, preferences, and stats       |
 | Index sources API      | Configure the log sources feeding an index, including enable state and checkpoints |
-| API key administration | Create and delete ingest API keys; admin oversight of personal keys |
-| Personal API keys      | Self-service create, list, and revoke for personal (read) keys |
+| API key administration | Create and delete ingest API keys and service account API keys |
+| Service accounts       | Create and delete non-human accounts for shared integrations |
+| Personal API keys      | Self-service create, list, and revoke for personal query keys |
 | User and invite API    | Users, roles, password resets, invites, and invite acceptance |
 | Authentication API     | Setup, sign-in, sessions, sign-out, and password changes      |
 | Auth settings API      | Google and GitHub OAuth credentials, allowed domains, and allowed organizations |
@@ -78,8 +77,8 @@ Content-Type: application/x-protobuf
 | Health check     | `GET /api/health`              | No authentication required                   |
 | Send NDJSON logs | `POST /api/ingest/ndjson`      | Requires an ingest API key                   |
 | Send OTLP logs   | `POST /v1/logs`                | Requires an ingest API key and protobuf body |
-| List indexes     | `GET /api/indexes`             | Accepts a session cookie or a personal API key |
-| Search logs      | `GET /api/indexes/{indexId}/logs` | Accepts a session cookie or a personal API key |
+| List indexes     | `GET /api/indexes`             | Accepts a session cookie or a query API key |
+| Search logs      | `GET /api/indexes/{indexId}/logs` | Accepts a session cookie or a query API key |
 
 ## Error responses
 

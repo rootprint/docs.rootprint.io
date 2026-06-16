@@ -162,6 +162,7 @@
               "configuration/environment-variables",
               "configuration/google-auth",
               "configuration/github-auth",
+              "configuration/service-accounts",
               "configuration/reset-admin-password",
               "configuration/manage-indexes",
               "configuration/custom-indexes"
@@ -270,8 +271,21 @@
               "POST /api/api-keys",
               "GET /api/api-keys/{apiKeyId}",
               "DELETE /api/api-keys/{apiKeyId}",
-              "GET /api/api-keys/personal",
-              "DELETE /api/api-keys/personal/{id}"
+              "GET /api/api-keys/service-account",
+              "POST /api/api-keys/service-account",
+              "DELETE /api/api-keys/service-account/{id}"
+            ]
+          },
+          {
+            "group": "Service accounts",
+            "openapi": {
+              "source": "api/openapi.json",
+              "directory": "api/reference"
+            },
+            "pages": [
+              "GET /api/service-accounts",
+              "POST /api/service-accounts",
+              "DELETE /api/service-accounts/{userId}"
             ]
           },
           {
