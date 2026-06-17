@@ -12,11 +12,12 @@ Rootprint accepts logs two ways:
 
 | If you have…                                 | Use                                                                                      |
 | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| An app in Python, Node.js, Go, Java, or .NET | The matching [language page](#languages) (OTLP SDK)                                      |
+| An app in Python, Node.js, Go, or Zig        | The matching [language page](#languages) (OTLP SDK)                                      |
+| Access logs from Caddy or Nginx              | The matching [web server page](#web-servers)                                            |
 | Container logs on a Linux host               | [Docker](/send-logs/platforms/docker) (OTEL Collector)                                   |
 | Logs already on disk on a Linux host         | [OpenTelemetry Collector](/send-logs/log-agents/otel-collector), [Fluent Bit](/send-logs/log-agents/fluent-bit), or [Vector](/send-logs/log-agents/vector) |
 | Existing pipeline that emits your own schema | [HTTP endpoint](/send-logs/http)                                                        |
-| Something else that speaks OTLP              | [OTLP reference](/send-logs/otlp)                                                        |
+| An app in another language, or anything else that speaks OTLP | [OTLP reference](/send-logs/otlp)                                       |
 
 ## Integrations
 
@@ -26,12 +27,20 @@ Rootprint accepts logs two ways:
 	<Card title="Python" icon="python" href="/send-logs/languages/python" />
 	<Card title="Node.js" icon="node-js" href="/send-logs/languages/javascript" />
 	<Card title="Go" icon="golang" href="/send-logs/languages/go" />
+	<Card title="Zig" icon="code" href="/send-logs/languages/zig" />
 </CardGroup>
 
 ### Platforms
 
 <CardGroup cols={3}>
 	<Card title="Docker" icon="docker" href="/send-logs/platforms/docker" />
+</CardGroup>
+
+### Web Servers
+
+<CardGroup cols={3}>
+	<Card title="Caddy" icon="globe" href="/send-logs/web-servers/caddy" />
+	<Card title="Nginx" icon="server" href="/send-logs/web-servers/nginx" />
 </CardGroup>
 
 ### Log Agents

@@ -3,7 +3,7 @@ title: 'Manage indexes'
 description: 'Inspect, configure, and delete Quickwit indexes from the Rootprint admin UI: the index list, per-index field-role mapping and visibility, fields, sources, and deletion.'
 ---
 
-The **Settings → Indexes** section gives admins a single place to inspect every index Quickwit knows about, configure how it is presented in the search UI, manage the data sources that feed it, and delete indexes that are no longer needed.
+The **Settings → Indexes** section gives admins a single place to create indexes, inspect every index Quickwit knows about, configure how each is presented in the search UI, manage the data sources that feed it, and delete indexes that are no longer needed.
 
 <Note>
 	Index actions proxy directly to the Quickwit metastore. Reads (the index list, fields, and
@@ -15,6 +15,20 @@ The **Settings → Indexes** section gives admins a single place to inspect ever
 ## Indexes list
 
 Navigate to **Settings → Indexes** to see every index currently known to Quickwit. The list is read live from the metastore on each page load, so an index you create in Quickwit appears here on the next refresh with no restart required. Each row shows the index ID and its visibility (**Public**, **Admins**, or **Hidden**). Use the search box to filter by ID, and click any row to open its detail page.
+
+## Create an index
+
+Click **Create index** on the **Settings → Indexes** page to define a new Quickwit index from a form, with no YAML or direct Quickwit calls. The form covers:
+
+- The **index ID** (starts with a letter, 3–255 characters of letters, digits, `-`, or `_`).
+- The schema **mode** (`dynamic`, `lenient`, or `strict`), which decides what Quickwit does with the fields you didn't declare.
+- The **field mappings**: each field's name, type, and per-type options such as tokenizer and the `fast` and `stored` flags.
+- The **timestamp field**, picked from the datetime fields you defined.
+- An optional **retention policy**, **storage URI**, **tag fields**, and **commit timeout**.
+
+Rootprint creates the index in Quickwit and opens its detail page when you save. The same form is available over the API as `POST /api/indexes`.
+
+Some schemas need a type or setting the form doesn't expose: `bytes`, `array<T>`, `object`, or `dynamic_mapping` tuning. For those, write the index definition in YAML and send it to Quickwit directly. See [Create a custom index](/configuration/custom-indexes) for the full schema reference.
 
 ## Index detail page
 
@@ -57,7 +71,7 @@ Lists every field in the index schema with its type and a **Fast** indicator (wh
 
 ### Sources tab
 
-Data sources are the pipelines Quickwit uses to receive or pull documents for the index, for example the built-in `_ingest-api-source` that backs the HTTP and OTLP ingest endpoints, or an external source that pulls from Amazon Kinesis or files announced over SQS. Each row shows the source ID, its type, and whether it is enabled. Click a row to open the source detail page, or use **Create source** to add a new one.
+Data sources are the pipelines Quickwit uses to receive or pull documents for the index, for example the built-in `_ingest-api-source` that backs the HTTP and OTLP ingest endpoints, or an external source that pulls from Amazon Kinesis, Apache Kafka, Apache Pulsar, or files announced over SQS. Each row shows the source ID, its type, and whether it is enabled. Click a row to open the source detail page, or use **Create source** to add a new one.
 
 #### Built-in sources
 
@@ -65,12 +79,14 @@ Quickwit's own sources (`_ingest-api-source`, `_ingest-cli-source`, and any sour
 
 #### Creating a source
 
-Click **Create source** on the Sources tab. Rootprint can create two source types; pick one and Quickwit starts pulling documents into this index as soon as the source is saved.
+Click **Create source** on the Sources tab. Rootprint can create four source types; pick one and Quickwit starts pulling documents into this index as soon as the source is saved.
 
 | Source type                            | Pulls from                                                                                            |
 | -------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | **Amazon Kinesis**                     | A Kinesis data stream.                                                                                 |
 | **File (S3 / SQS notifications)**      | Files referenced by messages on an SQS queue — typically S3 event notifications, or raw object URIs.  |
+| **Apache Kafka**                       | A Kafka topic.                                                                                         |
+| **Apache Pulsar**                      | One or more Pulsar topics.                                                                             |
 
 Every source needs a **Source ID** that starts with a letter and is 3–255 characters of letters, digits, `-`, or `_`. The source ID and type are fixed once the source is created.
 
@@ -97,9 +113,28 @@ AWS credentials are **not** entered in the form. Quickwit reads them from the en
 As with Kinesis, AWS credentials come from the environment, not the form.
 
 </Tab>
+<Tab title="Apache Kafka">
+
+| Field                | Required | Notes                                                                                                                                                                  |
+| -------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Topic**            | Yes      | The Kafka topic to consume.                                                                                                                                            |
+| **Client params**    | No       | A JSON object of `librdkafka` client properties, including `bootstrap.servers` — for example `{ "bootstrap.servers": "localhost:9092" }`.                              |
+| **Client log level** | No       | Verbosity of the Kafka client log: `debug`, `info` (the default), `warn`, or `error`.                                                                                  |
+| **Backfill mode**    | No       | When enabled, Quickwit reads the topic from the beginning once and then stops, instead of following it continuously. Use it for a one-time import.                     |
+
+</Tab>
+<Tab title="Apache Pulsar">
+
+| Field             | Required | Notes                                                                                |
+| ----------------- | -------- | ------------------------------------------------------------------------------------ |
+| **Topics**        | Yes      | One or more Pulsar topics, one per line (e.g. `persistent://public/default/my-topic`). |
+| **Address**       | Yes      | The Pulsar broker URL (e.g. `pulsar://localhost:6650`).                              |
+| **Consumer name** | No       | The consumer name Quickwit registers with Pulsar. Defaults to `quickwit`.            |
+
+</Tab>
 </Tabs>
 
-Both source types also accept three optional fields:
+All four source types also accept three optional fields:
 
 | Field                  | Notes                                                                                                                                                            |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -109,7 +144,7 @@ Both source types also accept three optional fields:
 
 #### Editing a source
 
-Open a Kinesis or file source from the list to edit it in place. The same Connection and Transform tabs appear, pre-filled with the current configuration; the source ID and type are read-only. Saving applies the change to Quickwit immediately. Sources of other types (those created directly in Quickwit) and built-in sources are shown read-only.
+Open any Rootprint-created source — Kinesis, file, Kafka, or Pulsar — from the list to edit it in place. The same Connection and Transform tabs appear, pre-filled with the current configuration; the source ID and type are read-only. Saving applies the change to Quickwit immediately. Sources created directly in Quickwit and built-in sources are shown read-only.
 
 #### Transforms (VRL)
 

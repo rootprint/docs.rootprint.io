@@ -3,9 +3,12 @@ title: 'Create a custom index'
 description: 'Define a Quickwit index with your own schema, tokenizers, and retention policy, then point Rootprint at it.'
 ---
 
-The bundled `otel-logs-v0_9` index works for any application that emits OpenTelemetry logs. For everything else (audit trails, third-party log formats, application events with a specialized schema), create an index in Quickwit with the fields and types your data needs, then map it into the Rootprint UI from the index's [Configuration tab](/configuration/manage-indexes#configuration-tab).
+The bundled `otel-logs-v0_9` index works for any application that emits OpenTelemetry logs. For everything else (audit trails, third-party log formats, application events with a specialized schema), create an index with the fields and types your data needs, then map it into the Rootprint UI from the index's [Configuration tab](/configuration/manage-indexes#configuration-tab).
 
-This page covers the index definition you send to Quickwit. For routing logs once the index exists, see the [HTTP endpoint](/send-logs/http).
+
+This page is the schema reference. It covers the index definition whether you build it in the
+Create-index form or send the YAML to Quickwit yourself. For routing logs once the index exists, see
+the [HTTP endpoint](/send-logs/http).
 
 ## Minimal example
 
@@ -50,12 +53,6 @@ curl -X POST 'http://quickwit:7280/api/v1/indexes' \
 ```
 
 The index appears in **Settings → Indexes** on the next page load. No Rootprint restart needed.
-
-<Note>
-	Rootprint proxies index management actions to Quickwit but does not currently expose an "create
-	index" form in the admin UI. Create the index through Quickwit's REST API or CLI, then configure
-	its display from Rootprint.
-</Note>
 
 ## Schema modes
 
