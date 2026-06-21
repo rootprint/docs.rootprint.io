@@ -34,11 +34,12 @@ This guide walks you through deploying Rootprint locally, signing in, and sendin
   </Step>
 
   <Step title="Send sample logs">
-    Use `curl` to post a couple of NDJSON log entries to the bundled `otel-logs-v0_9` index. Replace `<your-ingest-token>` with the API key you just copied:
+    Set `TOKEN` to the API key you just copied, then use `curl` to post a couple of NDJSON log entries to the bundled `otel-logs-v0_9` index:
 
     ```bash
+    export TOKEN='<your-ingest-token>'
     curl -X POST 'http://localhost:8282/api/ingest/ndjson' \
-      -H 'Authorization: Bearer <your-ingest-token>' \
+      -H "Authorization: Bearer $TOKEN" \
       -H 'Content-Type: application/x-ndjson' \
       --data-binary @- <<EOF
     {"timestamp_nanos":$(date +%s)000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{"user_id":"alice"},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":9,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
