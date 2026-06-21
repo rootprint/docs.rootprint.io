@@ -1,136 +1,199 @@
 ---
 title: 'Send logs with Vector'
-description: 'Tail log files on a Linux host with Vector and ship them to Rootprint over OTLP.'
+description: 'Tail log files with Vector — on bare metal or in Docker — and ship them to Rootprint over OTLP.'
 ---
 
-[Vector](https://vector.dev) is a stand-alone log collector that reads files, applies transforms, and ships records to one or more sinks. This page sets up Vector as a `systemd` service on a Linux host: it tails files under `/var/log/`, shapes each line into the OTLP wire format with a `remap` transform, and ships the result to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to: `otel-logs-v0_9` in this guide. Vector's `opentelemetry` sink is currently in beta upstream: stable enough for production logs, but worth tracking the [Vector changelog](https://github.com/vectordotdev/vector/releases) for breaking changes.
+[Vector](https://vector.dev) is a stand-alone log collector that reads files, applies transforms, and ships records to one or more sinks. This page tails files under `/var/log/`, shapes each line into the OTLP wire format with a `remap` transform, and ships the result to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to: `otel-logs-v0_9` in this guide. Run Vector on bare metal or in Docker — pick the tab below. Vector's `opentelemetry` sink is currently in beta upstream: stable enough for production logs, but worth tracking the [Vector changelog](https://github.com/vectordotdev/vector/releases) for breaking changes.
 
 <Warning>
-	The `file` source paths and `systemctl` invocations below assume a Linux host. Vector itself runs
-	on macOS and Windows, but this page does not cover those platforms.
+	The `file` source paths below assume a Linux host. Vector itself runs on macOS and Windows, but
+	this page does not cover those platforms.
 </Warning>
 
 ## Prerequisites
 
 - A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
-- A Linux host running `systemd`. The `file` source paths and `systemctl` commands below assume Linux.
+- A Linux host. The **Bare Metal** tab uses `systemd`; the **Docker** tab uses Docker Compose.
 - An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
 
-## Setup
+<Tabs>
+  <Tab title="Bare Metal">
+    <Steps>
+      <Step title="Install Vector">
+        Install the Vector package for your platform from the [official installation
+        page](https://vector.dev/docs/setup/installation/). Per-distro instructions (Debian/Ubuntu apt,
+        RHEL/Fedora dnf, macOS, Windows) are maintained upstream.
+      </Step>
 
-<Steps>
-  <Step title="Install Vector">
-	Install the Vector package for your platform from the [official installation
-	page](https://vector.dev/docs/setup/installation/). Per-distro instructions (Debian/Ubuntu apt,
-	RHEL/Fedora dnf, container images, macOS, Windows) are maintained upstream.
-</Step>
+      <Step title="Write the Vector config">
+        Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint base
+        URL, `<your-ingest-token>` with the API key you copied in step 1, `/var/log/myapp/*.log` with
+        the glob that matches your application's log files, and `myapp` with your service name.
 
-  <Step title="Write the Vector config">
-    Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint base
-    URL, `<your-ingest-token>` with the API key you copied in step 1, `/var/log/myapp/*.log` with
-    the glob that matches your application's log files, and `myapp` with your service name.
+        <Expandable title="vector.yaml">
+        ```yaml
+        sources:
+          app_logs:
+            type: file
+            include:
+              - /var/log/myapp/*.log
+            read_from: end
 
-    <Expandable title="vector.yaml">
-    ```yaml
-    sources:
-      app_logs:
-        type: file
-        include:
-          - /var/log/myapp/*.log
-        read_from: end
-
-    transforms:
-      to_otlp:
-        type: remap
-        inputs: [app_logs]
-        source: |
-          .resourceLogs = [{
-            "resource": {
-              "attributes": [
-                { "key": "service.name", "value": { "stringValue": "myapp" } },
-                { "key": "host.name", "value": { "stringValue": get_hostname!() } }
-              ]
-            },
-            "scopeLogs": [{
-              "scope": { "name": "vector", "version": "" },
-              "logRecords": [{
-                "timeUnixNano": to_unix_timestamp!(now(), unit: "nanoseconds"),
-                "observedTimeUnixNano": to_unix_timestamp!(now(), unit: "nanoseconds"),
-                "severityNumber": 9,
-                "severityText": "INFO",
-                "body": { "stringValue": .message },
-                "attributes": [
-                  { "key": "log.file.path", "value": { "stringValue": .file } }
-                ],
-                "traceId": "",
-                "spanId": "",
-                "flags": 0,
-                "droppedAttributesCount": 0
+        transforms:
+          to_otlp:
+            type: remap
+            inputs: [app_logs]
+            source: |
+              .resourceLogs = [{
+                "resource": {
+                  "attributes": [
+                    { "key": "service.name", "value": { "stringValue": "myapp" } },
+                    { "key": "host.name", "value": { "stringValue": get_hostname!() } }
+                  ]
+                },
+                "scopeLogs": [{
+                  "scope": { "name": "vector", "version": "" },
+                  "logRecords": [{
+                    "timeUnixNano": to_unix_timestamp!(now(), unit: "nanoseconds"),
+                    "observedTimeUnixNano": to_unix_timestamp!(now(), unit: "nanoseconds"),
+                    "severityNumber": 9,
+                    "severityText": "INFO",
+                    "body": { "stringValue": .message },
+                    "attributes": [
+                      { "key": "log.file.path", "value": { "stringValue": .file } }
+                    ],
+                    "traceId": "",
+                    "spanId": "",
+                    "flags": 0,
+                    "droppedAttributesCount": 0
+                  }]
+                }]
               }]
-            }]
-          }]
 
-          # Drop the original top-level fields so the sink sees only the OTLP envelope.
-          del(.message)
-          del(.file)
-          del(.host)
-          del(.source_type)
-          del(.timestamp)
+              # Drop the original top-level fields so the sink sees only the OTLP envelope.
+              del(.message)
+              del(.file)
+              del(.host)
+              del(.source_type)
+              del(.timestamp)
 
-    sinks:
-      rootprint:
-        type: opentelemetry
-        inputs: [to_otlp]
-        protocol:
-          type: http
-          uri: https://<your-rootprint>/v1/logs
-          method: post
-          encoding:
-            codec: otlp
-          compression: gzip
-          request:
-            headers:
-              Authorization: "Bearer <your-ingest-token>"
-          batch:
-            timeout_secs: 1
-            max_bytes: 8388608
-    ```
-    </Expandable>
+        sinks:
+          rootprint:
+            type: opentelemetry
+            inputs: [to_otlp]
+            protocol:
+              type: http
+              uri: https://<your-rootprint>/v1/logs
+              method: post
+              encoding:
+                codec: otlp
+              compression: gzip
+              request:
+                headers:
+                  Authorization: "Bearer <your-ingest-token>"
+              batch:
+                timeout_secs: 1
+                max_bytes: 8388608
+        ```
+        </Expandable>
 
-    `read_from: end` skips existing content on first start, so installing Vector against an
-    existing log file does not replay everything that was already there. Flip it to `beginning`
-    if you want a one-time backfill. `batch.max_bytes` is set to 8 MiB, a conservative size that
-    stays well within typical reverse-proxy and upstream limits even after gzip variance.
+        `read_from: end` skips existing content on first start, so installing Vector against an
+        existing log file does not replay everything that was already there. Flip it to `beginning`
+        if you want a one-time backfill. `batch.max_bytes` is set to 8 MiB, a conservative size that
+        stays well within typical reverse-proxy and upstream limits even after gzip variance.
+      </Step>
 
-  </Step>
+      <Step title="Grant Vector read access to the log files">
+        Vector runs as the `vector` user, which may not be able to read files under `/var/log/`.
+        Add `vector` to the group that owns them (for example `adm` on Debian/Ubuntu):
 
-  <Step title="Restart Vector">
-    ```bash
-    sudo systemctl restart vector
-    sudo systemctl status vector
-    ```
+        ```bash
+        sudo usermod -aG adm vector
+        ```
 
-    The status output should show `active (running)` and the most recent log lines should not
-    contain config-parse or sink-startup errors.
+        Alternatively `sudo chmod a+r` the log files, which loosens permissions for every user on
+        the host.
+      </Step>
 
-  </Step>
+      <Step title="Restart Vector">
+        ```bash
+        sudo systemctl restart vector
+        sudo systemctl status vector
+        ```
 
-  <Step title="Send a test log line">
-    Create the application log directory if it doesn't exist yet and append a single line:
+        The status output should show `active (running)` and the most recent log lines should not
+        contain config-parse or sink-startup errors.
+      </Step>
 
-    ```bash
-    sudo mkdir -p /var/log/myapp
-    echo "$(date -Iseconds) hello from vector" | sudo tee -a /var/log/myapp/test.log
-    ```
+      <Step title="Send a test log line">
+        Create the application log directory if it doesn't exist yet and append a single line:
 
-  </Step>
+        ```bash
+        sudo mkdir -p /var/log/myapp
+        echo "$(date -Iseconds) hello from vector" | sudo tee -a /var/log/myapp/test.log
+        ```
+      </Step>
 
-  <Step title="Verify in Rootprint">
-    Open Search, pick `otel-logs-v0_9` from the index selector, and query for
-    `hello from vector`. Records typically appear within 5–10 seconds. The OTLP path commits on
-    Quickwit's normal cadence, there is no `commit=wait_for` knob.
-  </Step>
-</Steps>
+      <Step title="Verify in Rootprint">
+        Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+        `hello from vector`. Records typically appear within 5–10 seconds. The OTLP path commits on
+        Quickwit's normal cadence, there is no `commit=wait_for` knob.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Docker">
+    Run Vector as a container that bind-mounts the log files you want to tail. The config is the
+    same one from the Bare Metal tab; the bind mount keeps the `/var/log/myapp/*.log` paths
+    identical inside the container.
+
+    <Steps>
+      <Step title="Write the Vector config">
+        Save the **same `vector.yaml`** shown in the Bare Metal tab next to your `docker-compose.yml`.
+        Replace `<your-rootprint>` and `<your-ingest-token>`, and point the `file` source `include`
+        at the log path you bind-mount in the next step.
+      </Step>
+
+      <Step title="Add the Vector service to your compose file">
+        ```yaml
+        services:
+          rootprint-vector:
+            image: timberio/vector:0.54.0-alpine
+            container_name: rootprint-vector
+            restart: unless-stopped
+            volumes:
+              - ./vector.yaml:/etc/vector/vector.yaml:ro
+              - /var/log/myapp:/var/log/myapp:ro
+        ```
+
+        The bind-mounted files keep their host ownership inside the container, so the `vector`
+        container user may not be able to read them. If logs don't appear and Vector reports
+        `permission denied`, run the service as `user: root` or loosen host permissions with
+        `sudo chmod a+r /var/log/myapp/*.log`.
+      </Step>
+
+      <Step title="Start Vector">
+        ```bash
+        docker compose up -d rootprint-vector
+        ```
+      </Step>
+
+      <Step title="Send a test log line">
+        Append a line to a file under the bind-mounted directory on the host:
+
+        ```bash
+        sudo mkdir -p /var/log/myapp
+        echo "$(date -Iseconds) hello from vector" | sudo tee -a /var/log/myapp/test.log
+        ```
+      </Step>
+
+      <Step title="Verify in Rootprint">
+        Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+        `hello from vector`. Records typically appear within 5–10 seconds.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
 
 ## What the remap does
 
@@ -180,6 +243,8 @@ Field-by-field:
 
 ## Related
 
+- [Send logs from Docker](/send-logs/platforms/docker): collect **every** container's stdout via the Docker daemon, rather than tailing specific files.
+- [Send logs from Kubernetes](/send-logs/platforms/kubernetes): run the Collector as a DaemonSet across a cluster.
 - [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
 - [Indexes](/indexes): the `otel-logs-v0_9` schema, so you know what you can search.
 - [Manage indexes](/configuration/manage-indexes): API key lifecycle and per-index permissions.

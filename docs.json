@@ -184,10 +184,6 @@
                 ]
               }
             ]
-          },
-          {
-            "group": "Tutorials",
-            "pages": ["tutorials/linux-auth-audit-vector"]
           }
         ]
       },

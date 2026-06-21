@@ -3,20 +3,20 @@ title: 'Send Nginx logs'
 description: "Tail nginx's access and error logs with the OpenTelemetry Collector or Vector and ship them to Rootprint over OTLP, with access fields mapped to OpenTelemetry HTTP semantic conventions."
 ---
 
-[nginx](https://nginx.org) writes plain-text logs by default: a `combined` access log and a separate error log. This page tails both and ships them to Rootprint over OTLP with either the **OpenTelemetry Collector** or **Vector**. Records land in `otel-logs-v0_9` tagged `service.name: nginx`, with access-log fields mapped to OpenTelemetry HTTP semantic conventions so they arrive as queryable attributes. Pick the tab for the agent you run.
+[nginx](https://nginx.org) writes plain-text logs by default: a `combined` access log and a separate error log. This page tails both and ships them to Rootprint over OTLP with either the **OpenTelemetry Collector** or **Vector**. Records land in `otel-logs-v0_9` tagged `service.name: nginx`, with access-log fields mapped to OpenTelemetry HTTP semantic conventions so they arrive as queryable attributes.
 
 ## Prerequisites
 
 - A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
-- A Linux host running nginx and `systemd`. The file paths and `systemctl` commands below assume Linux.
-- A log agent on the host: the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/installation/) or [Vector](https://vector.dev/docs/setup/installation/). Configs for both are below; install whichever you run.
-- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
+- A host running nginx that writes access and error logs to files. Stock nginx logs to `/var/log/nginx/` on Debian/Ubuntu; the paths below assume those defaults.
+- A log agent that can read those files — the [OpenTelemetry Collector](/send-logs/log-agents/otel-collector) or [Vector](/send-logs/log-agents/vector).
+- An **ingest API key** scoped to your target index. See [API keys](/api/overview).
 
 <Tabs>
   <Tab title="OpenTelemetry Collector">
-    ### Bare-metal
-
-    Run the Collector on the host alongside nginx.
+    <Note>
+      This config assumes the agent runs where it can read `/var/log/nginx`.
+    </Note>
 
     <Steps>
       <Step title="Confirm nginx is logging to file">
@@ -145,50 +145,12 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
         Open Search, pick `otel-logs-v0_9`, and query `service_name:nginx`. Records typically appear within 5–10 seconds.
       </Step>
     </Steps>
-
-    ### Docker
-
-    Run the Collector as a container that bind-mounts the host's `/var/log/nginx` and tails it. nginx can run on the host or in its own container; either way it must be writing to `/var/log/nginx` on the host. The config is the same one from the bare-metal section: the bind mount keeps the `/var/log/nginx/*.log` paths identical inside the container.
-
-    <Steps>
-      <Step title="Add the Collector to your compose file">
-        ```yaml
-        services:
-          rootprint-otelcol:
-            image: otel/opentelemetry-collector-contrib:latest
-            container_name: rootprint-otelcol
-            restart: unless-stopped
-            command: ["--config=/etc/otelcol/config.yaml"]
-            volumes:
-              - ./otel-config.yaml:/etc/otelcol/config.yaml:ro
-              - /var/log/nginx:/var/log/nginx:ro
-        ```
-      </Step>
-      <Step title="Save otel-config.yaml">
-        Save the **same config** shown in the bare-metal section above as `otel-config.yaml` next to your compose file. No changes are needed; the `filelog` `include` paths (`/var/log/nginx/access.log`, `/var/log/nginx/error.log`) resolve identically inside the container because of the bind mount.
-      </Step>
-      <Step title="Start the Collector">
-        ```bash
-        docker compose up -d rootprint-otelcol
-        ```
-      </Step>
-      <Step title="Send a test request and verify">
-        ```bash
-        curl -i http://localhost/
-        ```
-        Then query `service_name:nginx` in `otel-logs-v0_9`. Records typically appear within 5–10 seconds.
-      </Step>
-    </Steps>
-
-    **OTEL troubleshooting**
-
-    - **`404 unrecognized receiver "filelog"` / unknown processor `transform`**: you are on the core Collector. Install `otelcol-contrib`.
-    - **`permission denied` reading `/var/log/nginx/*.log` (bare-metal)**: add `otelcol-contrib` to the `adm` group (`sudo usermod -aG adm otelcol-contrib`) and restart.
-    - **`permission denied` reading the logs (Docker)**: the bind-mounted files are `adm`-group `640` on the host, which the container's user cannot read. Run the service as root (`user: root`) or `sudo chmod a+r /var/log/nginx/*.log` on the host.
-    - **No logs after start**: `start_at: end` skipped existing content. Make a request or set `start_at: beginning` for a one-time replay.
-    - **Records arrive but `attributes.http.*` are missing**: the entry came from `error.log` (no access fields), by design. Filter access-log entries with `attributes.nginx.format:access`.
   </Tab>
   <Tab title="Vector">
+    <Note>
+      This config assumes the agent runs where it can read `/var/log/nginx`.
+    </Note>
+
     <Steps>
       <Step title="Confirm nginx is logging to file">
         Stock nginx already writes `combined`-format access logs to `/var/log/nginx/access.log` and error logs to `/var/log/nginx/error.log`. This guide assumes those defaults. No `nginx.conf` changes are required.
@@ -435,11 +397,6 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
       </Step>
     </Steps>
 
-    **Vector troubleshooting**
-
-    - **`permission denied` reading `/var/log/nginx/access.log`**: Vector's `vector` user is not in the `adm` group. Run `sudo usermod -aG adm vector` and restart Vector. If that's not available, `sudo chmod a+r /var/log/nginx/*.log` works but loosens permissions for every user on the host.
-    - **`body` looks like a raw nginx line instead of a structured message**: the access log is using a non-default `log_format` directive in `nginx.conf`. The parser expects nginx's stock combined format. Either remove the custom `log_format` or extend the `parse_nginx` remap to handle the alternate shape.
-    - **`severity_text` is always `INFO` for access entries even on 5xx**: by design. nginx's combined format has no severity field; this parser trusts the source. Filter on `attributes.http.response.status_code:>=500` to surface server errors.
   </Tab>
 </Tabs>
 
@@ -465,7 +422,7 @@ The `nginx.format` discriminator (`"access"` or `"error"`) lets one config handl
 | `thread.id`                   | nginx worker thread ID (integer)                          | error  |
 | `nginx.connection_id`         | connection ID when present (integer)                      | error  |
 | `nginx.format`                | `"access"` or `"error"` discriminator                    | both   |
-| `log.file.path`               | source file path (bare-metal Vector only)                 | both   |
+| `log.file.path`               | source file path (Vector only)                            | both   |
 
 `timeUnixNano` is derived from the timestamp in each log line. If parsing fails, the agent's read time is used as a fallback.
 
@@ -516,9 +473,7 @@ service_name:nginx AND attributes.nginx.format:error AND attributes.nginx.upstre
 - **Records arrive but `attributes.http.*` are missing**: the entry came from `error.log` (no access fields), by design. Filter access-log entries with `attributes.nginx.format:access`.
 - **`body` looks like a raw nginx line instead of a structured message**: the access log is using a non-default `log_format` directive in `nginx.conf`. The parser expects nginx's stock combined format. Either remove the custom `log_format` or extend the config to handle the alternate shape.
 - **`severity_text` is always `INFO` even for 5xx responses**: by design. nginx's combined access format has no severity field; both agents trust the source. Filter on `attributes.http.response.status_code:>=500` to surface server errors.
-- **`401` from Rootprint**: the `Authorization` header is missing or the token is wrong. Check the token value in your config.
-- **`403` from Rootprint**: the API key exists but is not scoped to `otel-logs-v0_9`. Create a new key scoped to that index.
-- **`415` from Rootprint**: the `Content-Type` is not `application/x-protobuf`. Both agents set this automatically; if you see a 415, check for a proxy stripping headers.
+- **Ingest transport errors (`401`, `403`, `413`, `415`)**: see [OTLP reference → Response codes](/send-logs/otlp#response-codes).
 
 ## Related
 

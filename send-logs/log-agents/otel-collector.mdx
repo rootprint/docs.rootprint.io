@@ -1,9 +1,9 @@
 ---
 title: 'Send logs with the OpenTelemetry Collector'
-description: 'Tail log files on a Linux host with the OpenTelemetry Collector and ship them to Rootprint over OTLP.'
+description: 'Tail log files with the OpenTelemetry Collector — on bare metal or in Docker — and ship them to Rootprint over OTLP.'
 ---
 
-The [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) reads, processes, and exports telemetry without an SDK in your application. This page runs it on a Linux host: the `filelog` receiver tails files under `/var/log/`, and the `otlphttp` exporter ships each record to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to: `otel-logs-v0_9` in this guide.
+The [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) reads, processes, and exports telemetry without an SDK in your application. The `filelog` receiver tails files under `/var/log/`, and the `otlphttp` exporter ships each record to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to: `otel-logs-v0_9` in this guide. Run the Collector on bare metal or in Docker — pick the tab below.
 
 Use the **Contrib** distribution (`otelcol-contrib`). The `filelog` receiver lives in Contrib, not in the core release.
 
@@ -15,80 +15,146 @@ Use the **Contrib** distribution (`otelcol-contrib`). The `filelog` receiver liv
 ## Prerequisites
 
 - A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
-- A Linux host running `systemd`. The `filelog` paths and `systemctl` commands below assume Linux.
+- A Linux host. The **Bare Metal** tab runs the Collector directly or under `systemd`; the **Docker** tab uses Docker Compose.
 - An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
 
-## Setup
+<Tabs>
+  <Tab title="Bare Metal">
+    <Steps>
+      <Step title="Install the Collector">
+        Install the Contrib distribution (`otelcol-contrib`) for your platform — Debian/Ubuntu apt,
+        RHEL/Fedora rpm, or a standalone binary, all maintained upstream on the
+        [Collector installation page](https://opentelemetry.io/docs/collector/installation/).
+      </Step>
 
-<Steps>
-  <Step title="Install the Collector">
-    Install the Contrib distribution (`otelcol-contrib`) for your platform. Packages
-    (Debian/Ubuntu apt, RHEL/Fedora rpm), container images, and standalone binaries are maintained
-    upstream on the [Collector installation page](https://opentelemetry.io/docs/collector/installation/).
-    How you run it — a `systemd` service, a container, or a plain binary — is up to you; this guide
-    only assumes the config lives at `/etc/otel/config.yaml` and the Collector is pointed at it.
-  </Step>
+      <Step title="Write /etc/otel/config.yaml">
+        Save the following at `/etc/otel/config.yaml`. Replace `<your-rootprint>` with your
+        Rootprint base URL, `<your-ingest-token>` with the API key you copied in step 1, and
+        `/var/log/myapp/*.log` with the glob that matches your application's log files.
 
-  <Step title="Write /etc/otel/config.yaml">
-    Save the following at `/etc/otel/config.yaml`. Replace `<your-rootprint>` with your
-    Rootprint base URL, `<your-ingest-token>` with the API key you copied in step 1, and
-    `/var/log/myapp/*.log` with the glob that matches your application's log files.
+        ```yaml
+        receivers:
+          filelog:
+            include:
+              - /var/log/myapp/*.log
+            start_at: end
 
-    ```yaml
-    receivers:
-      filelog:
-        include:
-          - /var/log/myapp/*.log
-        start_at: end
+        processors:
+          batch: {}
 
-    processors:
-      batch: {}
+        exporters:
+          otlphttp:
+            logs_endpoint: https://<your-rootprint>/v1/logs
+            compression: gzip
+            headers:
+              Authorization: "Bearer <your-ingest-token>"
 
-    exporters:
-      otlphttp:
-        logs_endpoint: https://<your-rootprint>/v1/logs
-        compression: gzip
-        headers:
-          Authorization: "Bearer <your-ingest-token>"
+        service:
+          pipelines:
+            logs:
+              receivers: [filelog]
+              processors: [batch]
+              exporters: [otlphttp]
+        ```
 
-    service:
-      pipelines:
-        logs:
-          receivers: [filelog]
-          processors: [batch]
-          exporters: [otlphttp]
-    ```
+        `start_at: end` skips existing content on first start, so pointing the Collector at an existing
+        log file does not replay everything already in it. Set it to `beginning` for a one-time backfill.
+      </Step>
 
-    `start_at: end` skips existing content on first start, so pointing the Collector at an existing
-    log file does not replay everything already in it. Set it to `beginning` for a one-time backfill.
-  </Step>
+      <Step title="Grant read access to the log files">
+        The user the Collector runs as may not be able to read files under `/var/log/`. Add it to
+        the group that owns them (the Debian/RPM package runs as `otelcol-contrib`; the group is
+        often `adm` on Debian/Ubuntu):
 
-  <Step title="Start the Collector">
-    Point the Collector at the config:
+        ```bash
+        sudo usermod -aG adm otelcol-contrib
+        ```
 
-    ```bash
-    otelcol-contrib --config /etc/otel/config.yaml
-    ```
+        Alternatively `sudo chmod a+r` the log files, which loosens permissions for every user on
+        the host.
+      </Step>
 
-    If you run it under a service manager instead, point that unit at `/etc/otel/config.yaml` and
-    restart it. Either way, the startup log lines should not contain config-parse or exporter errors.
-  </Step>
+      <Step title="Start the Collector">
+        Point the Collector at the config:
 
-  <Step title="Send a test log line">
-    Create the application log directory if it doesn't exist yet and append a single line:
+        ```bash
+        otelcol-contrib --config /etc/otel/config.yaml
+        ```
 
-    ```bash
-    sudo mkdir -p /var/log/myapp
-    echo "$(date -Iseconds) hello from the otel collector" | sudo tee -a /var/log/myapp/test.log
-    ```
-  </Step>
+        If you run it under a service manager instead, point that unit at `/etc/otel/config.yaml` and
+        restart it. Either way, the startup log lines should not contain config-parse or exporter errors.
+      </Step>
 
-  <Step title="Verify in Rootprint">
-    Open Search, pick `otel-logs-v0_9` from the index selector, and query for
-    `hello from the otel collector`. Records typically appear within 5–10 seconds. The OTLP path
-    commits on Quickwit's normal cadence; there is no `commit=wait_for` knob.
-  </Step>
-</Steps>
+      <Step title="Send a test log line">
+        Create the application log directory if it doesn't exist yet and append a single line:
+
+        ```bash
+        sudo mkdir -p /var/log/myapp
+        echo "$(date -Iseconds) hello from the otel collector" | sudo tee -a /var/log/myapp/test.log
+        ```
+      </Step>
+
+      <Step title="Verify in Rootprint">
+        Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+        `hello from the otel collector`. Records typically appear within 5–10 seconds. The OTLP path
+        commits on Quickwit's normal cadence; there is no `commit=wait_for` knob.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Docker">
+    Run the Collector as a container that bind-mounts the log files you want to tail. The config is
+    the same one from the Bare Metal tab; the bind mount keeps the `/var/log/myapp/*.log` paths
+    identical inside the container.
+
+    <Steps>
+      <Step title="Save otel-config.yaml">
+        Save the **same config** shown in the Bare Metal tab as `otel-config.yaml` next to your
+        `docker-compose.yml`. Replace `<your-rootprint>` and `<your-ingest-token>`, and point the
+        `filelog` `include` at the log path you bind-mount in the next step.
+      </Step>
+
+      <Step title="Add the Collector to your compose file">
+        ```yaml
+        services:
+          rootprint-otelcol:
+            image: otel/opentelemetry-collector-contrib:latest
+            container_name: rootprint-otelcol
+            restart: unless-stopped
+            command: ["--config=/etc/otelcol/config.yaml"]
+            volumes:
+              - ./otel-config.yaml:/etc/otelcol/config.yaml:ro
+              - /var/log/myapp:/var/log/myapp:ro
+        ```
+
+        The bind-mounted files keep their host ownership inside the container, so the Collector's
+        container user may not be able to read them. If logs don't appear and the Collector reports
+        `permission denied`, run the service as `user: root` or loosen host permissions with
+        `sudo chmod a+r /var/log/myapp/*.log`.
+      </Step>
+
+      <Step title="Start the Collector">
+        ```bash
+        docker compose up -d rootprint-otelcol
+        ```
+      </Step>
+
+      <Step title="Send a test log line">
+        Append a line to a file under the bind-mounted directory on the host:
+
+        ```bash
+        sudo mkdir -p /var/log/myapp
+        echo "$(date -Iseconds) hello from the otel collector" | sudo tee -a /var/log/myapp/test.log
+        ```
+      </Step>
+
+      <Step title="Verify in Rootprint">
+        Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+        `hello from the otel collector`. Records typically appear within 5–10 seconds.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
 
 ## What the config does
 
@@ -125,6 +191,8 @@ Use the **Contrib** distribution (`otelcol-contrib`). The `filelog` receiver liv
 
 ## Related
 
+- [Send logs from Docker](/send-logs/platforms/docker): collect **every** container's stdout via the Docker daemon, rather than tailing specific files.
+- [Send logs from Kubernetes](/send-logs/platforms/kubernetes): run the Collector as a DaemonSet across a cluster.
 - [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
 - [Indexes](/indexes): the `otel-logs-v0_9` schema, so you know what you can search.
 - [Manage indexes](/configuration/manage-indexes): API key lifecycle and per-index permissions.

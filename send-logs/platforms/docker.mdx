@@ -3,14 +3,22 @@ title: 'Send logs from Docker'
 description: 'Ship every container on a Linux host to Rootprint with Vector (Docker socket, default) or the OpenTelemetry Collector (filelog), emitting OTLP.'
 ---
 
-This page ships container logs from a Linux host to Rootprint over OTLP. **Vector** reads the Docker daemon socket: it auto-discovers containers and attaches `container.name`, `container.image.name`, and friends with no extra wiring. The **OpenTelemetry Collector** reads container log files off disk; it works without the socket but cannot resolve friendly container names the same way; see the caveats in its tab.
+This page ships container logs from a Linux host to Rootprint over OTLP. **Vector** reads the Docker daemon socket: it auto-discovers containers and attaches `container.name`, `container.image.name`, and friends with no extra wiring.
+
+<Note>
+  This page collects **every** container's stdout — Vector via the Docker daemon socket, the
+  Collector via on-disk container logs. To run an agent **as a container** that tails specific
+  files you bind-mount in, see the agent pages: [Vector](/send-logs/log-agents/vector),
+  [OpenTelemetry Collector](/send-logs/log-agents/otel-collector),
+  [Fluent Bit](/send-logs/log-agents/fluent-bit).
+</Note>
 
 ## Prerequisites
 
 - A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
 - A Linux host with Docker (and Docker Compose for the examples below).
-- A log agent: [Vector](https://vector.dev/docs/setup/installation/) or the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/installation/). Configs for both are below; run whichever you prefer.
-- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
+- A log agent: [Vector](https://vector.dev/docs/setup/installation/) or the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/installation/).
+- An **ingest API key** scoped to your target index. See [API keys](/api/overview).
 
 <Tabs>
   <Tab title="Vector">
@@ -187,13 +195,6 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
     #### Apps that emit JSON
 
     If a container writes structured JSON to stdout, the body arrives as a string but its content is JSON. Add a `parse_json` step in `enrich` and assign parsed fields to attributes. The OTLP attribute list takes them as-is.
-
-    **Vector troubleshooting**
-
-    - **`permission denied` opening `/var/run/docker.sock`**: rootless Docker uses `$XDG_RUNTIME_DIR/docker.sock` (typically `/run/user/<uid>/docker.sock`). Adjust the volume mount on the `rootprint-vector` service accordingly.
-    - **Vector's own logs flooding back**: `exclude_containers` in `vector.yaml` does not match the compose service's `container_name`. Both must be the same string. If you renamed the service in your compose file, update `exclude_containers` to match.
-    - **`service.name` shows as `unknown_service`**: the Vector compose service was started without `container_name` set, so Docker assigned a generated name like `<project>_rootprint-vector_1`. Pin `container_name` on every service whose `service.name` you want to read cleanly.
-    - **`401`, `403`, `415` from Rootprint**: same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
   </Tab>
 
   <Tab title="OpenTelemetry Collector">
@@ -284,12 +285,6 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
         Query `hello from rootprint` in `otel-logs-v0_9`. The record carries `attributes.container.runtime: docker` and an inferred severity. `container.id` is present; friendly names are not (see the warning above).
       </Step>
     </Steps>
-
-    **OTEL troubleshooting**
-
-    - **No logs**: wrong logging driver (must be `json-file`), or the `/var/lib/docker/containers` mount is missing or not readable.
-    - **`404 unrecognized receiver "filelog"`**: install or use the `-contrib` image, not core.
-    - **Container names missing**: expected; the filelog path can't resolve them. Use the Vector tab if you need `container.name`/`service.name`.
   </Tab>
 </Tabs>
 

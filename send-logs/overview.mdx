@@ -8,6 +8,8 @@ Rootprint accepts logs two ways:
 - **OTLP HTTP**: OpenTelemetry logs over HTTP (protobuf). Use this with any OTEL SDK, the OTEL Collector, or a sidecar that speaks OTLP.
 - **Rootprint HTTP endpoint**: an authenticated endpoint that ingests NDJSON into your target index. Use this when you control the wire format and want to write to a custom-schema index.
 
+Two axes decide where you land. The **source** page (web server, platform, language) defines how its logs are parsed into OpenTelemetry attributes; the **agent** page ([OpenTelemetry Collector](/send-logs/log-agents/otel-collector), [Fluent Bit](/send-logs/log-agents/fluent-bit), [Vector](/send-logs/log-agents/vector)) shows how to run the collector — on bare metal or in Docker.
+
 ## Pick a path
 
 | If you have…                                 | Use                                                                                      |
