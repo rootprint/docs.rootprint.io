@@ -1,13 +1,13 @@
 ---
 title: 'Indexes'
-description: 'Understand how Rootprint uses Quickwit indexes to organize and query your log data.'
+description: 'Understand how Rootprint uses indexes to organize and query your log data.'
 ---
 
-Rootprint reads indexes from your Quickwit instance and presents them as searchable log sources in the UI. Each index defines a schema that determines how log fields are stored and queried.
+Indexes organize your logs into searchable log sources. Each index defines a schema that determines how log fields are stored and queried. When you attach an existing Quickwit instance, its indexes appear automatically as log sources in the UI.
 
 ## Built-in OpenTelemetry index
 
-Rootprint ships with `otel-logs-v0_9` as its default OpenTelemetry logs index, the current schema version bundled with Quickwit `v0.9.0-rc`. Older Quickwit releases (0.8.x and earlier) still default to `otel-logs-v0_7`, so check your metastore before assuming an index name. The schema maps directly to the [OpenTelemetry Log Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/) and is ready to use without any configuration.
+Rootprint ships with `otel-logs-v0_9` as its default OpenTelemetry logs index, the current schema version bundled with Quickwit `v0.9.0-rc`. If you attach an older Quickwit release (0.8.x and earlier), the default index is named `otel-logs-v0_7` instead, so check the index name before assuming. The schema maps directly to the [OpenTelemetry Log Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/) and is ready to use without any configuration.
 
 ### Rootprint field defaults
 
@@ -77,7 +77,7 @@ Understanding these two properties helps when querying and designing custom inde
 - **Indexed**: the field is added to an inverted index and is searchable via text queries. When `indexed: false`, you cannot use the field in search predicates.
 - **Fast**: the field is stored in column-oriented storage (similar to Lucene DocValues). Enables efficient range queries, aggregations, and sorting. A field can be fast without being indexed, and vice versa.
 
-For example, `timestamp_nanos` is fast but not indexed. Quickwit uses it for time-range partitioning, not text search.
+For example, `timestamp_nanos` is fast but not indexed. It is used for fast time-range filtering, not text search.
 
 ### Tokenizers
 
@@ -142,7 +142,7 @@ trace_id:abc123def456...
 
 ## Custom indexes
 
-For non-OpenTelemetry data (audit trails, custom application events, third-party log formats), create an index with the schema your data needs. See [Create a custom index](/configuration/custom-indexes) for the YAML structure, field types, tokenizers, and retention policy. Once it exists, configure how Rootprint maps its fields from the index's [Configuration tab](/configuration/manage-indexes#configuration-tab).
+For non-OpenTelemetry data (audit trails, custom application events, third-party log formats), create an index with the schema your data needs. See [Create a custom index](/configuration/custom-indexes) for the Create-index form: field types, tokenizers, and retention policy. Once it exists, configure how Rootprint maps its fields from the index's [Configuration tab](/configuration/manage-indexes#configuration-tab).
 
 ## Next steps
 

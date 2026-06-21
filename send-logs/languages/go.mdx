@@ -5,6 +5,12 @@ description: 'Ship Go logs to Rootprint with the OpenTelemetry SDK and the slog 
 
 Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Go SDK's `otlploghttp` exporter speaks this protocol directly, and the `otelslog` bridge lets Go's standard `slog` API emit through it. Records land in the OTEL logs index pinned by your ingest API key (`otel-logs-v0_9` in these examples).
 
+## Prerequisites
+
+- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- Go 1.21+ (for `log/slog`).
+- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` for the examples here). See [API keys](/api/overview).
+
 ## Setup
 
 <Steps>
@@ -37,6 +43,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Go SDK's `otlploghttp` 
   </Step>
 
   <Step title="Minimal working example">
+    <Expandable title="main.go">
     ```go
     package main
 
@@ -65,6 +72,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Go SDK's `otlploghttp` 
         logger.Info("Hello from Go to Rootprint")
     }
     ```
+    </Expandable>
 
   </Step>
 
@@ -95,6 +103,7 @@ reqLogger.Info("processing")
 
 Set up the provider once, then write a middleware that enriches the request logger with route metadata.
 
+<Expandable title="main.go — Gin">
 ```go
 package main
 
@@ -135,6 +144,7 @@ func main() {
     _ = r.Run(":3000")
 }
 ```
+</Expandable>
 
 ## Troubleshooting
 

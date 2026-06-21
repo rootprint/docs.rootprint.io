@@ -109,6 +109,7 @@
             "group": "Get Started",
             "pages": [
               "index",
+              "architecture",
               {
                 "group": "Installation",
                 "pages": ["install/docker-compose", "install/scaling"]
@@ -121,7 +122,6 @@
             "pages": [
               "send-logs/overview",
               "send-logs/otlp",
-              "send-logs/http",
               {
                 "group": "Languages",
                 "pages": [
@@ -133,7 +133,7 @@
               },
               {
                 "group": "Platforms",
-                "pages": ["send-logs/platforms/docker"]
+                "pages": ["send-logs/platforms/docker", "send-logs/platforms/kubernetes"]
               },
               {
                 "group": "Web Servers",
@@ -145,10 +145,12 @@
               {
                 "group": "Log Agents",
                 "pages": [
+                  "send-logs/log-agents/otel-collector",
                   "send-logs/log-agents/fluent-bit",
                   "send-logs/log-agents/vector"
                 ]
-              }
+              },
+              "send-logs/http"
             ]
           },
           {
@@ -159,16 +161,29 @@
             "group": "Manage Rootprint",
             "pages": [
               "configuration/environment-variables",
-              "configuration/google-auth",
-              "configuration/github-auth",
-              "configuration/reset-admin-password",
-              "configuration/manage-indexes",
-              "configuration/custom-indexes"
+              {
+                "group": "Authentication",
+                "pages": [
+                  "configuration/google-auth",
+                  "configuration/github-auth"
+                ]
+              },
+              {
+                "group": "Indexes",
+                "pages": [
+                  "configuration/manage-indexes",
+                  "configuration/custom-indexes"
+                ]
+              },
+              {
+                "group": "Users & access",
+                "pages": [
+                  "configuration/users",
+                  "configuration/service-accounts",
+                  "configuration/reset-admin-password"
+                ]
+              }
             ]
-          },
-          {
-            "group": "Tutorials",
-            "pages": ["tutorials/linux-auth-audit-vector"]
           }
         ]
       },
@@ -177,7 +192,7 @@
         "groups": [
           {
             "group": "Overview",
-            "pages": ["api/overview"]
+            "pages": ["api/overview", "api/query-logs"]
           },
           {
             "group": "Log ingest API",
@@ -186,14 +201,6 @@
               "directory": "api/reference"
             },
             "pages": ["POST /api/ingest/ndjson", "POST /v1/logs"]
-          },
-          {
-            "group": "Search API",
-            "openapi": {
-              "source": "api/openapi.json",
-              "directory": "api/reference"
-            },
-            "pages": ["GET /api/search/logs"]
           },
           {
             "group": "Log explorer API",
@@ -206,14 +213,29 @@
               "GET /api/indexes/{indexId}/logs/histogram",
               "GET /api/indexes/{indexId}/fields/{field}/values",
               "GET /api/indexes/{indexId}/fields/values",
-              "GET /api/indexes/{indexId}/logs/export",
-              "GET /api/indexes/{indexId}/saved-queries",
-              "POST /api/indexes/{indexId}/saved-queries",
-              "PATCH /api/indexes/{indexId}/saved-queries/{savedQueryId}",
-              "DELETE /api/indexes/{indexId}/saved-queries/{savedQueryId}",
-              "POST /api/shares",
-              "GET /api/shares/{code}"
+              "GET /api/indexes/{indexId}/logs/export"
             ]
+          },
+          {
+            "group": "Saved views",
+            "openapi": {
+              "source": "api/openapi.json",
+              "directory": "api/reference"
+            },
+            "pages": [
+              "GET /api/indexes/{indexId}/views",
+              "POST /api/indexes/{indexId}/views",
+              "PATCH /api/indexes/{indexId}/views/{viewId}",
+              "DELETE /api/indexes/{indexId}/views/{viewId}"
+            ]
+          },
+          {
+            "group": "Share links",
+            "openapi": {
+              "source": "api/openapi.json",
+              "directory": "api/reference"
+            },
+            "pages": ["POST /api/shares", "GET /api/shares/{code}"]
           },
           {
             "group": "Index management API",
@@ -229,18 +251,27 @@
               "GET /api/indexes/{indexId}/fields",
               "GET /api/indexes/{indexId}/config",
               "GET /api/indexes/{indexId}/stats",
-              "POST /api/indexes/{indexId}/sources",
-              "GET /api/indexes/{indexId}/sources/{sourceId}",
-              "PUT /api/indexes/{indexId}/sources/{sourceId}",
-              "PATCH /api/indexes/{indexId}/sources/{sourceId}",
-              "POST /api/indexes/{indexId}/sources/{sourceId}/reset-checkpoint",
-              "DELETE /api/indexes/{indexId}/sources/{sourceId}",
               "GET /api/indexes/{indexId}/preferences",
               "PUT /api/indexes/{indexId}/preferences"
             ]
           },
           {
-            "group": "API keys",
+            "group": "Index sources API",
+            "openapi": {
+              "source": "api/openapi.json",
+              "directory": "api/reference"
+            },
+            "pages": [
+              "POST /api/indexes/{indexId}/sources",
+              "GET /api/indexes/{indexId}/sources/{sourceId}",
+              "PUT /api/indexes/{indexId}/sources/{sourceId}",
+              "PATCH /api/indexes/{indexId}/sources/{sourceId}",
+              "POST /api/indexes/{indexId}/sources/{sourceId}/reset-checkpoint",
+              "DELETE /api/indexes/{indexId}/sources/{sourceId}"
+            ]
+          },
+          {
+            "group": "API key administration",
             "openapi": {
               "source": "api/openapi.json",
               "directory": "api/reference"
@@ -249,7 +280,36 @@
               "GET /api/api-keys",
               "POST /api/api-keys",
               "GET /api/api-keys/{apiKeyId}",
-              "DELETE /api/api-keys/{apiKeyId}"
+              "DELETE /api/api-keys/{apiKeyId}",
+              "GET /api/api-keys/service-account",
+              "POST /api/api-keys/service-account",
+              "DELETE /api/api-keys/service-account/{id}"
+            ]
+          },
+          {
+            "group": "Service accounts",
+            "openapi": {
+              "source": "api/openapi.json",
+              "directory": "api/reference"
+            },
+            "pages": [
+              "GET /api/service-accounts",
+              "POST /api/service-accounts",
+              "DELETE /api/service-accounts/{userId}"
+            ]
+          },
+          {
+            "group": "Personal API keys",
+            "openapi": {
+              "source": "api/openapi.json",
+              "directory": "api/reference"
+            },
+            "pages": [
+              "POST /api/auth/api-key/create",
+              "GET /api/auth/api-key/list",
+              "GET /api/auth/api-key/get",
+              "POST /api/auth/api-key/update",
+              "POST /api/auth/api-key/delete"
             ]
           },
           {

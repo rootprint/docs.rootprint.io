@@ -56,3 +56,38 @@ video,
 iframe {
 	border-radius: var(--rootprint-radius);
 }
+
+/* Mermaid renders each diagram at its intrinsic size and centers it, so on a wide
+   content column the flowcharts look small. Let them fill the available width —
+   the viewBox scales the whole diagram (and its labels) up proportionally. */
+svg[aria-roledescription="flowchart-v2"],
+svg[id^="mermaid-"] {
+	max-width: 100% !important;
+	width: 100% !important;
+	height: auto !important;
+}
+
+/* Bold every <Step> title; Mintlify renders it font-normal by default. */
+[data-component-part="step-title"] {
+	font-weight: 700 !important;
+}
+
+/* Cards in a row stretch to equal height, but Mintlify's content container
+   doesn't fill that height — so when one card wraps to two lines the shorter
+   ones top-align instead of matching. Fill the height so the container's own
+   `items-center` actually centers every card's icon + title. */
+[data-component-part="card-content-container"] {
+	height: 100%;
+}
+
+/* The card-icon wrapper is a flex item in the card's horizontal row. With the
+   default flex-shrink it collapses below 24px to the image's min-content width;
+   narrow marks like the OTel logo shrink to ~8px and effectively vanish. `width`
+   can't hold a shrinking flex item (and the img's max-width:100% then clamps it
+   to the shrunk wrapper) — min-width sets a floor flex-shrink can't cross. */
+[data-component-part="card-icon"] img {
+	min-width: 1.5rem !important;
+	width: 1.5rem !important;
+	height: 1.5rem !important;
+	object-fit: contain !important;
+}

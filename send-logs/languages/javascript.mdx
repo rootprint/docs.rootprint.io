@@ -5,6 +5,12 @@ description: 'Ship Node.js logs to Rootprint using the OpenTelemetry SDK, Pino, 
 
 Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain OTEL SDK, or plug OTLP into [Pino](https://getpino.io/) or [Winston](https://github.com/winstonjs/winston). All three routes ship records through the same endpoint and land in the OTEL logs index pinned by your ingest API key (`otel-logs-v0_9` in these examples).
 
+## Prerequisites
+
+- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- Node.js 18+ with `npm` (the SDK needs native `fetch` and top-level `await`).
+- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` for the examples here). See [API keys](/api/overview).
+
 ## Setup
 
 <Steps>

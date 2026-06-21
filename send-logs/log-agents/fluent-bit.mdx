@@ -1,101 +1,157 @@
 ---
 title: 'Send logs with Fluent Bit'
-description: 'Tail log files on a Linux host with Fluent Bit and ship them to Rootprint over OTLP.'
+description: 'Tail log files with Fluent Bit — on bare metal or in Docker — and ship them to Rootprint over OTLP.'
 ---
 
-[Fluent Bit](https://fluentbit.io) is a lightweight log forwarder built for edge and host-level collection. This page sets up Fluent Bit as a `systemd` service on a Linux host: it tails files under `/var/log/`, batches the records, and ships them to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to: `otel-logs-v0_9` in this guide.
+[Fluent Bit](https://fluentbit.io) is a lightweight log forwarder built for edge and host-level collection. This page tails files under `/var/log/`, batches the records, and ships them to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to: `otel-logs-v0_9` in this guide. Run Fluent Bit on bare metal or in Docker — pick the tab below.
 
 <Warning>
-	The `tail` input paths and `systemctl` invocations below assume a Linux host. Fluent Bit itself
-	runs on macOS and Windows, but this page does not cover those platforms. Fluent Bit's
-	`opentelemetry` output reaches OTLP/HTTP parity in 2.x and later. Pin to a recent Fluent Bit
-	release if you can.
+	The `tail` input paths below assume a Linux host. Fluent Bit itself runs on macOS and Windows,
+	but this page does not cover those platforms. Fluent Bit's `opentelemetry` output reaches
+	OTLP/HTTP parity in 2.x and later. Pin to a recent Fluent Bit release if you can.
 </Warning>
 
-## Setup
+## Prerequisites
 
-<Steps>
-  <Step title="Pick the target index and create an ingest API key">
-    Logs land in whichever index your ingest token is scoped to. These guides use the built-in
-    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
-    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once. Copy it before
-    clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
-  </Step>
+- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A Linux host. The **Bare Metal** tab uses `systemd`; the **Docker** tab uses Docker Compose.
+- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
 
-<Step title="Install Fluent Bit">
-	Install the Fluent Bit package for your platform from the [official downloads
-	page](https://docs.fluentbit.io/manual/installation/downloads). Per-distro instructions
-	(Debian/Ubuntu apt, RHEL/Fedora dnf, container images, Windows installer) are maintained upstream.
-	Pin to a recent release so the `opentelemetry` output is mature.
-</Step>
+<Tabs>
+  <Tab title="Bare Metal">
+    <Steps>
+      <Step title="Install Fluent Bit">
+        Install the Fluent Bit package for your platform from the [official downloads
+        page](https://docs.fluentbit.io/manual/installation/downloads). Per-distro instructions
+        (Debian/Ubuntu apt, RHEL/Fedora dnf, Windows installer) are maintained upstream.
+        Pin to a recent release so the `opentelemetry` output is mature.
+      </Step>
 
-  <Step title="Write the Fluent Bit config">
-    Save the following at `/etc/fluent-bit/fluent-bit.conf`. Replace `<your-rootprint-host>` with the
-    hostname of your Rootprint deployment, `<port>` with `443` (HTTPS) or `80` (HTTP) or whatever
-    custom port you serve on, `<your-ingest-token>` with the API key you copied in step 1, and
-    `/var/log/myapp/*.log` with the glob that matches your application's log files.
+      <Step title="Write the Fluent Bit config">
+        Save the following at `/etc/fluent-bit/fluent-bit.conf`. Replace `<your-rootprint-host>` with the
+        hostname of your Rootprint deployment, `<port>` with `443` (HTTPS) or `80` (HTTP) or whatever
+        custom port you serve on, `<your-ingest-token>` with the API key you copied in step 1, and
+        `/var/log/myapp/*.log` with the glob that matches your application's log files.
 
-    ```ini
-    [SERVICE]
-        Flush         1
-        Log_Level     info
-        Daemon        Off
-        HTTP_Server   Off
+        ```ini
+        [SERVICE]
+            Flush         1
+            Log_Level     info
+            Daemon        Off
+            HTTP_Server   Off
 
-    [INPUT]
-        Name             tail
-        Path             /var/log/myapp/*.log
-        Tag              myapp.*
-        Read_from_Head   False
+        [INPUT]
+            Name             tail
+            Path             /var/log/myapp/*.log
+            Tag              myapp.*
+            Read_from_Head   False
 
-    [OUTPUT]
-        Name                  opentelemetry
-        Match                 *
-        Host                  <your-rootprint-host>
-        Port                  <port>
-        Tls                   On
-        Tls.verify            On
-        Logs_uri              /v1/logs
-        Header                Authorization Bearer <your-ingest-token>
-        Logs_body_key         $log
-        Log_response_payload  True
-    ```
+        [OUTPUT]
+            Name                  opentelemetry
+            Match                 *
+            Host                  <your-rootprint-host>
+            Port                  <port>
+            Tls                   On
+            Tls.verify            On
+            Logs_uri              /v1/logs
+            Header                Authorization Bearer <your-ingest-token>
+            Logs_body_key         $log
+            Log_response_payload  True
+        ```
 
-    `Read_from_Head False` skips existing content on first start, so installing Fluent Bit against
-    an existing log file does not replay everything that was already there. Flip it to `True` if
-    you want a one-time backfill. Without a `DB` parameter (covered below), Fluent Bit re-applies
-    `Read_from_Head` on every restart. Fine for the first install, worth revisiting once the
-    setup is in production.
+        `Read_from_Head False` skips existing content on first start, so installing Fluent Bit against
+        an existing log file does not replay everything that was already there. Flip it to `True` if
+        you want a one-time backfill. Without a `DB` parameter (covered below), Fluent Bit re-applies
+        `Read_from_Head` on every restart. Fine for the first install, worth revisiting once the
+        setup is in production.
+      </Step>
 
-  </Step>
+      <Step title="Grant read access to the log files">
+        The Fluent Bit package installs a `fluent-bit` service user that may not be able to read
+        files under `/var/log/`. Add it to the group that owns them, or `sudo chmod a+r` the log
+        files (which loosens permissions for every user on the host).
+      </Step>
 
-  <Step title="Restart Fluent Bit">
-    ```bash
-    sudo systemctl restart fluent-bit
-    sudo systemctl status fluent-bit
-    ```
+      <Step title="Restart Fluent Bit">
+        ```bash
+        sudo systemctl restart fluent-bit
+        sudo systemctl status fluent-bit
+        ```
 
-    The status output should show `active (running)` and the most recent log lines should not
-    contain config-parse or output-startup errors.
+        The status output should show `active (running)` and the most recent log lines should not
+        contain config-parse or output-startup errors.
+      </Step>
 
-  </Step>
+      <Step title="Send a test log line">
+        Create the application log directory if it doesn't exist yet and append a single line:
 
-  <Step title="Send a test log line">
-    Create the application log directory if it doesn't exist yet and append a single line:
+        ```bash
+        sudo mkdir -p /var/log/myapp
+        echo "$(date -Iseconds) hello from fluent-bit" | sudo tee -a /var/log/myapp/test.log
+        ```
+      </Step>
 
-    ```bash
-    sudo mkdir -p /var/log/myapp
-    echo "$(date -Iseconds) hello from fluent-bit" | sudo tee -a /var/log/myapp/test.log
-    ```
+      <Step title="Verify in Rootprint">
+        Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+        `hello from fluent-bit`. Records typically appear within 5–10 seconds. The OTLP path commits
+        on Quickwit's normal cadence, there is no `commit=wait_for` knob.
+      </Step>
+    </Steps>
+  </Tab>
 
-  </Step>
+  <Tab title="Docker">
+    Run Fluent Bit as a container that bind-mounts the log files you want to tail. The config is
+    the same one from the Bare Metal tab; the bind mount keeps the `/var/log/myapp/*.log` paths
+    identical inside the container.
 
-  <Step title="Verify in Rootprint">
-    Open Search, pick `otel-logs-v0_9` from the index selector, and query for
-    `hello from fluent-bit`. Records typically appear within 5–10 seconds. The OTLP path commits
-    on Quickwit's normal cadence, there is no `commit=wait_for` knob.
-  </Step>
-</Steps>
+    <Steps>
+      <Step title="Write the Fluent Bit config">
+        Save the **same `fluent-bit.conf`** shown in the Bare Metal tab next to your
+        `docker-compose.yml`. The container reads it at `/fluent-bit/etc/fluent-bit.conf` (mounted
+        in the next step). Replace `<your-rootprint-host>`, `<port>`, and `<your-ingest-token>`, and
+        point the `tail` `Path` at the log path you bind-mount in.
+      </Step>
+
+      <Step title="Add the Fluent Bit service to your compose file">
+        ```yaml
+        services:
+          rootprint-fluentbit:
+            image: fluent/fluent-bit:latest
+            container_name: rootprint-fluentbit
+            restart: unless-stopped
+            volumes:
+              - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+              - /var/log/myapp:/var/log/myapp:ro
+        ```
+
+        The bind-mounted files keep their host ownership inside the container, so the Fluent Bit
+        container user may not be able to read them. If logs don't appear and Fluent Bit reports
+        `permission denied`, run the service as `user: root` or loosen host permissions with
+        `sudo chmod a+r /var/log/myapp/*.log`.
+      </Step>
+
+      <Step title="Start Fluent Bit">
+        ```bash
+        docker compose up -d rootprint-fluentbit
+        ```
+      </Step>
+
+      <Step title="Send a test log line">
+        Append a line to a file under the bind-mounted directory on the host:
+
+        ```bash
+        sudo mkdir -p /var/log/myapp
+        echo "$(date -Iseconds) hello from fluent-bit" | sudo tee -a /var/log/myapp/test.log
+        ```
+      </Step>
+
+      <Step title="Verify in Rootprint">
+        Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+        `hello from fluent-bit`. Records typically appear within 5–10 seconds.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
 
 ## Setting `service.name` and `host.name`
 
@@ -166,6 +222,8 @@ If your systemd unit drops privileges to a non-root user, also `sudo chown -R fl
 
 ## Related
 
+- [Send logs from Docker](/send-logs/platforms/docker): collect **every** container's stdout via the Docker daemon, rather than tailing specific files.
+- [Send logs from Kubernetes](/send-logs/platforms/kubernetes): run the Collector as a DaemonSet across a cluster.
 - [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
 - [Indexes](/indexes): the `otel-logs-v0_9` schema, so you know what you can search.
 - [Manage indexes](/configuration/manage-indexes): API key lifecycle and per-index permissions.

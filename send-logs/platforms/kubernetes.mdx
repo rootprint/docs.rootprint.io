@@ -1,0 +1,165 @@
+---
+title: 'Send logs from Kubernetes'
+description: 'Ship every pod in a cluster to Rootprint with the OpenTelemetry Collector running as a DaemonSet, emitting OTLP with pod/namespace/node metadata attached.'
+---
+
+This page ships container logs from a Kubernetes cluster to Rootprint over OTLP. The **OpenTelemetry Collector** runs as a **DaemonSet** — one pod per node — tailing every pod's stdout/stderr off the kubelet. The chart's `logsCollection` preset wires up the `filelog` receiver; the `kubernetesAttributes` preset enriches each record with the pod, namespace, node, and container it came from. A small `transform` infers severity from the message body, the same way the [Docker](/send-logs/platforms/docker) path does.
+
+## Prerequisites
+
+- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A Kubernetes cluster with `kubectl` and `helm` configured against it. The DaemonSet schedules on every node whose pods you want collected.
+- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
+
+<Steps>
+  <Step title="Add the OpenTelemetry Helm repo">
+    ```bash
+    helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+    helm repo update
+    ```
+  </Step>
+
+  <Step title="Create values.yaml">
+    Save this as `values.yaml`. Replace `<your-rootprint>` with your Rootprint base URL and
+    `<your-ingest-token>` with the API key you copied above.
+
+    <Expandable title="values.yaml">
+    ```yaml
+    mode: daemonset
+
+    presets:
+      logsCollection:
+        enabled: true
+      kubernetesAttributes:
+        enabled: true
+
+    config:
+      processors:
+        transform:
+          log_statements:
+            - context: log
+              statements:
+                - set(severity_number, SEVERITY_NUMBER_ERROR) where IsString(body) and IsMatch(body, "(?i)\\b(error|fatal|panic|exception)\\b")
+                - set(severity_text, "ERROR") where severity_number == SEVERITY_NUMBER_ERROR
+                - set(severity_number, SEVERITY_NUMBER_WARN) where severity_number == 0 and IsString(body) and IsMatch(body, "(?i)\\b(warn|warning|deprecated|retry)\\b")
+                - set(severity_text, "WARN") where severity_number == SEVERITY_NUMBER_WARN
+                - set(severity_number, SEVERITY_NUMBER_INFO) where severity_number == 0
+                - set(severity_text, "INFO") where severity_text == ""
+      exporters:
+        otlphttp:
+          logs_endpoint: https://<your-rootprint>/v1/logs
+          compression: gzip
+          headers:
+            Authorization: "Bearer <your-ingest-token>"
+      service:
+        pipelines:
+          logs:
+            processors: [memory_limiter, k8sattributes, transform, batch]
+            exporters: [otlphttp]
+    ```
+    </Expandable>
+
+    The `service.pipelines.logs.processors` list is spelled out on purpose. The chart **replaces**
+    this array rather than merging it, so the preset-injected processors (`memory_limiter`,
+    `k8sattributes`, `batch`) have to be listed alongside `transform` — drop one and the chart drops
+    it from the pipeline.
+
+  </Step>
+
+  <Step title="Install the chart">
+    ```bash
+    helm install rootprint-otel open-telemetry/opentelemetry-collector \
+      --namespace rootprint --create-namespace \
+      -f values.yaml
+    ```
+
+    Confirm the DaemonSet is running — one pod per node:
+
+    ```bash
+    kubectl get pods -n rootprint -l app.kubernetes.io/name=opentelemetry-collector
+    ```
+  </Step>
+
+  <Step title="Send a test log line">
+    Run a throwaway pod that prints one line and exits. The Collector on that pod's node tails it and
+    ships it with the pod's metadata attached.
+
+    ```bash
+    kubectl run rootprint-smoke-test --image=alpine --restart=Never \
+      -- echo "hello from rootprint"
+    ```
+
+    Clean up afterwards with `kubectl delete pod rootprint-smoke-test`.
+  </Step>
+
+  <Step title="Verify in Rootprint">
+    Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+    `hello from rootprint`. The record typically arrives within a few seconds.
+    `attributes.k8s.pod.name` reads `rootprint-smoke-test`, and `k8s.namespace.name`,
+    `k8s.node.name`, and `k8s.container.name` are populated.
+  </Step>
+</Steps>
+
+## What you get in Rootprint
+
+The `kubernetesAttributes` preset attaches cluster context to every record:
+
+| OTLP attribute        | Value                                  |
+| --------------------- | -------------------------------------- |
+| `k8s.pod.name`        | pod the log came from                  |
+| `k8s.namespace.name`  | pod's namespace                        |
+| `k8s.node.name`       | node the pod is scheduled on           |
+| `k8s.container.name`  | container within the pod               |
+| `k8s.pod.uid`         | pod UID                                |
+| severity              | inferred from the message body         |
+
+### Severity inference
+
+The `transform` lowercases the body and matches two pattern families:
+
+- `error`, `fatal`, `panic`, or `exception` (word-boundary) → `severityText: ERROR` (severity number 17).
+- `warn` / `warning`, `deprecated`, or `retry` → `severityText: WARN` (13).
+- Everything else → `severityText: INFO` (9).
+
+`DEBUG` is not inferred — `\bdebug\b` against arbitrary pod output false-positives constantly. Apps that need debug-level visibility should emit it via an OpenTelemetry SDK that sets `severityNumber` itself; that record carries through unchanged because the SDK writes to the same endpoint.
+
+## Cluster events (optional)
+
+The steps above collect **pod logs**. To also capture cluster-level events — scheduling, image pulls, OOMKills — deploy a second Collector as a single-replica `Deployment` (not a DaemonSet, to avoid duplicate events) with the `kubernetesEvents` preset:
+
+```yaml
+mode: deployment
+replicaCount: 1
+presets:
+  kubernetesEvents:
+    enabled: true
+config:
+  exporters:
+    otlphttp:
+      logs_endpoint: https://<your-rootprint>/v1/logs
+      compression: gzip
+      headers:
+        Authorization: "Bearer <your-ingest-token>"
+  service:
+    pipelines:
+      logs:
+        exporters: [otlphttp]
+```
+
+Install it under a separate release name (e.g. `rootprint-otel-events`) so it doesn't collide with the DaemonSet.
+
+## Troubleshooting
+
+- **No pods in the DaemonSet**: nodes may carry taints the Collector doesn't tolerate. Add the matching `tolerations` to `values.yaml`, or check `kubectl describe daemonset -n rootprint`.
+- **`401` from Rootprint**: the `Authorization` header is missing or the token is wrong. Check the token value in `values.yaml`.
+- **`403` from Rootprint**: the API key exists but is not scoped to `otel-logs-v0_9`. Create a new key scoped to that index.
+- **`413` from Rootprint**: the batch is too large. Add `send_batch_max_size` to the `batch` processor.
+- **`415` from Rootprint**: the `Content-Type` is not `application/x-protobuf`. The Collector sets this automatically; if you see a 415, check for a proxy stripping headers.
+- **Logs arrive without `k8s.*` attributes**: the `kubernetesAttributes` preset needs RBAC to read pod metadata. The chart creates the `ClusterRole` automatically — if you disabled RBAC creation, grant `get`/`list`/`watch` on `pods` and `namespaces`.
+
+## Related
+
+- [Send logs from Docker](/send-logs/platforms/docker): container logs on a single Linux host.
+- [Send logs with the OpenTelemetry Collector](/send-logs/log-agents/otel-collector): the same Collector tailing files on a host.
+- [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
+- [Indexes](/indexes): the `otel-logs-v0_9` schema.

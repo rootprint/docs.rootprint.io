@@ -38,7 +38,10 @@ Use these terms consistently across pages:
 
 - **index** — a Quickwit index. Not "dataset" or "collection".
 - **view** — a saved search/filter combination. Not "preset" or "filter set".
-- **API key** — the bearer credential for ingest or search, created in **Administration → API keys**. Each key has a **role** (`ingest` or `search`) and is scoped to one index. Refer to a specific key by its role: "ingest API key" / "search API key". Not "token" or "write key".
+- **ingest API key** — the bearer credential for log ingestion, created in **Settings → API keys**. It uses the `lwit_` prefix and is scoped to one index.
+- **query API key** — umbrella term for read-only `rpk_` credentials that grant `logs: read` on log query endpoints. Use the specific term when the owner matters.
+- **personal API key** / **personal access token (PAT)** — a query API key created by a signed-in user from **Settings → Profile**. It authenticates as that user.
+- **service account** — a non-human account created by an admin from **Settings → Service accounts**. Service account API keys are query API keys for shared integrations.
 - **log level** — severity (INFO/WARN/ERROR/DEBUG/UNKNOWN). Not "severity" or "log priority".
 - **OTLP** — OpenTelemetry Protocol. Capitalize.
 - **NDJSON gateway** — the per-line JSON ingest endpoint. Don't abbreviate to "JSON gateway".

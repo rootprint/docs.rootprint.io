@@ -1,6 +1,6 @@
 ---
 title: 'Get started with Rootprint in under five minutes'
-description: 'Deploy Rootprint with Docker Compose, create an ingest API key, and send your first logs to a Quickwit index, all in under five minutes.'
+description: 'Deploy Rootprint with Docker Compose, create an ingest API key, and send your first logs, all in under five minutes.'
 ---
 
 This guide walks you through deploying Rootprint locally, signing in, and sending your first logs. The whole process takes about five minutes and requires only Docker.
@@ -19,14 +19,14 @@ This guide walks you through deploying Rootprint locally, signing in, and sendin
 <Step title="Create the admin account">
 	Open [http://localhost:8282](http://localhost:8282) in your browser. On first boot, Rootprint
 	redirects you to the setup wizard. Enter your desired admin credentials and
-	submit the form. You will be signed in automatically after setup completes.
+	submit the form.
 </Step>
 
   <Step title="Create an ingest API key">
     Rootprint requires a bearer API key to accept log data. To create one:
 
     1. In the sidebar, open **Settings → API keys**.
-    2. Click **Create API key**, give it a name, pick the bundled `otel-logs-v0_9` index, and choose the **Ingest** role.
+    2. Click **Create ingest key**, give it a name, and pick the bundled `otel-logs-v0_9` index.
     3. The value is shown once on creation. Copy it before clicking **Done**. You can re-reveal it later with the eye icon on the key's row.
 
     You will use this API key in the next step to authenticate your log shipper.
@@ -34,11 +34,12 @@ This guide walks you through deploying Rootprint locally, signing in, and sendin
   </Step>
 
   <Step title="Send sample logs">
-    Use `curl` to post a couple of NDJSON log entries to the bundled `otel-logs-v0_9` index. Replace `<your-ingest-token>` with the API key you just copied:
+    Set `TOKEN` to the API key you just copied, then use `curl` to post a couple of NDJSON log entries to the bundled `otel-logs-v0_9` index:
 
     ```bash
+    export TOKEN='<your-ingest-token>'
     curl -X POST 'http://localhost:8282/api/ingest/ndjson' \
-      -H 'Authorization: Bearer <your-ingest-token>' \
+      -H "Authorization: Bearer $TOKEN" \
       -H 'Content-Type: application/x-ndjson' \
       --data-binary @- <<EOF
     {"timestamp_nanos":$(date +%s)000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{"user_id":"alice"},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":9,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
@@ -57,6 +58,4 @@ This guide walks you through deploying Rootprint locally, signing in, and sendin
 
 - [Read the Send Logs guide](/send-logs/overview) to understand the OpenTelemetry path and the authenticated HTTP endpoint.
 - [Learn the search query syntax](/search/query-language) to filter your logs precisely.
-- [Configure your index fields](/configuration/manage-indexes#field-role-mappings) to map log level, message, and traceback fields for your data schema.
 - [Set up Google OAuth](/configuration/google-auth) to let your team sign in with their company Google accounts.
-- [Explore the Ingest API reference](/api/ingest-logs) for endpoint-level details.

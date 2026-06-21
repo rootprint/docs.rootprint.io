@@ -7,8 +7,8 @@ The bundled Docker Compose is optimized for one active Rootprint container, one 
 container, local-disk Quickwit storage, and Quickwit's file-backed metastore. That setup handles substantial ingest on modest hardware.
 
 Scaling Rootprint means keeping Rootprint single-node and moving scale-sensitive work into
-Quickwit. Quickwit is the distributed search and indexing layer; Rootprint is the UI, auth, ingest
-gateway, and API layer in front of it.
+Quickwit, its search engine. See [Architecture](/architecture) for the full responsibility split
+and what's stored where.
 
 ## What you can run in parallel
 
@@ -16,30 +16,20 @@ gateway, and API layer in front of it.
 | --------- | --------------- | ----- |
 | Rootprint | No | Run one active Rootprint instance. Do not add load-balanced Rootprint replicas and do not build a shared filesystem for Rootprint. |
 | Quickwit | Yes | Quickwit is designed as a horizontally scalable cluster. Add nodes to grow ingest and search capacity. |
-| Rootprint database | External Postgres | Rootprint stores users, API keys, saved queries, preferences, and activity state in Postgres. This is separate from Quickwit's metastore, even if both databases run on the same Postgres server. |
+| Rootprint database | External Postgres | Rootprint stores users, API keys, saved views, preferences, and activity state in its own Postgres database. Keep it separate from Quickwit's metastore. The two can share a Postgres server, but each needs its own database. |
 
 If you need a bigger deployment, keep one Rootprint instance and point `QUICKWIT_URL` at a
 Quickwit REST endpoint, load balancer, or Kubernetes service. Quickwit nodes serve the REST API and
 can redirect requests to the right service in the cluster.
 
-## The Quickwit metastore is the first thing to fix
+## The Metastore is the first thing to fix
 
 Quickwit uses the metastore to track index configuration, split metadata, source checkpoints, and
 index creation state. Indexers write split data to index storage and publish metadata to the
 metastore. Searchers read the metastore before planning a query.
 
 The default file-backed metastore used by the bundled Compose file is **not a distributed
-metastore**. Quickwit's docs say it does not implement locking and does not support multiple
-instances running at the same time.
-
-<Warning>
-Running more than one Quickwit process against the same file-backed metastore can overwrite
-metadata. Do not use a local path, S3 prefix, or mounted shared filesystem as a substitute for the
-PostgreSQL metastore in a multi-node Quickwit deployment.
-
-If you are running more than one Quickwit node, switch to PostgreSQL first.
-
-</Warning>
+metastore**.
 
 ### Switch to the PostgreSQL metastore
 
@@ -84,7 +74,7 @@ control plane, a metastore service, and a janitor), selected per node with `quic
 or `QW_ENABLED_SERVICES`. Because nodes coordinate through PostgreSQL and object storage, you grow
 the cluster by adding nodes, not by resizing one machine.
 
-How far you scale is driven by your workload: add **indexers** when ingest throughput
+Your workload drives how far you scale: add **indexers** when ingest throughput
 is the bottleneck, and add **searchers** (stateless, sized by query concurrency) when search or
 aggregations are. The control plane, metastore service, and janitor are lightweight. One of each is
 usually enough. For Kubernetes, start from the official
@@ -92,24 +82,20 @@ usually enough. For Kubernetes, start from the official
 
 ## Sizing rough numbers
 
-Use these as starting points and measure. Quickwit's cluster sizing guide is the source of truth.
+Use these as starting points and measure.
 
 | Resource | Starting point |
 | -------- | -------------- |
 | Indexing throughput | About `7.5 MB/s` per indexer core; `20-40 MB/s` for a small 4-vCPU indexer is a reasonable first estimate. |
 | Indexer memory | About `4 GB` RAM per core. Workloads with many indexes or data sources need more memory. Avoid indexers below `8 GB` RAM. |
-| Indexer local disk | At least `120 GB` for the split cache, ingest queue, and in-progress indexing work. Local SSDs are preferred. |
+| Indexer local disk | At least `120 GB` for the split cache, ingest queue, and in-progress indexing work. Prefer local SSDs. |
 | Searcher memory | Start around `8 GB` RAM per core when using high-latency object storage such as S3. Heavy aggregations need more. |
 | Searcher disk | Searchers do not need disk unless you enable the searcher split cache. |
 | PostgreSQL metastore | For most Quickwit clusters, Quickwit recommends a PostgreSQL instance with `1` core and `4 GB` RAM. |
 
-Size searchers by query concurrency and aggregation load, not by total data volume. Adding or
-removing them never moves index data.
-
 ## Related
 
 - [Docker Compose install](/install/docker-compose): the single-node setup and S3 configuration.
-- [Custom indexes](/configuration/custom-indexes): where to put `commit_timeout_secs` and `indexing_resources.heap_size`.
 - [Environment variables](/configuration/environment-variables): the Rootprint-side configuration surface.
 - [Quickwit deployment modes](https://quickwit.io/docs/main-branch/deployment/deployment-modes): upstream cluster topology.
 - [Quickwit cluster sizing](https://quickwit.io/docs/main-branch/deployment/cluster-sizing): upstream sizing guidance.

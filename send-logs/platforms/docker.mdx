@@ -1,203 +1,312 @@
 ---
 title: 'Send logs from Docker'
-description: 'Ship every container on a Linux host to Rootprint with a Vector sidecar that reads from the Docker daemon and emits OTLP.'
+description: 'Ship every container on a Linux host to Rootprint with Vector (Docker socket, default) or the OpenTelemetry Collector (filelog), emitting OTLP.'
 ---
 
-Run a Vector sidecar next to your other containers. It reads each container's logs from the Docker daemon socket, picks up `container.id`, `container.name`, `container.image.name`, and `container.image.id` automatically, infers a severity level from the message, packs the result into an OTLP record, and ships to Rootprint over HTTPS.
+This page ships container logs from a Linux host to Rootprint over OTLP. **Vector** reads the Docker daemon socket: it auto-discovers containers and attaches `container.name`, `container.image.name`, and friends with no extra wiring.
 
-<Warning>
-	Mounting `/var/run/docker.sock` into a container lets it enumerate and inspect
-	every container on the host. This is standard for log collectors that use the Docker API. The
-	mount below is read-only (`:ro`).
-</Warning>
+<Note>
+  This page collects **every** container's stdout — Vector via the Docker daemon socket, the
+  Collector via on-disk container logs. To run an agent **as a container** that tails specific
+  files you bind-mount in, see the agent pages: [Vector](/send-logs/log-agents/vector),
+  [OpenTelemetry Collector](/send-logs/log-agents/otel-collector),
+  [Fluent Bit](/send-logs/log-agents/fluent-bit).
+</Note>
 
-## Setup
+## Prerequisites
 
-<Steps>
-  <Step title="Pick the target index and create an ingest API key">
-    Logs land in whichever index your ingest token is scoped to. These guides use the built-in
-    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create API key**, give it a name, pick
-    `otel-logs-v0_9`, and choose the **Ingest** role. The value is shown once. Copy it before
-    clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
-  </Step>
+- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A Linux host with Docker (and Docker Compose for the examples below).
+- A log agent: [Vector](https://vector.dev/docs/setup/installation/) or the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/installation/).
+- An **ingest API key** scoped to your target index. See [API keys](/api/overview).
 
-  <Step title="Create the Vector config">
-    Save this as `vector.yaml` next to your `docker-compose.yml`. Replace `<your-rootprint>` with
-    your Rootprint base URL and `<your-ingest-token>` with the API key you copied in step 1.
+<Tabs>
+  <Tab title="Vector">
+    <Warning>
+    	Mounting `/var/run/docker.sock` into a container lets it enumerate and inspect
+    	every container on the host. This is standard for log collectors that use the Docker API. The
+    	mount below is read-only (`:ro`).
+    </Warning>
 
-    ```yaml
-    sources:
-      docker:
-        type: docker_logs
-        exclude_containers:
-          - rootprint-vector
+    <Steps>
+      <Step title="Create the Vector config">
+        Save this as `vector.yaml` next to your `docker-compose.yml`. Replace `<your-rootprint>` with
+        your Rootprint base URL and `<your-ingest-token>` with the API key.
 
-    transforms:
-      enrich:
-        type: remap
-        inputs: [docker]
-        source: |
-          .message = to_string(.message) ?? ""
-          lower = downcase(.message)
-          if match(lower, r'\berror\b|\bfatal\b|\bpanic\b|\bexception\b') {
-            .severity_number = 17
-            .severity_text   = "ERROR"
-          } else if match(lower, r'\bwarn(ing)?\b|\bdeprecated\b|\bretry\b') {
-            .severity_number = 13
-            .severity_text   = "WARN"
-          } else {
-            .severity_number = 9
-            .severity_text   = "INFO"
-          }
+        <Expandable title="vector.yaml">
+        ```yaml
+        sources:
+          docker:
+            type: docker_logs
+            exclude_containers:
+              - rootprint-vector
 
-      to_otlp:
-        type: remap
-        inputs: [enrich]
-        source: |
-          msg = string!(.message)
-          ts_nano = to_unix_timestamp(now(), unit: "nanoseconds")
-          if exists(.timestamp) && is_timestamp(.timestamp) {
-            ts_nano = to_unix_timestamp!(.timestamp, unit: "nanoseconds")
-          }
-          sev_num  = to_int(.severity_number) ?? 9
-          sev_text = string(.severity_text)   ?? "INFO"
+        transforms:
+          enrich:
+            type: remap
+            inputs: [docker]
+            source: |
+              .message = to_string(.message) ?? ""
+              lower = downcase(.message)
+              if match(lower, r'\berror\b|\bfatal\b|\bpanic\b|\bexception\b') {
+                .severity_number = 17
+                .severity_text   = "ERROR"
+              } else if match(lower, r'\bwarn(ing)?\b|\bdeprecated\b|\bretry\b') {
+                .severity_number = 13
+                .severity_text   = "WARN"
+              } else {
+                .severity_number = 9
+                .severity_text   = "INFO"
+              }
 
-          cname = string(.container_name) ?? ""
-          cname = replace(cname, r'^/', "")
-          svc_name = "unknown_service"
-          if cname != "" { svc_name = cname }
+          to_otlp:
+            type: remap
+            inputs: [enrich]
+            source: |
+              msg = string!(.message)
+              ts_nano = to_unix_timestamp(now(), unit: "nanoseconds")
+              if exists(.timestamp) && is_timestamp(.timestamp) {
+                ts_nano = to_unix_timestamp!(.timestamp, unit: "nanoseconds")
+              }
+              sev_num  = to_int(.severity_number) ?? 9
+              sev_text = string(.severity_text)   ?? "INFO"
 
-          attrs = [
-            { "key": "container.runtime", "value": { "stringValue": "docker" } }
-          ]
-          if exists(.container_id) { attrs = push(attrs, { "key": "container.id",         "value": { "stringValue": string!(.container_id) } }) }
-          if cname != ""           { attrs = push(attrs, { "key": "container.name",       "value": { "stringValue": cname } }) }
-          if exists(.image)        { attrs = push(attrs, { "key": "container.image.name", "value": { "stringValue": string!(.image) } }) }
-          if exists(.image_id)     { attrs = push(attrs, { "key": "container.image.id",   "value": { "stringValue": string!(.image_id) } }) }
-          if exists(.stream)       { attrs = push(attrs, { "key": "log.iostream",         "value": { "stringValue": string!(.stream) } }) }
+              cname = string(.container_name) ?? ""
+              cname = replace(cname, r'^/', "")
+              svc_name = "unknown_service"
+              if cname != "" { svc_name = cname }
 
-          . = {
-            "resourceLogs": [{
-              "resource": {
-                "attributes": [
-                  { "key": "service.name", "value": { "stringValue": svc_name } },
-                  { "key": "host.name",    "value": { "stringValue": get_hostname!() } }
-                ]
-              },
-              "scopeLogs": [{
-                "scope": { "name": "vector", "version": "" },
-                "logRecords": [{
-                  "timeUnixNano":         ts_nano,
-                  "observedTimeUnixNano": to_unix_timestamp(now(), unit: "nanoseconds"),
-                  "severityNumber":       sev_num,
-                  "severityText":         sev_text,
-                  "body":                 { "stringValue": msg },
-                  "attributes":           attrs,
-                  "traceId":              "",
-                  "spanId":               "",
-                  "flags":                0,
-                  "droppedAttributesCount": 0
+              attrs = [
+                { "key": "container.runtime", "value": { "stringValue": "docker" } }
+              ]
+              if exists(.container_id) { attrs = push(attrs, { "key": "container.id",         "value": { "stringValue": string!(.container_id) } }) }
+              if cname != ""           { attrs = push(attrs, { "key": "container.name",       "value": { "stringValue": cname } }) }
+              if exists(.image)        { attrs = push(attrs, { "key": "container.image.name", "value": { "stringValue": string!(.image) } }) }
+              if exists(.image_id)     { attrs = push(attrs, { "key": "container.image.id",   "value": { "stringValue": string!(.image_id) } }) }
+              if exists(.stream)       { attrs = push(attrs, { "key": "log.iostream",         "value": { "stringValue": string!(.stream) } }) }
+
+              . = {
+                "resourceLogs": [{
+                  "resource": {
+                    "attributes": [
+                      { "key": "service.name", "value": { "stringValue": svc_name } },
+                      { "key": "host.name",    "value": { "stringValue": get_hostname!() } }
+                    ]
+                  },
+                  "scopeLogs": [{
+                    "scope": { "name": "vector", "version": "" },
+                    "logRecords": [{
+                      "timeUnixNano":         ts_nano,
+                      "observedTimeUnixNano": to_unix_timestamp(now(), unit: "nanoseconds"),
+                      "severityNumber":       sev_num,
+                      "severityText":         sev_text,
+                      "body":                 { "stringValue": msg },
+                      "attributes":           attrs,
+                      "traceId":              "",
+                      "spanId":               "",
+                      "flags":                0,
+                      "droppedAttributesCount": 0
+                    }]
+                  }]
                 }]
-              }]
-            }]
-          }
+              }
 
-    sinks:
-      rootprint:
-        type: opentelemetry
-        inputs: [to_otlp]
-        protocol:
-          type: http
-          uri: https://<your-rootprint>/v1/logs
-          method: post
-          encoding:
-            codec: otlp
-          compression: gzip
-          request:
+        sinks:
+          rootprint:
+            type: opentelemetry
+            inputs: [to_otlp]
+            protocol:
+              type: http
+              uri: https://<your-rootprint>/v1/logs
+              method: post
+              encoding:
+                codec: otlp
+              compression: gzip
+              request:
+                headers:
+                  Authorization: "Bearer <your-ingest-token>"
+              batch:
+                timeout_secs: 1
+                max_bytes: 8388608
+        ```
+        </Expandable>
+
+      </Step>
+
+      <Step title="Add the Vector service to your compose file">
+        Drop this service alongside your existing ones. The Vector container reads every other
+        container's logs through the Docker socket. No changes needed to your application services.
+
+        ```yaml
+        services:
+          rootprint-vector:
+            image: timberio/vector:0.54.0-alpine
+            container_name: rootprint-vector
+            restart: unless-stopped
+            volumes:
+              - ./vector.yaml:/etc/vector/vector.yaml:ro
+              - /var/run/docker.sock:/var/run/docker.sock:ro
+        ```
+
+        The `container_name` and the `exclude_containers` value in `vector.yaml` must match. That's
+        how Vector skips its own logs. Change one, change the other.
+
+      </Step>
+
+      <Step title="Start the Vector service">
+        ```bash
+        docker compose up -d rootprint-vector
+        ```
+
+      </Step>
+
+      <Step title="Send a test log line">
+        Run a throwaway container that prints one line and exits. Vector picks it up from the daemon
+        and ships it with `service.name` set to the container's name.
+
+        ```bash
+        docker run --rm --name rootprint-smoke-test alpine echo "hello from rootprint"
+        ```
+
+      </Step>
+
+      <Step title="Verify in Rootprint">
+        Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+        `hello from rootprint`. The record typically arrives within 5 seconds (one batch interval).
+        `service.name` reads `rootprint-smoke-test`; `attributes.container.image.name` reads
+        `alpine`.
+      </Step>
+    </Steps>
+
+    ### What the remap does
+
+    Two `remap` transforms run in sequence. `enrich` infers a severity level from the message body. `to_otlp` packs the message and the Docker-supplied metadata into the OTLP wire format that Rootprint's ingest endpoint expects.
+
+    #### Severity inference
+
+    The message body is lowercased and matched against two pattern families:
+
+    - `error`, `fatal`, `panic`, or `exception` (word-boundary) → `severityText: ERROR` (severity number 17).
+    - `warn` / `warning`, `deprecated`, or `retry` → `severityText: WARN` (13).
+    - Everything else → `severityText: INFO` (9).
+
+    `DEBUG` is not inferred. `\bdebug\b` against arbitrary container output false-positives constantly. Apps that need debug-level visibility should emit it via an OpenTelemetry SDK that sets `severityNumber` itself; the OTLP record will carry that through unchanged because the SDK writes to the same endpoint.
+
+    #### Apps that emit JSON
+
+    If a container writes structured JSON to stdout, the body arrives as a string but its content is JSON. Add a `parse_json` step in `enrich` and assign parsed fields to attributes. The OTLP attribute list takes them as-is.
+  </Tab>
+
+  <Tab title="OpenTelemetry Collector">
+    <Warning>
+      The Collector reads container logs from `/var/lib/docker/containers` on disk. This requires the **`json-file`** logging driver (Docker's default) and does **not** auto-resolve friendly container names: records carry `container.id` and severity, but `service.name`/`container.name` need extra wiring the socket-based Vector path handles for free. For rich per-container metadata, use the Vector tab.
+    </Warning>
+
+    <Steps>
+      <Step title="Confirm the json-file logging driver">
+        ```bash
+        docker inspect -f '{{.HostConfig.LogConfig.Type}}' <a-running-container>
+        ```
+        Must print `json-file`. The `local` and `journald` drivers are not readable by `filelog`.
+      </Step>
+
+      <Step title="Add the Collector sidecar to your compose file">
+        ```yaml
+        services:
+          rootprint-otelcol:
+            image: otel/opentelemetry-collector-contrib:latest
+            container_name: rootprint-otelcol
+            restart: unless-stopped
+            command: ["--config=/etc/otelcol/config.yaml"]
+            volumes:
+              - ./otel-config.yaml:/etc/otelcol/config.yaml:ro
+              - /var/lib/docker/containers:/var/lib/docker/containers:ro
+        ```
+      </Step>
+
+      <Step title="Save otel-config.yaml">
+        Replace `<your-rootprint>` and `<your-ingest-token>`.
+
+        <Expandable title="otel-config.yaml">
+        ```yaml
+        receivers:
+          filelog:
+            include:
+              - /var/lib/docker/containers/*/*-json.log
+            start_at: end
+            operators:
+              - type: container
+                add_metadata_from_filepath: true
+
+        processors:
+          transform:
+            log_statements:
+              - context: log
+                statements:
+                  - set(severity_number, SEVERITY_NUMBER_ERROR) where IsString(body) and IsMatch(body, "(?i)\\b(error|fatal|panic|exception)\\b")
+                  - set(severity_text, "ERROR") where severity_number == SEVERITY_NUMBER_ERROR
+                  - set(severity_number, SEVERITY_NUMBER_WARN) where severity_number == 0 and IsString(body) and IsMatch(body, "(?i)\\b(warn|warning|deprecated|retry)\\b")
+                  - set(severity_text, "WARN") where severity_number == SEVERITY_NUMBER_WARN
+                  - set(severity_number, SEVERITY_NUMBER_INFO) where severity_number == 0
+                  - set(severity_text, "INFO") where severity_text == ""
+                  - set(attributes["container.runtime"], "docker")
+          batch: {}
+
+        exporters:
+          otlphttp:
+            logs_endpoint: https://<your-rootprint>/v1/logs
+            compression: gzip
             headers:
               Authorization: "Bearer <your-ingest-token>"
-          batch:
-            timeout_secs: 1
-            max_bytes: 8388608
-    ```
 
-  </Step>
+        service:
+          pipelines:
+            logs:
+              receivers: [filelog]
+              processors: [transform, batch]
+              exporters: [otlphttp]
+        ```
+        </Expandable>
+      </Step>
 
-  <Step title="Add the Vector service to your compose file">
-    Drop this service alongside your existing ones. The Vector container reads every other
-    container's logs through the Docker socket. No changes needed to your application services.
+      <Step title="Start the sidecar">
+        ```bash
+        docker compose up -d rootprint-otelcol
+        ```
+      </Step>
 
-    ```yaml
-    services:
-      rootprint-vector:
-        image: timberio/vector:0.54.0-alpine
-        container_name: rootprint-vector
-        restart: unless-stopped
-        volumes:
-          - ./vector.yaml:/etc/vector/vector.yaml:ro
-          - /var/run/docker.sock:/var/run/docker.sock:ro
-    ```
+      <Step title="Send a test log line">
+        ```bash
+        docker run --rm --name rootprint-smoke-test alpine echo "hello from rootprint"
+        ```
+      </Step>
 
-    The `container_name` and the `exclude_containers` value in `vector.yaml` must match. That's
-    how Vector skips its own logs. Change one, change the other.
+      <Step title="Verify in Rootprint">
+        Query `hello from rootprint` in `otel-logs-v0_9`. The record carries `attributes.container.runtime: docker` and an inferred severity. `container.id` is present; friendly names are not (see the warning above).
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
 
-  </Step>
+## What you get in Rootprint
 
-  <Step title="Start the Vector service">
-    ```bash
-    docker compose up -d rootprint-vector
-    ```
+`service.name` is derived from the container's name (with the leading `/` Docker prefixes stripped) when using Vector; it is not set automatically by the OTEL Collector path.
 
-  </Step>
+Per-event attributes by agent:
 
-  <Step title="Send a test log line">
-    Run a throwaway container that prints one line and exits. Vector picks it up from the daemon
-    and ships it with `service.name` set to the container's name.
+| OTLP key               | Vector                                 | OpenTelemetry Collector         |
+| ---------------------- | -------------------------------------- | ------------------------------- |
+| `container.id`         | full 64-char ID                        | full 64-char ID (from filepath) |
+| `container.name`       | name without leading `/`               | not populated                   |
+| `container.image.name` | image reference (e.g., `nginx:latest`) | not populated                   |
+| `container.image.id`   | image digest                           | not populated                   |
+| `container.runtime`    | literal `docker`                       | literal `docker`                |
+| `log.iostream`         | `stdout` or `stderr`                   | not populated                   |
+| severity               | inferred from message body             | inferred from message body      |
 
-    ```bash
-    docker run --rm --name rootprint-smoke-test alpine echo "hello from rootprint"
-    ```
+The Vector path populates all rows. The OTEL Collector path populates `container.id`, `container.runtime`, and severity only; it cannot resolve `container.name` or `container.image.name` from the json-file path without the Docker socket.
 
-  </Step>
-
-  <Step title="Verify in Rootprint">
-    Open Search, pick `otel-logs-v0_9` from the index selector, and query for
-    `hello from rootprint`. The record typically arrives within 5 seconds (one batch interval).
-    `service.name` reads `rootprint-smoke-test`; `attributes.container.image.name` reads
-    `alpine`.
-  </Step>
-</Steps>
-
-## What the remap does
-
-Two `remap` transforms run in sequence. `enrich` infers a severity level from the message body. `to_otlp` packs the message and the Docker-supplied metadata into the OTLP wire format that Rootprint's ingest endpoint expects.
-
-### Severity inference
-
-The message body is lowercased and matched against two pattern families:
-
-- `error`, `fatal`, `panic`, or `exception` (word-boundary) → `severityText: ERROR` (severity number 17).
-- `warn` / `warning`, `deprecated`, or `retry` → `severityText: WARN` (13).
-- Everything else → `severityText: INFO` (9).
-
-`DEBUG` is not inferred. `\bdebug\b` against arbitrary container output false-positives constantly. Apps that need debug-level visibility should emit it via an OpenTelemetry SDK that sets `severityNumber` itself; the OTLP record will carry that through unchanged because the SDK writes to the same endpoint.
-
-### Attributes
-
-`service.name` is derived from the container's name (with the leading `/` Docker prefixes stripped), so a query for `service:my-api` filters Rootprint to one container's events. `host.name` comes from the Vector container's hostname.
-
-Per-event attributes:
-
-| OTLP key               | Value                                  |
-| ---------------------- | -------------------------------------- |
-| `container.id`         | full 64-char ID                        |
-| `container.name`       | name without leading `/`               |
-| `container.image.name` | image reference (e.g., `nginx:latest`) |
-| `container.image.id`   | image digest                           |
-| `container.runtime`    | literal `docker`                       |
-| `log.iostream`         | `stdout` or `stderr`                   |
-
-Container labels are not promoted by default. They're user-defined and unbounded, and adding all of them risks attribute-cardinality issues. To promote a specific label, add one line to the `to_otlp` remap before the `. = { ... }` assignment:
+Container labels are not promoted by default. They're user-defined and unbounded, and adding all of them risks attribute-cardinality issues. To promote a specific label with Vector, add one line to the `to_otlp` remap before the `. = { ... }` assignment:
 
 ```vrl
 if exists(.label."com.example.team") {
@@ -205,16 +314,12 @@ if exists(.label."com.example.team") {
 }
 ```
 
-### Apps that emit JSON
-
-If a container writes structured JSON to stdout, the body arrives as a string but its content is JSON. Add a `parse_json` step in `enrich` and assign parsed fields to attributes. The OTLP attribute list takes them as-is.
-
 ## Troubleshooting
 
-- **`permission denied` opening `/var/run/docker.sock`**: rootless Docker uses `$XDG_RUNTIME_DIR/docker.sock` (typically `/run/user/<uid>/docker.sock`). Adjust the volume mount on the `rootprint-vector` service accordingly.
-- **Vector's own logs flooding back**: `exclude_containers` in `vector.yaml` does not match the compose service's `container_name`. Both must be the same string. If you renamed the service in your compose file, update `exclude_containers` to match.
-- **`service.name` shows as `unknown_service`**: the Vector compose service was started without `container_name` set, so Docker assigned a generated name like `<project>_rootprint-vector_1`. Pin `container_name` on every service whose `service.name` you want to read cleanly.
-- **`401`, `403`, `415` from Rootprint**: same response codes as a misconfigured Vector setup of any kind. See [Send logs with Vector](/send-logs/log-agents/vector#troubleshooting) for full diagnoses.
+- **`401` from Rootprint**: the `Authorization` header is missing or the token is wrong. Check the token value in your config.
+- **`403` from Rootprint**: the API key exists but is not scoped to `otel-logs-v0_9`. Create a new key scoped to that index.
+- **`413` from Rootprint**: the batch is too large. Lower `max_bytes` (Vector) or add `send_batch_max_size` to the `batch` processor (OTEL Collector).
+- **`415` from Rootprint**: the `Content-Type` is not `application/x-protobuf`. Both agents set this automatically; if you see a 415, check for a proxy stripping headers.
 
 ## Related
 

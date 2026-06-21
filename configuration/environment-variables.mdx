@@ -24,19 +24,9 @@ Rootprint refuses to start if any required variable is missing, empty, or (for U
 
 | Variable             | Default          | Description                                                                                                                                                                                                                       |
 | -------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET` | Auto-generated   | Secret used to sign session tokens. If unset, Rootprint generates 32 random bytes on first boot and persists them in the `app_settings` table; subsequent boots read the row. If set, must be ≥32 characters or startup fails.       |
-| `FRONTEND_URL`       | Same as `ORIGIN` | Additional allowed CORS origin. Only useful in split deployments where the SPA is hosted on a different origin than the API. Cookie domain, invite link host, and Better Auth `baseURL` always derive from `ORIGIN`, not this.    |
-| `PORT`               | `8282`           | HTTP listen port. Usually you remap with the compose `ports:` block instead of changing this.                                                                                                                                     |
-
-## Removed in this release
-
-These variables were honored in earlier (SQLite-era) builds and are no longer read. Setting them has no effect:
-
-- `ROOTPRINT_DATABASE_PATH`: Rootprint now requires PostgreSQL.
-- `ROOTPRINT_AUTH_SECRET`: renamed; use `BETTER_AUTH_SECRET`.
-- `ROOTPRINT_INVITE_EXPIRY_HOURS`: hard-coded to 48 hours.
-- `ROOTPRINT_RATE_LIMIT_*`, `ROOTPRINT_SIGNIN_RATE_LIMIT_MAX`, `ROOTPRINT_QUICKWIT_TIMEOUT_MS`: not currently implemented; will be re-exposed via the admin settings UI in a future release.
-- `HOST`, `BETTER_AUTH_URL`, `ROOTPRINT_SERVE_WEB`, `ROOTPRINT_WEB_ROOT`: replaced by `0.0.0.0` bind, derived from `ORIGIN`, and image-build defaults respectively.
+| `BETTER_AUTH_SECRET` | Auto-generated   | Secret used to sign session tokens. If unset, Rootprint generates a random 32-byte secret on first boot and persists it in the `app_settings` table; subsequent boots read the row. If set, must be ≥32 characters or startup fails.       |
+| `FRONTEND_URL`       | Same as `ORIGIN` | Additional allowed CORS origin. Use this only in split deployments where the SPA is hosted on a different origin than the API. Cookie domain, invite link host, and Better Auth `baseURL` always derive from `ORIGIN`, not this.    |
+| `PORT`               | `8282`           | HTTP listen port. Remap the port with the compose `ports:` block instead of changing this.                                                                                                                                     |
 
 ## Docker Compose example
 

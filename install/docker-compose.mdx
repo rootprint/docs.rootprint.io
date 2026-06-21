@@ -9,7 +9,7 @@ Install [Docker](https://www.docker.com) and [Docker Compose](https://docs.docke
 
 ## Self-contained deployment (recommended)
 
-This option deploys Rootprint together with PostgreSQL and a bundled Quickwit instance. Best for getting started quickly or running a self-contained setup.
+This option deploys Rootprint together with PostgreSQL and its embedded Quickwit search engine. Best for getting started quickly or running a self-contained setup.
 
 Download the Compose file and start the services:
 
@@ -78,7 +78,7 @@ This starts three containers:
 
 - **Rootprint**: the web UI, exposed on port `8282`.
 - **PostgreSQL**: Rootprint application state, stored in the `rootprint-db` Docker volume.
-- **Quickwit**: the search and indexing backend, reachable only from the Compose network by default.
+- **Quickwit**: Rootprint's embedded search engine, reachable only from the Compose network by default.
 
 Run `docker compose ps` to confirm all containers are healthy, then open [http://localhost:8282](http://localhost:8282).
 
@@ -102,6 +102,12 @@ services:
 
 Set both variables to paths within the same bucket. The bucket must already exist. See [Quickwit storage configuration](https://quickwit.io/docs/configuration/storage-config) for all options, including S3-compatible providers and custom endpoints.
 
+<Note>
+	This keeps Quickwit single-node. An S3 `QW_METASTORE_URI` is a file-backed metastore
+	(single-writer): durable, but not distributed. To run a multi-node Quickwit cluster, move
+	the metastore to PostgreSQL. See [Scaling beyond a single node](/install/scaling).
+</Note>
+
 #### Other storage backends
 
 Quickwit also supports Azure Blob Storage, Google Cloud Storage, and S3-compatible providers (MinIO, Garage, DigitalOcean Spaces). The configuration follows the same shape: a URI scheme on `QW_DEFAULT_INDEX_ROOT_URI` and `QW_METASTORE_URI`, plus credentials.
@@ -122,7 +128,7 @@ If other services on your internal network need to ingest data directly into Qui
 ```yaml
 ports:
   - '7280:7280'
-  - '7281:7281'
+  - '7281:7281' # gRPC
 ```
 
 Quickwit will then be reachable at `http://<host-ip>:7280` from other machines on the same network.
@@ -136,7 +142,7 @@ Quickwit will then be reachable at `http://<host-ip>:7280` from other machines o
 ## Connect to an existing Quickwit instance
 
 <Warning>
-	**Prerequisite: Quickwit `0.9` or later is required.** Rootprint relies on Quickwit `0.9`
+	**Prerequisite: Quickwit `0.9` required.** Rootprint relies on Quickwit `0.9`
 	Ingest V2 behavior and does not support `0.8` or earlier. Confirm your instance's version before
 	connecting it.
 </Warning>
@@ -149,7 +155,7 @@ Download the standalone Compose file:
 curl -o docker-compose.yml https://docs.rootprint.io/files/docker-compose.standalone.yaml
 ```
 
-Open `docker-compose.yml` and set `QUICKWIT_URL` to the REST API endpoint of your Quickwit instance. Do not include `/api/v1` in the URL:
+Open `docker-compose.yml` and set `QUICKWIT_URL` to the REST API endpoint of your Quickwit instance:
 
 ```yaml
 environment:
@@ -208,3 +214,7 @@ Run `docker compose ps` to confirm both containers are healthy, then open [http:
 ## Configuration
 
 Customize the deployment by setting environment variables under the `environment` key of the `rootprint` service. See the [environment variables reference](/configuration/environment-variables) for the full list, including the database URL, public origin, Quickwit endpoint, and session secret.
+
+## Next steps
+
+With Rootprint running, head to [Send logs](/send-logs/overview) to start ingesting data.

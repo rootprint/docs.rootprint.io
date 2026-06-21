@@ -1,0 +1,64 @@
+---
+title: 'Query logs with API keys'
+description: 'Read logs and explore indexes from external tools, scripts, and AI agents using a personal access token or service account key.'
+---
+
+A **query API key** lets a tool, script, dashboard, or AI agent call Rootprint's read-only log endpoints without a browser session. Use a personal API key, also called a personal access token (PAT), when the client should act as you. Use a service account key when a shared integration needs its own non-human identity.
+
+## How query keys work
+
+- **Prefix `rpk_`.** Personal keys and service account keys use the same prefix. Rootprint shows the full value once, at creation. Store it like a password; Rootprint only keeps a short display fragment afterwards.
+- **Read-only.** A query key grants `logs: read`. Management endpoints for indexes, sources, users, settings, and keys reject it with `401`.
+- **Scoped to the owner, not an index.** A personal key inherits its user's visibility. A service account key inherits the service account's visibility. Ingest API keys use a different `lwit_` prefix and are scoped to one write target.
+- **No expiry.** Query keys do not expire. Revoke a key to cut off access.
+
+## Create a personal key
+
+Create, list, and revoke your own personal keys from **Settings → Profile**. In the **API keys** section, click **Create key**, give the key a name, and copy the value before you close the dialog.
+
+## Create a service account key
+
+Admins create service account keys from **Settings → Service accounts**. Create a service account first, then click **Create key**, choose the account, name the key, and copy the one-time value. See [Service accounts](/configuration/service-accounts) for the full workflow.
+
+## Authenticate
+
+Send either key type as a bearer token.
+
+```http
+Authorization: Bearer rpk_abcdef0123456789...
+```
+
+## Read logs
+
+The key works on these read-only log explorer endpoints.
+
+```bash
+curl 'https://your-rootprint-host/api/indexes/{indexId}/logs?q=severity_text:ERROR&limit=50' \
+  -H 'Authorization: Bearer rpk_abcdef0123456789...'
+```
+
+To discover the index IDs your key can read, list indexes first:
+
+```bash
+curl 'https://your-rootprint-host/api/indexes' \
+  -H 'Authorization: Bearer rpk_abcdef0123456789...'
+```
+
+### Endpoints that accept a query key
+
+| Endpoint                                              | Purpose                          |
+| ----------------------------------------------------- | -------------------------------- |
+| `GET /api/indexes`                                    | List indexes the owner can see   |
+| `GET /api/indexes/{indexId}/logs`                     | Search logs                      |
+| `GET /api/indexes/{indexId}/logs/histogram`           | Time-bucketed counts             |
+| `GET /api/indexes/{indexId}/config`                   | Index field configuration        |
+| `GET /api/indexes/{indexId}/fields`                   | Discover fields                  |
+| `GET /api/indexes/{indexId}/fields/values`            | Top values across fields         |
+| `GET /api/indexes/{indexId}/fields/{field}/values`    | Top values for one field         |
+
+See [Query language](/search/query-language) for the `q` syntax, and the endpoint reference in the sidebar for every query parameter.
+
+<Note>
+	Management routes (creating indexes, editing sources, changing settings) and the key-management
+	endpoints reject query API keys with `401`.
+</Note>

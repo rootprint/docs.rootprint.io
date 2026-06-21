@@ -3,9 +3,9 @@ title: 'What is Rootprint?'
 description: 'Rootprint is an open-source, self-hosted log management platform that runs search directly on cloud storage.'
 ---
 
-Rootprint is built on top of [Quickwit](https://quickwit.io), a cloud-native search engine designed for log and event data stored on object storage.
+Rootprint is a self-hosted log management platform that runs search directly on object storage. It embeds [Quickwit](https://quickwit.io), a cloud-native search engine designed for log and event data, as its search engine, or attaches to a Quickwit instance you already run.
 
-Get started or explore the features:
+Get started or explore:
 
 <CardGroup cols={2}>
   <Card title="Installation" icon="docker" href="/install/docker-compose">
@@ -19,10 +19,13 @@ Get started or explore the features:
 
 ## Key features
 
-- **Log search on object storage**: query your logs with Quickwit-powered full-text search
+- **Log search on object storage**: query your logs with full-text search
 - **Log frequency histogram**: visualize log volume and severity distribution over time
 - **Quick filters**: one-click filtering by field values with aggregation counts
-- **Saved queries**: bookmark and share frequently used searches with your team
+- **Saved views**: bookmark and share frequently used searches with your team
 - **Log export**: download filtered results as NDJSON, CSV, or plain text
-- **Log ingestion**: push logs over OTEL (OTLP HTTP, protobuf) or the authenticated NDJSON HTTP endpoint
-- **User management**: invite-based access control with optional Google Authentication
+- **Log ingestion**: push logs over OTEL or custom NDJSON HTTP endpoint
+- **Pull-based sources**: ingest from Amazon Kinesis, Apache Kafka, or SQS
+- **Index management**: create, configure, and delete custom indexes and their sources 
+- **Programmatic access**: personal and service-account API keys for read-only log queries from scripts, dashboards, and agents
+- **User management**: invite-based access control with optional Google or GitHub sign-in

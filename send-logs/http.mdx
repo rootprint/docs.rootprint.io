@@ -1,65 +1,167 @@
 ---
 title: 'Send logs over HTTP'
-description: 'Authenticated HTTP endpoint in front of Quickwit: push logs to the index attached to your ingest API key using whatever schema that index expects.'
+description: 'Authenticated NDJSON endpoint for custom-schema indexes: you own the wire format, Rootprint forwards records to the index your ingest key is scoped to.'
 ---
 
-Rootprint exposes an authenticated HTTP endpoint at `/api/ingest/ndjson`. Each ingest API key is scoped to a single index; Rootprint forwards the request body unmodified to Quickwit. Use this endpoint when you already control the wire format and want to write to a custom-schema index.
+Rootprint exposes an authenticated HTTP endpoint at `/api/ingest/ndjson` that forwards your request body straight to the index your API key is scoped to. Rootprint adds nothing to the records and reshapes nothing — whatever you POST is what Quickwit indexes. That makes it the endpoint for **custom-schema indexes**: you define the fields your logs carry, then send records that match. Each ingest API key is scoped to a single index.
 
 <Note>
-	For OpenTelemetry-instrumented apps, prefer the [OTLP endpoint](/send-logs/otlp). It handles
-	batching, retries, and schema mapping automatically.
+	For OpenTelemetry-instrumented apps, prefer the [OTLP endpoint](/send-logs/otlp). It is tied to
+	the OTEL schema (the built-in `otel-logs-v0_9` index) and handles batching, retries, and schema
+	mapping for you. This endpoint does none of that — it relays bytes.
 </Note>
+
+## When to use this endpoint
+
+- You run a **custom index** whose schema you defined — audit events, billing records, app logs with your own field names. You control the wire format; the endpoint passes it through unchanged.
+- You already emit JSON and don't want to adopt OpenTelemetry.
+
+The trade-off is delivery: this endpoint is a thin proxy, so batching, retries, and back-pressure are yours to handle. The curl example below is a one-shot POST; the Vector example hands batching and retries to an agent. For OpenTelemetry-shaped logs going to `otel-logs-v0_9`, the [OTLP endpoint](/send-logs/otlp) is the better fit.
+
+## Prerequisites
+
+- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A target index to write to: the built-in `otel-logs-v0_9` (see [Indexes](/indexes) for its schema) or a [custom index](/configuration/custom-indexes) you define first.
+- An **ingest API key** scoped to that index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the target index. See [API keys](/api/overview).
+- An HTTP client or log agent to send the request. The examples cover `curl` and [Vector](https://vector.dev).
 
 ## Setup
 
+These examples write to the built-in `otel-logs-v0_9` index, so they run with no schema setup. For your own index, keep the same mechanics and swap the record shape for your fields — see [Shipping to a custom index](#shipping-to-a-custom-index).
+
 <Steps>
-  <Step title="Pick the target index">
-    Decide which Quickwit index you'll write to. The built-in OTEL index is `otel-logs-v0_9`: see [Indexes](/indexes) for its schema, or follow [Create a custom index](/configuration/custom-indexes) to define your own first.
+  <Step title="Send records to the endpoint">
+    Pick your client. `curl` posts a few lines by hand; Vector tails files and ships them continuously. Both write the same flat `otel-logs-v0_9` records to `/api/ingest/ndjson`.
+
+    <Tabs>
+      <Tab title="curl">
+        Replace `<your-rootprint>` and `<your-ingest-token>`. The payload is one JSON document per line: no trailing comma.
+
+        ```bash
+        curl -X POST 'https://<your-rootprint>/api/ingest/ndjson' \
+          -H 'Authorization: Bearer <your-ingest-token>' \
+          -H 'Content-Type: application/x-ndjson' \
+          --data-binary @- <<EOF
+        {"timestamp_nanos":$(date +%s)000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":9,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
+        {"timestamp_nanos":$(date +%s)000000000,"severity_text":"ERROR","body":{"message":"Checkout failed"},"service_name":"frontend","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":17,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
+        EOF
+        ```
+      </Tab>
+
+      <Tab title="Vector">
+        Vector's `http` sink posts NDJSON straight to this endpoint, so a custom-schema index does not need the OTLP sink. The `remap` transform shapes each tailed line into the same flat `otel-logs-v0_9` record the curl example sends. Replace `<your-rootprint>`, `<your-ingest-token>`, the log glob, and `myapp`.
+
+        ```yaml
+        sources:
+          app_logs:
+            type: file
+            include:
+              - /var/log/myapp/*.log
+            read_from: end
+
+        transforms:
+          to_ndjson:
+            type: remap
+            inputs: [app_logs]
+            source: |
+              msg = .message
+              fpath = .file
+              ts = to_unix_timestamp!(now(), unit: "nanoseconds")
+              . = {
+                "timestamp_nanos": ts,
+                "observed_timestamp_nanos": ts,
+                "severity_text": "INFO",
+                "severity_number": 9,
+                "body": { "message": msg },
+                "service_name": "myapp",
+                "attributes": { "log.file.path": fpath },
+                "resource_attributes": {},
+                "trace_id": "",
+                "span_id": "",
+                "trace_flags": 0,
+                "dropped_attributes_count": 0,
+                "resource_dropped_attributes_count": 0,
+                "scope_name": "",
+                "scope_version": "",
+                "scope_attributes": {},
+                "scope_dropped_attributes_count": 0
+              }
+
+        sinks:
+          rootprint:
+            type: http
+            inputs: [to_ndjson]
+            uri: https://<your-rootprint>/api/ingest/ndjson
+            encoding:
+              codec: json
+            framing:
+              method: newline_delimited
+            auth:
+              strategy: bearer
+              token: <your-ingest-token>
+            batch:
+              max_bytes: 8388608
+              timeout_secs: 1
+        ```
+
+        `framing.method: newline_delimited` is what makes the `http` sink emit NDJSON (one object per line) instead of a JSON array. Vector sends `Content-Type: application/json`, which this endpoint accepts. Every line is tagged `INFO`; parse a real level out of `.message` in the `remap` transform if you need accurate severity. For install, `systemd`, and file-permission setup, see [Send logs with Vector](/send-logs/log-agents/vector) — that page ships OTLP, but its install and `file` source steps are identical.
+      </Tab>
+    </Tabs>
   </Step>
 
-<Step title="Create an ingest API key">
-	In **Settings → API keys**, click **Create API key**, pick the target index, and choose the
-	**Ingest** role. Copy the value shown on creation. API keys are scoped to one index. You cannot
-	reuse one across indexes.
-</Step>
+  <Step title="Verify in Rootprint">
+    A successful POST returns `{"num_docs_for_processing": <count>}` — the number of documents Quickwit queued, not a guarantee they are searchable yet. Open Search, pick your index from the selector, and look for the records you just sent (or that Vector shipped). Allow a few seconds for Quickwit to commit.
+  </Step>
+</Steps>
 
-  <Step title="POST NDJSON to the endpoint">
-    Replace `<your-rootprint>` and `<your-ingest-token>`. The payload is one JSON document per line: no trailing comma.
+## Shipping to a custom index
+
+The example above uses the built-in OTEL schema. Your own logs rarely look like that — and they don't have to. The full workflow:
+
+<Steps>
+  <Step title="Define the index">
+    Create an index with the fields your logs carry and one `datetime` field as the timestamp. Field types are `text`, `i64`, `u64`, `f64`, `bool`, `datetime`, `ip`, and `json`. See [Create a custom index](/configuration/custom-indexes) for the form and the field options. Then mint an ingest key scoped to it.
+  </Step>
+
+  <Step title="Send records that match the schema">
+    POST NDJSON where each line is one record using your field names. For an audit-log index with fields `ts`, `level`, `action`, `actor`, and `source_ip`:
 
     ```bash
     curl -X POST 'https://<your-rootprint>/api/ingest/ndjson' \
       -H 'Authorization: Bearer <your-ingest-token>' \
       -H 'Content-Type: application/x-ndjson' \
       --data-binary @- <<EOF
-    {"timestamp_nanos":$(date +%s)000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":9,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
-    {"timestamp_nanos":$(date +%s)000000000,"severity_text":"ERROR","body":{"message":"Checkout failed"},"service_name":"frontend","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":17,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
+    {"ts":"2026-06-21T10:04:00Z","level":"info","action":"user.login","actor":"alice@acme.io","source_ip":"10.0.0.4"}
+    {"ts":"2026-06-21T10:05:12Z","level":"warn","action":"index.delete","actor":"bob@acme.io","source_ip":"10.0.0.9"}
     EOF
     ```
 
-    The unquoted heredoc lets `$(date +%s)000000000` stamp each entry with the current time in Unix epoch nanoseconds (UTC, second precision, which is plenty here) so they appear in Search right away instead of in the past. This works the same on Linux and macOS.
-
+    How unknown fields are treated depends on the index mode — `dynamic` stores them, `lenient` ignores them, `strict` rejects the record. Pick the mode when you [create the index](/configuration/custom-indexes).
   </Step>
 
-  <Step title="Verify in Rootprint">
-    Open Search, pick your index from the selector, and look for the records you just sent.
+  <Step title="Map fields to display roles">
+    Search needs to know which field is the severity, which is the message, and which holds a traceback. Set these on the index's [Configuration tab](/configuration/manage-indexes#field-role-mappings). The defaults assume the OTEL schema (`severity_text`, `body.message`), so point them at your fields — for the example above, level → `level` and message → `action`. These are presentation settings only; they never change the stored data.
   </Step>
 </Steps>
 
 ## Payload format
 
-Rootprint forwards the body unchanged. You must send the format your API key's Quickwit index expects: typically NDJSON with `Content-Type: application/x-ndjson`. The payload must match the target index schema; Quickwit rejects documents that don't. See [Indexes](/indexes) for the built-in `otel-logs-v0_9` schema, or the index's [Configuration tab](/configuration/manage-indexes#field-role-mappings) for Rootprint's display mapping over your custom schema.
+Rootprint forwards the body unchanged. Send NDJSON — one JSON document per line — with `Content-Type: application/x-ndjson` (the endpoint also accepts `application/json`, but the body must still be newline-delimited, not a JSON array). Each record must match the target index schema: see [Indexes](/indexes) for the built-in `otel-logs-v0_9` fields, or your index's [Configuration tab](/configuration/manage-indexes#field-role-mappings) for the display mapping over a custom schema.
 
 ## Troubleshooting
 
-- **401**: missing or malformed Bearer token.
-- **403**: the API key is invalid or revoked. Create a new ingest API key for that index in **Settings → API keys**.
-- **400**: NDJSON parse error. Common causes: trailing comma between objects, a JSON array instead of one-object-per-line, wrong `Content-Type`.
-- **Accepted but not visible in Search**: Quickwit has not flushed the new documents yet. Wait a few seconds and search again.
+- **401**: missing or malformed `Authorization: Bearer` header.
+- **403**: the API key is invalid or revoked. Mint a new ingest key for that index in **Settings → API keys**.
+- **400 with per-line parse errors**: the response body names which documents failed. Common causes: a trailing comma, a JSON array instead of one object per line, or a value whose type doesn't match the index schema.
+- **400 empty body**: the request carried no body (or `Content-Length: 0`).
+- **413**: a batch was too large for a reverse proxy in front of Rootprint, or the server's body limit. Split it into smaller POSTs.
+- **503**: Quickwit is unavailable, or the upload ran past the 120-second proxy timeout. Retry; if it persists, check that Quickwit is healthy.
+- **Accepted but not visible in Search**: a `200` means Quickwit queued the documents, not that they are committed. Wait a few seconds and search again.
 
 ## Related
 
 - [OTLP reference](/send-logs/otlp): for OpenTelemetry apps
 - [Indexes](/indexes): built-in OTEL schema
-- [Create a custom index](/configuration/custom-indexes): define your own schema in Quickwit
+- [Create a custom index](/configuration/custom-indexes): define your own index schema
 - [Manage indexes](/configuration/manage-indexes#field-role-mappings): map log level, message, and traceback
 - [POST /api/ingest/ndjson](/api/ingest-logs): endpoint reference

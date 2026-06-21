@@ -1,180 +1,144 @@
 ---
 title: 'Create a custom index'
-description: 'Define a Quickwit index with your own schema, tokenizers, and retention policy, then point Rootprint at it.'
+description: 'Define a custom index with your own schema, tokenizers, and retention from the Rootprint'
 ---
 
-The bundled `otel-logs-v0_9` index works for any application that emits OpenTelemetry logs. For everything else (audit trails, third-party log formats, application events with a specialized schema), create an index in Quickwit with the fields and types your data needs, then map it into the Rootprint UI from the index's [Configuration tab](/configuration/manage-indexes#configuration-tab).
+The bundled `otel-logs-v0_9` index works for any application that emits OpenTelemetry logs. For everything else (audit trails, third-party log formats, application events with a specialized schema), create an index with the fields and types your data needs.
 
-This page covers the index definition you send to Quickwit. For routing logs once the index exists, see the [HTTP endpoint](/send-logs/http).
-
-## Minimal example
-
-Save the following as `my-index.yaml` and POST it to Quickwit. Replace `app_logs` with the index ID you want.
-
-```yaml
-version: 0.9
-index_id: app_logs
-doc_mapping:
-  mode: dynamic
-  field_mappings:
-    - name: timestamp
-      type: datetime
-      input_formats: [rfc3339, unix_timestamp]
-      fast_precision: milliseconds
-      fast: true
-    - name: level
-      type: text
-      tokenizer: raw
-      fast: true
-    - name: message
-      type: text
-      tokenizer: default
-      record: position
-    - name: service
-      type: text
-      tokenizer: raw
-      fast: true
-  timestamp_field: timestamp
-search_settings:
-  default_search_fields: [message]
-indexing_settings:
-  commit_timeout_secs: 60
-```
-
-Send it to your Quickwit instance:
-
-```bash
-curl -X POST 'http://quickwit:7280/api/v1/indexes' \
-  -H 'Content-Type: application/yaml' \
-  --data-binary @my-index.yaml
-```
-
-The index appears in **Settings → Indexes** on the next page load. No Rootprint restart needed.
+Create indexes from **Settings → Indexes → Create index**: a form, with no YAML or direct Quickwit calls. Rootprint creates the index in Quickwit and opens its detail page when you save, where you [map its fields](/configuration/manage-indexes#field-role-mappings) into the search UI.
 
 <Note>
-	Rootprint proxies index management actions to Quickwit but does not currently expose an "create
-	index" form in the admin UI. Create the index through Quickwit's REST API or CLI, then configure
-	its display from Rootprint.
+	The same form is available over the API as `POST /api/indexes`. See the [Index management
+	API](/api/overview).
 </Note>
 
-## Schema modes
+## Index ID
 
-The `mode` field on `doc_mapping` decides what Quickwit does with fields you didn't declare in `field_mappings`.
+<Frame>
+	<img src="/images/indexes/create-index-top.png" alt="Create index form: Index ID, Mode, and Timestamp field" />
+</Frame>
 
-| Mode      | Behavior                                                                                                                             |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+Starts with a letter; 3–255 characters of letters, digits, `-`, or `_`. This is the index ID, and the value you pass as the `index` when ingesting.
+
+## Mode
+
+The schema mode decides what Quickwit does with fields you didn't declare in the field mappings.
+
+| Mode      | Behavior                                                                                                                            |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `dynamic` | Default. Unknown fields are stored under a JSON catch-all and remain searchable. Most flexible — recommended unless you need rigour. |
-| `lenient` | Unknown fields are silently dropped at indexing. Useful when you want a stable schema but don't want noisy errors from extra fields. |
-| `strict`  | Unknown fields cause Quickwit to reject the document. The bundled `otel-logs-v0_9` index uses this mode.                             |
-
-In `dynamic` mode, you can tune how unmapped fields are handled with `dynamic_mapping`:
-
-```yaml
-doc_mapping:
-  mode: dynamic
-  dynamic_mapping:
-    indexed: true
-    stored: true
-    tokenizer: default
-    expand_dots: true
-    fast: true
-```
-
-## Field types
-
-| Type       | Use for                              | Notable parameters                                  |
-| ---------- | ------------------------------------ | --------------------------------------------------- |
-| `text`     | Searchable strings                   | `tokenizer`, `record`, `fieldnorms`                 |
-| `i64`      | Signed integers                      | `coerce`, `output_format`                           |
-| `u64`      | Unsigned integers                    | `coerce`, `output_format`                           |
-| `f64`      | Floating point                       | `coerce`, `output_format`                           |
-| `datetime` | Timestamps                           | `input_formats`, `output_format`, `fast_precision`  |
-| `bool`     | True/false                           | —                                                   |
-| `ip`       | IPv4/IPv6 addresses                  | —                                                   |
-| `bytes`    | Binary blobs                         | `input_format` (`base64` or `hex`), `output_format` |
-| `json`     | Free-form key-value blobs            | `tokenizer`, `expand_dots`                          |
-| `array<T>` | Repeated values of any scalar type   | Inherits the inner type's parameters                |
-| `object`   | Nested struct (no arrays of objects) | `field_mappings`                                    |
-
-Add `fast: true` to any field you want to filter, range-query, sort, or aggregate on. `fast` is the column-store backing for everything Quickwit does at scan time; without it, range queries fall back to the inverted index and lose efficiency.
-
-## Tokenizers
-
-Pick a tokenizer based on how you want the field queried. Tokenization happens at index time and cannot be changed without recreating the index.
-
-| Tokenizer            | Behavior                                            | Use for                                               |
-| -------------------- | --------------------------------------------------- | ----------------------------------------------------- |
-| `raw`                | One token, no processing. Case-sensitive.           | IDs, enums, hostnames, severity labels                |
-| `default`            | Whitespace + punctuation split, lowercased          | Free-text search on message bodies                    |
-| `en_stem`            | `default` plus English stemming (`running` → `run`) | Free-text search where you want morphological matches |
-| `chinese_compatible` | Per-character CJK splitting plus `default` behavior | Mixed CJK and Latin text                              |
-| `lowercase`          | Lowercase, no tokenization                          | Case-insensitive enum-like fields                     |
-
-The bundled OTel index uses `raw` for `severity_text` and `service_name`, and `default` for `body`. The same choices work well for most application logs.
+| `lenient` | Unknown fields are silently dropped at indexing. A stable schema without noisy errors from extra fields.                            |
+| `strict`  | Unknown fields cause Quickwit to reject the document. The bundled `otel-logs-v0_9` index uses this mode.                            |
 
 ## Timestamp field
 
-Set `timestamp_field` on `doc_mapping` to a `datetime` field marked `fast: true`. This is what Quickwit uses to:
+Pick the `datetime` field the index uses as its time axis, chosen from the datetime fields you define below. It is used to:
 
 - Partition splits by time, so time-bounded searches only scan relevant splits.
-- Drive the retention policy (next section).
-- Enforce search bounds: the Rootprint time picker passes `start_timestamp` and `end_timestamp` based on this field.
+- Drive the retention policy.
+- Enforce search bounds: the Rootprint time picker passes `start_timestamp` and `end_timestamp` against this field.
 
-Without a `timestamp_field`, queries scan every split and retention has nothing to age out.
+Rootprint always stores the timestamp field as `fast`, so its `fast` toggle is hidden in the field editor. You must define at least one `datetime` field before you can pick one here.
+
+## Fields
+
+<Frame>
+	<img src="/images/indexes/create-index-fields.png" alt="Create index field editor: a field with its type, tokenizer, and per-type options" />
+</Frame>
+
+Add a row per field with **Add field**, then set its name, type, and options. At least one field is required, and the toggles come preselected to the recommended defaults (`indexed`, `stored`, and `fast` on).
+
+### Field types
+
+| Type       | Use for                  |
+| ---------- | ------------------------ |
+| `text`     | Searchable strings       |
+| `i64`      | Signed integers          |
+| `u64`      | Unsigned integers        |
+| `f64`      | Floating point           |
+| `datetime` | Timestamps               |
+| `bool`     | True/false               |
+| `ip`       | IPv4/IPv6 addresses      |
+| `json`     | Free-form key-value blobs |
+
+### Indexed, stored, and fast
+
+Every field exposes three toggles:
+
+- **Indexed**: the field is added to an inverted index and is searchable via text queries. When off, you cannot use the field in search predicates.
+- **Stored**: the field's value is kept and returned in search results.
+- **Fast**: the field is stored in column-oriented storage (like Lucene DocValues), enabling efficient range queries, aggregations, and sorting. The form preselects `fast` on for every field; the timestamp field is always fast.
+
+### Per-type options
+
+Depending on the field type, the editor exposes extra options:
+
+| Type            | Options                                                                                                                              |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `text`          | **tokenizer**, **record**, **fieldnorms** (store field-length norms for scoring)                                                    |
+| `json`          | **tokenizer**, **record**, **expand dots** (treat `a.b` keys as nested `a` → `b`)                                                    |
+| `i64` / `u64` / `f64` | **coerce** (accept numbers sent as strings)                                                                                   |
+| `datetime`      | **output** format, **precision** of the fast value, and **input formats** (see below)                                               |
+
+`text` and `json` fields also have a **default search** checkbox. Tick it to add the field to the index's default search fields — the fields searched when a query doesn't name one, so `timeout` matches `message:timeout` without the user typing the field.
+
+The **record** option controls how much term data the inverted index keeps: `basic` (which documents contain the term), `freq` (also term frequency), or `position` (also token positions, required for phrase queries).
+
+For `datetime` fields, **input formats** is how Rootprint parses incoming values. Tick any of the presets (`rfc3339`, `iso8601`, `rfc2822`, `unix_timestamp`) and add custom [strptime](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) patterns one per line. **Output** controls how values are returned (`rfc3339` or `unix_timestamp_secs`/`millis`/`micros`/`nanos`), and **precision** sets the granularity of the fast column (`seconds`, `milliseconds`, `microseconds`, `nanoseconds`).
+
+### Tokenizers
+
+`text` and `json` fields take a tokenizer, which decides how the value is split for search. Tokenization happens at index time and cannot be changed without recreating the index.
+
+| Tokenizer            | Behavior                                                          | Use for                                       |
+| -------------------- | ----------------------------------------------------------------- | --------------------------------------------- |
+| `raw`                | Whole value as one token. Case-sensitive.                         | IDs, enums, hostnames, severity labels        |
+| `raw_lowercase`      | Whole value as one token, lowercased. Case-insensitive exact match. | Enum-like fields matched regardless of case |
+| `default`            | Splits on whitespace and punctuation, lowercases.                 | Free-text search on message bodies            |
+| `en_stem`            | `default` plus English stemming (`running` → `run`).              | Free-text with morphological matching         |
+| `whitespace`         | Splits on whitespace only; keeps case and punctuation.            | Text where punctuation is significant         |
+| `chinese_compatible` | Per-character CJK splitting plus `default` behavior.              | Mixed CJK and Latin text                      |
+| `lowercase`          | Lowercases the value with minimal tokenization.                   | Case-insensitive enum-like fields             |
+
+The bundled OTel index uses `raw` for `severity_text` and `service_name`, and `default` for `body`. The same choices work well for most application logs.
 
 ## Retention
 
-Add a `retention` block to drop splits older than a fixed window:
-
-```yaml
-retention:
-  period: 30 days
-  schedule: daily
-```
-
-`period` accepts durations like `48 hours`, `30 days`, `12 months`, `2 years`. `schedule` controls how often the cleanup runs: `hourly`, `daily`, `weekly`, `monthly`, `yearly`, or a cron expression.
+Enable retention to drop splits older than a fixed window. **Period** accepts durations like `48 hours`, `90 days`, `12 months`, `2 years`; **schedule** controls how often the cleanup runs (`hourly`, `daily`, `weekly`, `monthly`, `yearly`, or a cron expression), and defaults to daily when left blank.
 
 <Warning>
 	Retention drops entire splits, so the actual cutoff floats by the split duration. A document
-	timestamped 30 days ago is not deleted at exactly day 30. Its split survives until every document
+	timestamped 30 days ago is not deleted at exactly day 30 — its split survives until every document
 	in it is past the period. Plan for hours of lag, not seconds.
 </Warning>
 
-## Default search fields
+## Other settings
 
-`search_settings.default_search_fields` lists the fields that get searched when a query doesn't name one. For the bundled OTel index this is `[body.message]`; for a custom index, name the fields users care about most:
+<Frame>
+	<img src="/images/indexes/create-index-options.png" alt="Create index form: retention, index URI, tag fields, commit timeout, store source, and field presence" />
+</Frame>
 
-```yaml
-search_settings:
-  default_search_fields: [message, attributes.error_code]
-```
+The rest of the form is optional and most deployments leave it untouched:
 
-A query like `timeout` then translates to `message:timeout OR attributes.error_code:timeout`.
+| Setting                  | What it does                                                                                                                             |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Index URI**            | Where splits are stored. Defaults to the configured index root. Set it to put this index on a different bucket or path.                 |
+| **Tag fields**           | Low-cardinality field names (one per line) indexed so the engine can skip data efficiently before scanning. |
+| **Commit timeout (secs)** | How long indexing waits before forcing a commit. Defaults to `60`. Lower it to make new documents searchable sooner, at the cost of more, smaller splits. |
+| **Store source**         | Keep the original document JSON in the index alongside the mapped fields.                                                                |
+| **Index field presence** | Track which fields exist per document so presence queries (does this field exist?) work.                                                 |
 
-## Indexing settings
-
-Most deployments don't need to change these, but two are worth knowing:
-
-| Setting                        | Default      | What it does                                                                       |
-| ------------------------------ | ------------ | ---------------------------------------------------------------------------------- |
-| `commit_timeout_secs`          | `60`         | Maximum seconds a document can sit in the indexer queue before a commit is forced. |
-| `indexing_resources.heap_size` | `2000000000` | Indexer heap per source. Raise it on hosts that ingest >40 MB/s.                   |
-
-Lowering `commit_timeout_secs` makes new documents searchable sooner at the cost of more, smaller splits. The bundled OTel index keeps the default 60 s.
-
-For the merge policy and other tuning knobs, see the upstream [Quickwit index configuration reference](https://quickwit.io/docs/configuration/index-config).
 
 ## Use it from Rootprint
 
-Once the index exists in Quickwit:
+Saving the form lands you on the new index's detail page. To finish wiring it up:
 
-1. Open **Settings → Indexes** and click the new index.
-2. On the **Configuration** tab, set the [field mappings](/configuration/manage-indexes#field-role-mappings) so the message, level, and traceback render correctly.
-3. Create an [ingest API key](/api/overview) scoped to the index and route writes through the [HTTP endpoint](/send-logs/http) or, for OpenTelemetry-shaped data, the [OTLP endpoint](/send-logs/otlp).
+1. On the **Configuration** tab, set the [field-role mappings](/configuration/manage-indexes#field-role-mappings) so the message, level, and traceback render correctly.
+2. Create an [ingest API key](/api/overview) scoped to the index and route writes through the [HTTP endpoint](/send-logs/http) or, for OpenTelemetry-shaped data, the [OTLP endpoint](/send-logs/otlp).
 
 ## Related
 
-- [Quickwit index configuration reference](https://quickwit.io/docs/configuration/index-config): the full upstream schema.
+- [Manage indexes](/configuration/manage-indexes): the index list, field-role mapping, fields, sources, and deletion.
 - [Indexes](/indexes): the bundled `otel-logs-v0_9` schema.
-- [Manage indexes](/configuration/manage-indexes#field-role-mappings): Rootprint field-role mapping.
 - [Search query syntax](/search/query-language): what users can query against your fields.
+- [Quickwit index configuration reference](https://quickwit.io/docs/configuration/index-config): the full upstream schema.

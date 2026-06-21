@@ -328,7 +328,10 @@
 			},
 			"ApiKeyResponse": {
 				"properties": {
-					"createdAt": {},
+					"createdAt": {
+						"format": "date-time",
+						"type": "string"
+					},
 					"createdByUserId": {
 						"type": "string"
 					},
@@ -340,7 +343,10 @@
 					},
 					"lastUsedAt": {
 						"anyOf": [
-							{},
+							{
+								"format": "date-time",
+								"type": "string"
+							},
 							{
 								"type": "null"
 							}
@@ -351,8 +357,7 @@
 					},
 					"role": {
 						"enum": [
-							"ingest",
-							"search"
+							"ingest"
 						],
 						"type": "string"
 					},
@@ -381,6 +386,109 @@
 				"required": [
 					"token"
 				],
+				"type": "object"
+			},
+			"Apikey": {
+				"properties": {
+					"configId": {
+						"default": "default",
+						"readOnly": true,
+						"type": "string"
+					},
+					"createdAt": {
+						"format": "date-time",
+						"readOnly": true,
+						"type": "string"
+					},
+					"enabled": {
+						"default": true,
+						"readOnly": true,
+						"type": "boolean"
+					},
+					"expiresAt": {
+						"format": "date-time",
+						"readOnly": true,
+						"type": "string"
+					},
+					"id": {
+						"type": "string"
+					},
+					"key": {
+						"readOnly": true,
+						"type": "string"
+					},
+					"lastRefillAt": {
+						"format": "date-time",
+						"readOnly": true,
+						"type": "string"
+					},
+					"lastRequest": {
+						"format": "date-time",
+						"readOnly": true,
+						"type": "string"
+					},
+					"metadata": {
+						"type": "string"
+					},
+					"name": {
+						"readOnly": true,
+						"type": "string"
+					},
+					"permissions": {
+						"readOnly": true,
+						"type": "string"
+					},
+					"prefix": {
+						"readOnly": true,
+						"type": "string"
+					},
+					"rateLimitEnabled": {
+						"default": true,
+						"readOnly": true,
+						"type": "boolean"
+					},
+					"rateLimitMax": {
+						"default": 10,
+						"readOnly": true,
+						"type": "number"
+					},
+					"rateLimitTimeWindow": {
+						"default": 86400000,
+						"readOnly": true,
+						"type": "number"
+					},
+					"referenceId": {
+						"readOnly": true,
+						"type": "string"
+					},
+					"refillAmount": {
+						"readOnly": true,
+						"type": "number"
+					},
+					"refillInterval": {
+						"readOnly": true,
+						"type": "number"
+					},
+					"remaining": {
+						"readOnly": true,
+						"type": "number"
+					},
+					"requestCount": {
+						"default": 0,
+						"readOnly": true,
+						"type": "number"
+					},
+					"start": {
+						"readOnly": true,
+						"type": "string"
+					},
+					"updatedAt": {
+						"format": "date-time",
+						"readOnly": true,
+						"type": "string"
+					}
+				},
+				"required": [],
 				"type": "object"
 			},
 			"AuthProvidersResponse": {
@@ -516,6 +624,15 @@
 					"elapsedTimeMicros": {
 						"type": "number"
 					},
+					"truncated": {
+						"additionalProperties": {
+							"type": "boolean"
+						},
+						"propertyNames": {
+							"type": "string"
+						},
+						"type": "object"
+					},
 					"values": {
 						"additionalProperties": {
 							"items": {
@@ -530,12 +647,16 @@
 					}
 				},
 				"required": [
-					"values"
+					"values",
+					"truncated"
 				],
 				"type": "object"
 			},
 			"FieldValuesResponse": {
 				"properties": {
+					"truncated": {
+						"type": "boolean"
+					},
 					"values": {
 						"items": {
 							"$ref": "#/components/schemas/FieldValueEntrySchema"
@@ -544,7 +665,8 @@
 					}
 				},
 				"required": [
-					"values"
+					"values",
+					"truncated"
 				],
 				"type": "object"
 			},
@@ -640,6 +762,16 @@
 			},
 			"IndexDetailResponse": {
 				"properties": {
+					"commitTimeoutSecs": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
 					"contextFields": {
 						"anyOf": [
 							{
@@ -682,6 +814,16 @@
 						},
 						"type": "array"
 					},
+					"indexFieldPresence": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
 					"indexId": {
 						"type": "string"
 					},
@@ -705,6 +847,35 @@
 						"anyOf": [
 							{
 								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"retention": {
+						"anyOf": [
+							{
+								"properties": {
+									"period": {
+										"type": "string"
+									},
+									"schedule": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
+									}
+								},
+								"required": [
+									"period",
+									"schedule"
+								],
+								"type": "object"
 							},
 							{
 								"type": "null"
@@ -783,6 +954,9 @@
 					"tagFields",
 					"defaultSearchFields",
 					"storeSource",
+					"indexFieldPresence",
+					"commitTimeoutSecs",
+					"retention",
 					"fields",
 					"sources"
 				],
@@ -849,7 +1023,10 @@
 			},
 			"IndexStatsPointSchema": {
 				"properties": {
-					"capturedAt": {},
+					"capturedAt": {
+						"format": "date-time",
+						"type": "string"
+					},
 					"maxTimestamp": {
 						"anyOf": [
 							{
@@ -1126,6 +1303,7 @@
 					"capturedAt": {
 						"anyOf": [
 							{
+								"format": "date-time",
 								"type": "string"
 							},
 							{
@@ -1461,9 +1639,25 @@
 				],
 				"type": "object"
 			},
-			"SavedQueryResponse": {
+			"SavedViewResponse": {
 				"properties": {
-					"createdAt": {},
+					"columns": {
+						"anyOf": [
+							{
+								"items": {
+									"type": "string"
+								},
+								"type": "array"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"createdAt": {
+						"format": "date-time",
+						"type": "string"
+					},
 					"description": {
 						"anyOf": [
 							{
@@ -1473,6 +1667,30 @@
 								"type": "null"
 							}
 						]
+					},
+					"filters": {
+						"items": {
+							"properties": {
+								"exclude": {
+									"type": "boolean"
+								},
+								"field": {
+									"minLength": 1,
+									"type": "string"
+								},
+								"value": {
+									"minLength": 1,
+									"type": "string"
+								}
+							},
+							"required": [
+								"field",
+								"value",
+								"exclude"
+							],
+							"type": "object"
+						},
+						"type": "array"
 					},
 					"id": {
 						"type": "number"
@@ -1486,7 +1704,17 @@
 					"query": {
 						"type": "string"
 					},
-					"updatedAt": {}
+					"sortDirection": {
+						"enum": [
+							"asc",
+							"desc"
+						],
+						"type": "string"
+					},
+					"updatedAt": {
+						"format": "date-time",
+						"type": "string"
+					}
 				},
 				"required": [
 					"id",
@@ -1494,8 +1722,119 @@
 					"name",
 					"description",
 					"query",
+					"filters",
+					"sortDirection",
+					"columns",
 					"createdAt",
 					"updatedAt"
+				],
+				"type": "object"
+			},
+			"ServiceAccountApiKeyCreatedResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"token": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"token"
+				],
+				"type": "object"
+			},
+			"ServiceAccountApiKeyResponse": {
+				"properties": {
+					"createdAt": {
+						"format": "date-time",
+						"type": "string"
+					},
+					"id": {
+						"type": "string"
+					},
+					"lastRequest": {
+						"anyOf": [
+							{
+								"format": "date-time",
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"name": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"start": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"userId": {
+						"type": "string"
+					},
+					"userName": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"start",
+					"userId",
+					"userName",
+					"lastRequest",
+					"createdAt"
+				],
+				"type": "object"
+			},
+			"ServiceAccountCreatedResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id"
+				],
+				"type": "object"
+			},
+			"ServiceAccountResponse": {
+				"properties": {
+					"createdAt": {
+						"format": "date-time",
+						"type": "string"
+					},
+					"id": {
+						"type": "string"
+					},
+					"keyCount": {
+						"type": "number"
+					},
+					"name": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"createdAt",
+					"keyCount"
 				],
 				"type": "object"
 			},
@@ -1514,6 +1853,7 @@
 						"type": "string"
 					},
 					"impersonatedBy": {
+						"readOnly": true,
 						"type": "string"
 					},
 					"ipAddress": {
@@ -1588,6 +1928,28 @@
 					"endTime": {
 						"type": "number"
 					},
+					"filters": {
+						"items": {
+							"properties": {
+								"exclude": {
+									"type": "boolean"
+								},
+								"field": {
+									"type": "string"
+								},
+								"value": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"field",
+								"value",
+								"exclude"
+							],
+							"type": "object"
+						},
+						"type": "array"
+					},
 					"hit": {
 						"additionalProperties": {},
 						"propertyNames": {
@@ -1610,12 +1972,47 @@
 					"query",
 					"startTime",
 					"endTime",
-					"hit"
+					"hit",
+					"filters"
 				],
 				"type": "object"
 			},
 			"SourceDetailSchema": {
 				"properties": {
+					"clientLogLevel": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"clientParams": {
+						"anyOf": [
+							{
+								"additionalProperties": {},
+								"propertyNames": {
+									"type": "string"
+								},
+								"type": "object"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"enableBackfillMode": {
+						"anyOf": [
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
 					"enabled": {
 						"type": "boolean"
 					},
@@ -1698,6 +2095,16 @@
 							}
 						]
 					},
+					"topic": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
 					"vrlScript": {
 						"anyOf": [
 							{
@@ -1720,6 +2127,10 @@
 					"endpoint",
 					"queueUrl",
 					"messageType",
+					"topic",
+					"clientLogLevel",
+					"clientParams",
+					"enableBackfillMode",
 					"vrlScript",
 					"hasUnsupportedConfig"
 				],
@@ -1880,7 +2291,10 @@
 			},
 			"UserResponse": {
 				"properties": {
-					"createdAt": {},
+					"createdAt": {
+						"format": "date-time",
+						"type": "string"
+					},
 					"email": {
 						"type": "string"
 					},
@@ -1892,7 +2306,10 @@
 					},
 					"inviteExpiresAt": {
 						"anyOf": [
-							{},
+							{
+								"format": "date-time",
+								"type": "string"
+							},
 							{
 								"type": "null"
 							}
@@ -1910,7 +2327,10 @@
 					},
 					"lastActive": {
 						"anyOf": [
-							{},
+							{
+								"format": "date-time",
+								"type": "string"
+							},
 							{
 								"type": "null"
 							}
@@ -2044,8 +2464,8 @@
 				"scheme": "bearer",
 				"type": "http"
 			},
-			"searchBearer": {
-				"description": "Search API key",
+			"personalBearer": {
+				"description": "Query API key (personal or service account)",
 				"scheme": "bearer",
 				"type": "http"
 			}
@@ -2054,7 +2474,7 @@
 	"info": {
 		"description": "HTTP API for the Rootprint log management platform.",
 		"title": "Rootprint API",
-		"version": "0.3.3"
+		"version": "0.3.4"
 	},
 	"openapi": "3.1.0",
 	"paths": {
@@ -2067,9 +2487,8 @@
 						"name": "apiKeyId",
 						"required": true,
 						"schema": {
-							"minimum": 1,
-							"pattern": "^\\d+$",
-							"type": "integer"
+							"minLength": 1,
+							"type": "string"
 						}
 					},
 					{
@@ -2133,9 +2552,8 @@
 						"name": "apiKeyId",
 						"required": true,
 						"schema": {
-							"minimum": 1,
-							"pattern": "^\\d+$",
-							"type": "integer"
+							"minLength": 1,
+							"type": "string"
 						}
 					},
 					{
@@ -2227,9 +2645,8 @@
 						"name": "apiKeyId",
 						"required": true,
 						"schema": {
-							"minimum": 1,
-							"pattern": "^\\d+$",
-							"type": "integer"
+							"minLength": 1,
+							"type": "string"
 						}
 					},
 					{
@@ -2290,9 +2707,8 @@
 						"name": "apiKeyId",
 						"required": true,
 						"schema": {
-							"minimum": 1,
-							"pattern": "^\\d+$",
-							"type": "integer"
+							"minLength": 1,
+							"type": "string"
 						}
 					},
 					{
@@ -2992,19 +3408,6 @@
 		"/api/api-keys": {
 			"get": {
 				"operationId": "getApiApiKeys",
-				"parameters": [
-					{
-						"in": "query",
-						"name": "role",
-						"schema": {
-							"enum": [
-								"ingest",
-								"search"
-							],
-							"type": "string"
-						}
-					}
-				],
 				"responses": {
 					"200": {
 						"content": {
@@ -3058,19 +3461,11 @@
 										"maxLength": 100,
 										"minLength": 1,
 										"type": "string"
-									},
-									"role": {
-										"enum": [
-											"ingest",
-											"search"
-										],
-										"type": "string"
 									}
 								},
 								"required": [
 									"name",
-									"indexId",
-									"role"
+									"indexId"
 								],
 								"type": "object"
 							}
@@ -3112,6 +3507,153 @@
 					}
 				},
 				"summary": "Create API key",
+				"tags": [
+					"API keys"
+				]
+			}
+		},
+		"/api/api-keys/service-account": {
+			"get": {
+				"operationId": "getApiApiKeysServiceAccount",
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/ServiceAccountApiKeyResponse"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "Successful response"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"summary": "List service account API keys",
+				"tags": [
+					"API keys"
+				]
+			},
+			"post": {
+				"operationId": "postApiApiKeysServiceAccount",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"name": {
+										"maxLength": 100,
+										"minLength": 1,
+										"type": "string"
+									},
+									"userId": {
+										"minLength": 1,
+										"type": "string"
+									}
+								},
+								"required": [
+									"name",
+									"userId"
+								],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ServiceAccountApiKeyCreatedResponse"
+								}
+							}
+						},
+						"description": "Service account API key created"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"summary": "Create a service account API key",
+				"tags": [
+					"API keys"
+				]
+			}
+		},
+		"/api/api-keys/service-account/{id}": {
+			"delete": {
+				"operationId": "deleteApiApiKeysServiceAccountById",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"minLength": 1,
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Service account API key revoked"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"summary": "Revoke a service account API key",
 				"tags": [
 					"API keys"
 				]
@@ -3363,8 +3905,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Get the account info provided by the provider",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -3524,8 +4067,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Ban a user",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -3694,8 +4238,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Create a new user",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -3831,8 +4376,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Get an existing user",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -3982,8 +4528,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Check if the user has permission",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -4132,8 +4679,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Impersonate a user",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -4282,8 +4830,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "List user sessions",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -4533,8 +5082,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "List users",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -4680,8 +5230,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Delete a user and all their sessions and accounts. Cannot be undone.",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -4827,8 +5378,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Revoke a user session",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -4974,8 +5526,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Revoke all user sessions",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -5126,8 +5679,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Set the role of a user",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -5278,8 +5832,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Set a user's password",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -5389,8 +5944,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Admin stop impersonating",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -5536,8 +6092,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Unban a user",
 				"tags": [
-					"Admin"
+					"Auth administration"
 				]
 			}
 		},
@@ -5688,8 +6245,1361 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Update a user's details",
 				"tags": [
-					"Admin"
+					"Auth administration"
+				]
+			}
+		},
+		"/api/auth/api-key/create": {
+			"post": {
+				"description": "Create a new API key for a user",
+				"parameters": [],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"configId": {
+										"description": "The configuration ID to use for the API key. If not provided, the default configuration will be used.",
+										"type": [
+											"string",
+											"null"
+										]
+									},
+									"expiresIn": {
+										"default": null,
+										"type": "string"
+									},
+									"metadata": {
+										"type": [
+											"string",
+											"null"
+										]
+									},
+									"name": {
+										"description": "Name of the Api Key",
+										"type": [
+											"string",
+											"null"
+										]
+									},
+									"organizationId": {
+										"description": "Organization Id of the organization that the Api Key belongs to. Eg: 'org-id'",
+										"type": [
+											"string",
+											"null"
+										]
+									},
+									"permissions": {
+										"description": "Permissions of the Api Key.",
+										"type": [
+											"string",
+											"null"
+										]
+									},
+									"prefix": {
+										"description": "Prefix of the Api Key",
+										"type": [
+											"string",
+											"null"
+										]
+									},
+									"rateLimitEnabled": {
+										"description": "Whether the key has rate limiting enabled. server-only. Eg: true",
+										"type": [
+											"boolean",
+											"null"
+										]
+									},
+									"rateLimitMax": {
+										"description": "Maximum amount of requests allowed within a window. Once the `maxRequests` is reached, the request will be rejected until the `timeWindow` has passed, at which point the `timeWindow` will be reset. server-only. Eg: 100",
+										"type": [
+											"number",
+											"null"
+										]
+									},
+									"rateLimitTimeWindow": {
+										"description": "The duration in milliseconds where each request is counted. Once the `maxRequests` is reached, the request will be rejected until the `timeWindow` has passed, at which point the `timeWindow` will be reset. server-only. Eg: 1000",
+										"type": [
+											"number",
+											"null"
+										]
+									},
+									"refillAmount": {
+										"description": "Amount to refill the remaining count of the Api Key. server-only. Eg: 100",
+										"type": [
+											"number",
+											"null"
+										]
+									},
+									"refillInterval": {
+										"description": "Interval to refill the Api Key in milliseconds. server-only. Eg: 1000",
+										"type": [
+											"number",
+											"null"
+										]
+									},
+									"remaining": {
+										"default": null,
+										"type": "string"
+									},
+									"userId": {
+										"description": "User Id of the user that the Api Key belongs to. server-only. Eg: \"user-id\"",
+										"type": [
+											"string",
+											"null"
+										]
+									}
+								},
+								"required": [
+									"expiresIn",
+									"remaining"
+								],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"createdAt": {
+											"description": "Creation timestamp",
+											"format": "date-time",
+											"type": "string"
+										},
+										"enabled": {
+											"description": "Whether the key is enabled",
+											"type": "boolean"
+										},
+										"expiresAt": {
+											"description": "Expiration timestamp",
+											"format": "date-time",
+											"nullable": true,
+											"type": "string"
+										},
+										"id": {
+											"description": "Unique identifier of the API key",
+											"type": "string"
+										},
+										"key": {
+											"description": "The full API key (only returned on creation)",
+											"type": "string"
+										},
+										"lastRefillAt": {
+											"description": "Last refill timestamp",
+											"format": "date-time",
+											"nullable": true,
+											"type": "string"
+										},
+										"lastRequest": {
+											"description": "Last request timestamp",
+											"format": "date-time",
+											"nullable": true,
+											"type": "string"
+										},
+										"metadata": {
+											"additionalProperties": true,
+											"description": "Metadata associated with the key",
+											"nullable": true,
+											"type": "object"
+										},
+										"name": {
+											"description": "Name of the API key",
+											"nullable": true,
+											"type": "string"
+										},
+										"permissions": {
+											"additionalProperties": {
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
+											"description": "Permissions associated with the key",
+											"nullable": true,
+											"type": "object"
+										},
+										"prefix": {
+											"description": "Prefix of the API key",
+											"nullable": true,
+											"type": "string"
+										},
+										"rateLimitEnabled": {
+											"description": "Whether rate limiting is enabled",
+											"type": "boolean"
+										},
+										"rateLimitMax": {
+											"description": "Maximum requests in time window",
+											"nullable": true,
+											"type": "number"
+										},
+										"rateLimitTimeWindow": {
+											"description": "Rate limit time window in milliseconds",
+											"nullable": true,
+											"type": "number"
+										},
+										"referenceId": {
+											"description": "ID of the reference owning the key",
+											"type": "string"
+										},
+										"refillAmount": {
+											"description": "Amount to refill",
+											"nullable": true,
+											"type": "number"
+										},
+										"refillInterval": {
+											"description": "Refill interval in milliseconds",
+											"nullable": true,
+											"type": "number"
+										},
+										"remaining": {
+											"description": "Remaining requests",
+											"nullable": true,
+											"type": "number"
+										},
+										"requestCount": {
+											"description": "Current request count in window",
+											"type": "number"
+										},
+										"start": {
+											"description": "Starting characters of the key (if configured)",
+											"nullable": true,
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "Last update timestamp",
+											"format": "date-time",
+											"type": "string"
+										}
+									},
+									"required": [
+										"id",
+										"createdAt",
+										"updatedAt",
+										"key",
+										"enabled",
+										"referenceId",
+										"rateLimitEnabled",
+										"requestCount"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "API key created successfully"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"message"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Bad Request. Usually due to missing parameters, or invalid parameters."
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"message"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized. Due to missing or invalid authentication."
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Forbidden. You do not have permission to access this resource or to perform this action."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource was not found."
+					},
+					"429": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Too Many Requests. You have exceeded the rate limit. Try again later."
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Internal Server Error. This is a problem with the server that you cannot fix."
+					}
+				},
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Create a new API key for a user",
+				"tags": [
+					"Personal API keys"
+				]
+			}
+		},
+		"/api/auth/api-key/delete": {
+			"post": {
+				"description": "Delete an existing API key",
+				"parameters": [],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"keyId": {
+										"description": "The id of the API key to delete",
+										"type": "string"
+									}
+								},
+								"required": [
+									"keyId"
+								],
+								"type": "object"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"success": {
+											"description": "Indicates if the API key was successfully deleted",
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "API key deleted successfully"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"message"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Bad Request. Usually due to missing parameters, or invalid parameters."
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"message"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized. Due to missing or invalid authentication."
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Forbidden. You do not have permission to access this resource or to perform this action."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource was not found."
+					},
+					"429": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Too Many Requests. You have exceeded the rate limit. Try again later."
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Internal Server Error. This is a problem with the server that you cannot fix."
+					}
+				},
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Delete an existing API key",
+				"tags": [
+					"Personal API keys"
+				]
+			}
+		},
+		"/api/auth/api-key/get": {
+			"get": {
+				"description": "Retrieve an existing API key by ID",
+				"parameters": [
+					{
+						"in": "query",
+						"name": "configId",
+						"schema": {
+							"description": "The configuration ID to use for the API key lookup. If not provided, the default configuration will be used.",
+							"type": [
+								"string",
+								"null"
+							]
+						}
+					},
+					{
+						"in": "query",
+						"name": "id",
+						"schema": {
+							"description": "The id of the Api Key",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"createdAt": {
+											"description": "created at",
+											"format": "date-time",
+											"type": "string"
+										},
+										"enabled": {
+											"default": true,
+											"description": "Sets if key is enabled or disabled",
+											"type": "boolean"
+										},
+										"expiresAt": {
+											"description": "Expiry date of a key",
+											"format": "date-time",
+											"nullable": true,
+											"type": "string"
+										},
+										"id": {
+											"description": "ID",
+											"type": "string"
+										},
+										"lastRefillAt": {
+											"description": "The last refill date",
+											"format": "date-time",
+											"nullable": true,
+											"type": "string"
+										},
+										"lastRequest": {
+											"description": "When last request occurred",
+											"format": "date-time",
+											"nullable": true,
+											"type": "string"
+										},
+										"metadata": {
+											"additionalProperties": true,
+											"description": "Extra metadata about the apiKey",
+											"nullable": true,
+											"type": "object"
+										},
+										"name": {
+											"description": "The name of the key",
+											"nullable": true,
+											"type": "string"
+										},
+										"permissions": {
+											"description": "Permissions for the api key (stored as JSON string)",
+											"nullable": true,
+											"type": "string"
+										},
+										"prefix": {
+											"description": "The API Key prefix. Stored as plain text.",
+											"nullable": true,
+											"type": "string"
+										},
+										"rateLimitEnabled": {
+											"description": "Whether the key has rate limiting enabled",
+											"type": "boolean"
+										},
+										"rateLimitMax": {
+											"description": "Maximum amount of requests allowed within a window",
+											"nullable": true,
+											"type": "number"
+										},
+										"rateLimitTimeWindow": {
+											"description": "The duration in milliseconds",
+											"nullable": true,
+											"type": "number"
+										},
+										"refillAmount": {
+											"description": "The amount to refill",
+											"nullable": true,
+											"type": "number"
+										},
+										"refillInterval": {
+											"description": "The interval in milliseconds between refills of the `remaining` count. Example: 3600000 // refill every hour (3600000ms = 1h)",
+											"nullable": true,
+											"type": "number"
+										},
+										"remaining": {
+											"description": "Remaining requests (every time api key is used this should updated and should be updated on refill as well)",
+											"nullable": true,
+											"type": "number"
+										},
+										"requestCount": {
+											"description": "The number of requests made within the rate limit time window",
+											"type": "number"
+										},
+										"start": {
+											"description": "Shows the first few characters of the API key, including the prefix. This allows you to show those few characters in the UI to make it easier for users to identify the API key.",
+											"nullable": true,
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "updated at",
+											"format": "date-time",
+											"type": "string"
+										},
+										"userId": {
+											"description": "The owner of the user id",
+											"type": "string"
+										}
+									},
+									"required": [
+										"id",
+										"userId",
+										"enabled",
+										"rateLimitEnabled",
+										"requestCount",
+										"createdAt",
+										"updatedAt"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "API key retrieved successfully"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"message"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Bad Request. Usually due to missing parameters, or invalid parameters."
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"message"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized. Due to missing or invalid authentication."
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Forbidden. You do not have permission to access this resource or to perform this action."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource was not found."
+					},
+					"429": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Too Many Requests. You have exceeded the rate limit. Try again later."
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Internal Server Error. This is a problem with the server that you cannot fix."
+					}
+				},
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Retrieve an existing API key by ID",
+				"tags": [
+					"Personal API keys"
+				]
+			}
+		},
+		"/api/auth/api-key/list": {
+			"get": {
+				"description": "List all API keys for the authenticated user or for a specific organization",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"apiKeys": {
+											"items": {
+												"properties": {
+													"createdAt": {
+														"description": "created at",
+														"format": "date-time",
+														"type": "string"
+													},
+													"enabled": {
+														"default": true,
+														"description": "Sets if key is enabled or disabled",
+														"type": "boolean"
+													},
+													"expiresAt": {
+														"description": "Expiry date of a key",
+														"format": "date-time",
+														"nullable": true,
+														"type": "string"
+													},
+													"id": {
+														"description": "ID",
+														"type": "string"
+													},
+													"lastRefillAt": {
+														"description": "The last refill date",
+														"format": "date-time",
+														"nullable": true,
+														"type": "string"
+													},
+													"lastRequest": {
+														"description": "When last request occurred",
+														"format": "date-time",
+														"nullable": true,
+														"type": "string"
+													},
+													"metadata": {
+														"additionalProperties": true,
+														"description": "Extra metadata about the apiKey",
+														"nullable": true,
+														"type": "object"
+													},
+													"name": {
+														"description": "The name of the key",
+														"nullable": true,
+														"type": "string"
+													},
+													"permissions": {
+														"description": "Permissions for the api key (stored as JSON string)",
+														"nullable": true,
+														"type": "string"
+													},
+													"prefix": {
+														"description": "The API Key prefix. Stored as plain text.",
+														"nullable": true,
+														"type": "string"
+													},
+													"rateLimitEnabled": {
+														"description": "Whether the key has rate limiting enabled",
+														"type": "boolean"
+													},
+													"rateLimitMax": {
+														"description": "Maximum amount of requests allowed within a window",
+														"nullable": true,
+														"type": "number"
+													},
+													"rateLimitTimeWindow": {
+														"description": "The duration in milliseconds",
+														"nullable": true,
+														"type": "number"
+													},
+													"refillAmount": {
+														"description": "The amount to refill",
+														"nullable": true,
+														"type": "number"
+													},
+													"refillInterval": {
+														"description": "The interval in milliseconds between refills of the `remaining` count. Example: 3600000 // refill every hour (3600000ms = 1h)",
+														"nullable": true,
+														"type": "number"
+													},
+													"remaining": {
+														"description": "Remaining requests (every time api key is used this should updated and should be updated on refill as well)",
+														"nullable": true,
+														"type": "number"
+													},
+													"requestCount": {
+														"description": "The number of requests made within the rate limit time window",
+														"type": "number"
+													},
+													"start": {
+														"description": "Shows the first few characters of the API key, including the prefix. This allows you to show those few characters in the UI to make it easier for users to identify the API key.",
+														"nullable": true,
+														"type": "string"
+													},
+													"updatedAt": {
+														"description": "updated at",
+														"format": "date-time",
+														"type": "string"
+													},
+													"userId": {
+														"description": "The owner of the user id",
+														"type": "string"
+													}
+												},
+												"required": [
+													"id",
+													"userId",
+													"enabled",
+													"rateLimitEnabled",
+													"requestCount",
+													"createdAt",
+													"updatedAt"
+												],
+												"type": "object"
+											},
+											"type": "array"
+										},
+										"limit": {
+											"description": "The limit used for pagination",
+											"nullable": true,
+											"type": "number"
+										},
+										"offset": {
+											"description": "The offset used for pagination",
+											"nullable": true,
+											"type": "number"
+										},
+										"total": {
+											"description": "Total number of API keys",
+											"type": "number"
+										}
+									},
+									"required": [
+										"apiKeys",
+										"total"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "API keys retrieved successfully"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"message"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Bad Request. Usually due to missing parameters, or invalid parameters."
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"message"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized. Due to missing or invalid authentication."
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Forbidden. You do not have permission to access this resource or to perform this action."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource was not found."
+					},
+					"429": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Too Many Requests. You have exceeded the rate limit. Try again later."
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Internal Server Error. This is a problem with the server that you cannot fix."
+					}
+				},
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "List all API keys for the authenticated user or for a specific organization",
+				"tags": [
+					"Personal API keys"
+				]
+			}
+		},
+		"/api/auth/api-key/update": {
+			"post": {
+				"description": "Update an existing API key by ID",
+				"parameters": [],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"configId": {
+										"description": "The configuration ID to use for the API key lookup. If not provided, the default configuration will be used.",
+										"type": [
+											"string",
+											"null"
+										]
+									},
+									"enabled": {
+										"description": "Whether the Api Key is enabled or not",
+										"type": [
+											"boolean",
+											"null"
+										]
+									},
+									"expiresIn": {
+										"type": "string"
+									},
+									"keyId": {
+										"description": "The id of the Api Key",
+										"type": "string"
+									},
+									"metadata": {
+										"type": [
+											"string",
+											"null"
+										]
+									},
+									"name": {
+										"description": "The name of the key",
+										"type": [
+											"string",
+											"null"
+										]
+									},
+									"permissions": {
+										"type": "string"
+									},
+									"rateLimitEnabled": {
+										"description": "Whether the key has rate limiting enabled.",
+										"type": [
+											"boolean",
+											"null"
+										]
+									},
+									"rateLimitMax": {
+										"description": "Maximum amount of requests allowed within a window. Once the `maxRequests` is reached, the request will be rejected until the `timeWindow` has passed, at which point the `timeWindow` will be reset. server-only. Eg: 100",
+										"type": [
+											"number",
+											"null"
+										]
+									},
+									"rateLimitTimeWindow": {
+										"description": "The duration in milliseconds where each request is counted. server-only. Eg: 1000",
+										"type": [
+											"number",
+											"null"
+										]
+									},
+									"refillAmount": {
+										"description": "The refill amount",
+										"type": [
+											"number",
+											"null"
+										]
+									},
+									"refillInterval": {
+										"description": "The refill interval",
+										"type": [
+											"number",
+											"null"
+										]
+									},
+									"remaining": {
+										"description": "The number of remaining requests",
+										"type": [
+											"number",
+											"null"
+										]
+									},
+									"userId": {
+										"description": "The id of the user which the api key belongs to. server-only. Eg: \"some-user-id\"",
+										"type": [
+											"string",
+											"null"
+										]
+									}
+								},
+								"required": [
+									"keyId",
+									"expiresIn",
+									"permissions"
+								],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"createdAt": {
+											"description": "created at",
+											"format": "date-time",
+											"type": "string"
+										},
+										"enabled": {
+											"default": true,
+											"description": "Sets if key is enabled or disabled",
+											"type": "boolean"
+										},
+										"expiresAt": {
+											"description": "Expiry date of a key",
+											"format": "date-time",
+											"nullable": true,
+											"type": "string"
+										},
+										"id": {
+											"description": "ID",
+											"type": "string"
+										},
+										"lastRefillAt": {
+											"description": "The last refill date",
+											"format": "date-time",
+											"nullable": true,
+											"type": "string"
+										},
+										"lastRequest": {
+											"description": "When last request occurred",
+											"format": "date-time",
+											"nullable": true,
+											"type": "string"
+										},
+										"metadata": {
+											"additionalProperties": true,
+											"description": "Extra metadata about the apiKey",
+											"nullable": true,
+											"type": "object"
+										},
+										"name": {
+											"description": "The name of the key",
+											"nullable": true,
+											"type": "string"
+										},
+										"permissions": {
+											"description": "Permissions for the api key (stored as JSON string)",
+											"nullable": true,
+											"type": "string"
+										},
+										"prefix": {
+											"description": "The API Key prefix. Stored as plain text.",
+											"nullable": true,
+											"type": "string"
+										},
+										"rateLimitEnabled": {
+											"description": "Whether the key has rate limiting enabled",
+											"type": "boolean"
+										},
+										"rateLimitMax": {
+											"description": "Maximum amount of requests allowed within a window",
+											"nullable": true,
+											"type": "number"
+										},
+										"rateLimitTimeWindow": {
+											"description": "The duration in milliseconds",
+											"nullable": true,
+											"type": "number"
+										},
+										"refillAmount": {
+											"description": "The amount to refill",
+											"nullable": true,
+											"type": "number"
+										},
+										"refillInterval": {
+											"description": "The interval in milliseconds between refills of the `remaining` count. Example: 3600000 // refill every hour (3600000ms = 1h)",
+											"nullable": true,
+											"type": "number"
+										},
+										"remaining": {
+											"description": "Remaining requests (every time api key is used this should updated and should be updated on refill as well)",
+											"nullable": true,
+											"type": "number"
+										},
+										"requestCount": {
+											"description": "The number of requests made within the rate limit time window",
+											"type": "number"
+										},
+										"start": {
+											"description": "Shows the first few characters of the API key, including the prefix. This allows you to show those few characters in the UI to make it easier for users to identify the API key.",
+											"nullable": true,
+											"type": "string"
+										},
+										"updatedAt": {
+											"description": "updated at",
+											"format": "date-time",
+											"type": "string"
+										},
+										"userId": {
+											"description": "The owner of the user id",
+											"type": "string"
+										}
+									},
+									"required": [
+										"id",
+										"userId",
+										"enabled",
+										"rateLimitEnabled",
+										"requestCount",
+										"createdAt",
+										"updatedAt"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "API key updated successfully"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"message"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Bad Request. Usually due to missing parameters, or invalid parameters."
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"message"
+									],
+									"type": "object"
+								}
+							}
+						},
+						"description": "Unauthorized. Due to missing or invalid authentication."
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Forbidden. You do not have permission to access this resource or to perform this action."
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Not Found. The requested resource was not found."
+					},
+					"429": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Too Many Requests. You have exceeded the rate limit. Try again later."
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										}
+									},
+									"type": "object"
+								}
+							}
+						},
+						"description": "Internal Server Error. This is a problem with the server that you cannot fix."
+					}
+				},
+				"security": [
+					{
+						"bearerAuth": []
+					}
+				],
+				"summary": "Update an existing API key by ID",
+				"tags": [
+					"Personal API keys"
 				]
 			}
 		},
@@ -5840,8 +7750,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Callback id",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			},
 			"post": {
@@ -5959,8 +7870,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Callback id",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -6129,8 +8041,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Change email",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -6339,8 +8252,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Change the password of the user",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -6503,8 +8417,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Delete the user",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -6662,8 +8577,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Callback to complete user deletion with verification token",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -6785,8 +8701,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Displays an error page",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -6940,8 +8857,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Get a valid access token, doing a refresh if needed",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -7078,13 +8996,14 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Get the current session",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			},
 			"post": {
 				"description": "Get the current session",
-				"operationId": "getSession",
+				"operationId": "getSessionPost",
 				"parameters": [],
 				"requestBody": {
 					"content": {
@@ -7224,8 +9143,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Get the current session",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -7459,8 +9379,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Link a social account to the user",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -7622,8 +9543,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "List all accounts linked to the user",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -7748,8 +9670,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "List all active sessions for the user",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -7879,8 +9802,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Check if the API is working",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -8082,8 +10006,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Refresh the access token using a refresh token",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -8239,8 +10164,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Send a password reset email to the user",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -8393,8 +10319,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Reset the password for a user",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -8540,8 +10467,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Redirects the user to the callback URL with the token",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -8681,8 +10609,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Revoke all other sessions for the user except the current one",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -8830,8 +10759,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Revoke a single session",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -8971,8 +10901,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Revoke all sessions for the user",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -9125,8 +11056,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Send a verification email to the user",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -9455,8 +11387,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Sign in with email and password",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -9747,8 +11680,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Sign in with a social provider",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -9885,8 +11819,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Sign out the current user",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -10119,8 +12054,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Sign up a user using email and password",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -10270,8 +12206,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Unlink an account",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -10409,8 +12346,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Update the current session",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -10558,8 +12496,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Update the current user",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -10713,8 +12652,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Verify the email of the user",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -10921,8 +12861,9 @@
 						"bearerAuth": []
 					}
 				],
+				"summary": "Verify the current user's password",
 				"tags": [
-					"Default"
+					"Authentication"
 				]
 			}
 		},
@@ -10971,8 +12912,12 @@
 				"parameters": [
 					{
 						"in": "query",
-						"name": "includeHidden",
+						"name": "view",
 						"schema": {
+							"enum": [
+								"search",
+								"admin"
+							],
 							"type": "string"
 						}
 					}
@@ -11010,7 +12955,422 @@
 						"$ref": "#/components/responses/ServiceUnavailable"
 					}
 				},
+				"security": [
+					{
+						"personalBearer": []
+					},
+					{
+						"cookieAuth": []
+					}
+				],
 				"summary": "List indexes",
+				"tags": [
+					"Index management"
+				]
+			},
+			"post": {
+				"operationId": "postApiIndexes",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"commitTimeoutSecs": {
+										"minimum": 1,
+										"type": "integer"
+									},
+									"defaultSearchFields": {
+										"items": {
+											"minLength": 1,
+											"type": "string"
+										},
+										"type": "array"
+									},
+									"fieldMappings": {
+										"items": {
+											"oneOf": [
+												{
+													"properties": {
+														"fast": {
+															"type": "boolean"
+														},
+														"fieldnorms": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"record": {
+															"enum": [
+																"basic",
+																"freq",
+																"position"
+															],
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"tokenizer": {
+															"enum": [
+																"raw",
+																"raw_lowercase",
+																"default",
+																"en_stem",
+																"whitespace",
+																"chinese_compatible",
+																"lowercase"
+															],
+															"type": "string"
+														},
+														"type": {
+															"const": "text"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"coerce": {
+															"type": "boolean"
+														},
+														"fast": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"type": {
+															"const": "i64"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"coerce": {
+															"type": "boolean"
+														},
+														"fast": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"type": {
+															"const": "u64"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"coerce": {
+															"type": "boolean"
+														},
+														"fast": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"type": {
+															"const": "f64"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"fast": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"type": {
+															"const": "bool"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"fast": {
+															"type": "boolean"
+														},
+														"fastPrecision": {
+															"enum": [
+																"seconds",
+																"milliseconds",
+																"microseconds",
+																"nanoseconds"
+															],
+															"type": "string"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"inputFormats": {
+															"items": {
+																"minLength": 1,
+																"type": "string"
+															},
+															"minItems": 1,
+															"type": "array"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"outputFormat": {
+															"enum": [
+																"rfc3339",
+																"unix_timestamp_secs",
+																"unix_timestamp_millis",
+																"unix_timestamp_micros",
+																"unix_timestamp_nanos"
+															],
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"type": {
+															"const": "datetime"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"fast": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"type": {
+															"const": "ip"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"expandDots": {
+															"type": "boolean"
+														},
+														"fast": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"record": {
+															"enum": [
+																"basic",
+																"freq",
+																"position"
+															],
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"tokenizer": {
+															"enum": [
+																"raw",
+																"raw_lowercase",
+																"default",
+																"en_stem",
+																"whitespace",
+																"chinese_compatible",
+																"lowercase"
+															],
+															"type": "string"
+														},
+														"type": {
+															"const": "json"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												}
+											]
+										},
+										"minItems": 1,
+										"type": "array"
+									},
+									"indexFieldPresence": {
+										"type": "boolean"
+									},
+									"indexId": {
+										"pattern": "^[a-zA-Z][a-zA-Z0-9_-]{2,254}$",
+										"type": "string"
+									},
+									"indexUri": {
+										"minLength": 1,
+										"type": "string"
+									},
+									"mode": {
+										"enum": [
+											"dynamic",
+											"lenient",
+											"strict"
+										],
+										"type": "string"
+									},
+									"retention": {
+										"properties": {
+											"period": {
+												"minLength": 1,
+												"type": "string"
+											},
+											"schedule": {
+												"minLength": 1,
+												"type": "string"
+											}
+										},
+										"required": [
+											"period"
+										],
+										"type": "object"
+									},
+									"storeSource": {
+										"type": "boolean"
+									},
+									"tagFields": {
+										"items": {
+											"minLength": 1,
+											"type": "string"
+										},
+										"type": "array"
+									},
+									"timestampField": {
+										"minLength": 1,
+										"type": "string"
+									}
+								},
+								"required": [
+									"indexId",
+									"timestampField",
+									"fieldMappings"
+								],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/IndexSummarySchema"
+								}
+							}
+						},
+						"description": "Successful response"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"409": {
+						"$ref": "#/components/responses/Conflict"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"summary": "Create index",
 				"tags": [
 					"Index management"
 				]
@@ -11256,6 +13616,14 @@
 						"$ref": "#/components/responses/ServiceUnavailable"
 					}
 				},
+				"security": [
+					{
+						"personalBearer": []
+					},
+					{
+						"cookieAuth": []
+					}
+				],
 				"summary": "Get index view config",
 				"tags": [
 					"Index management"
@@ -11306,6 +13674,14 @@
 						"$ref": "#/components/responses/ServiceUnavailable"
 					}
 				},
+				"security": [
+					{
+						"personalBearer": []
+					},
+					{
+						"cookieAuth": []
+					}
+				],
 				"summary": "List index fields",
 				"tags": [
 					"Index management"
@@ -11381,7 +13757,7 @@
 						"in": "query",
 						"name": "limit",
 						"schema": {
-							"maximum": 10000,
+							"maximum": 65000,
 							"minimum": 1,
 							"pattern": "^\\d+$",
 							"type": "integer"
@@ -11426,6 +13802,14 @@
 						"$ref": "#/components/responses/ServiceUnavailable"
 					}
 				},
+				"security": [
+					{
+						"personalBearer": []
+					},
+					{
+						"cookieAuth": []
+					}
+				],
 				"summary": "Get bulk field values",
 				"tags": [
 					"Log explorer"
@@ -11479,7 +13863,7 @@
 						"in": "query",
 						"name": "limit",
 						"schema": {
-							"maximum": 10000,
+							"maximum": 65000,
 							"minimum": 1,
 							"pattern": "^\\d+$",
 							"type": "integer"
@@ -11516,6 +13900,14 @@
 						"$ref": "#/components/responses/ServiceUnavailable"
 					}
 				},
+				"security": [
+					{
+						"personalBearer": []
+					},
+					{
+						"cookieAuth": []
+					}
+				],
 				"summary": "Get field values",
 				"tags": [
 					"Log explorer"
@@ -11623,6 +14015,14 @@
 						"$ref": "#/components/responses/ServiceUnavailable"
 					}
 				},
+				"security": [
+					{
+						"personalBearer": []
+					},
+					{
+						"cookieAuth": []
+					}
+				],
 				"summary": "Search logs",
 				"tags": [
 					"Log explorer"
@@ -11827,6 +14227,14 @@
 						"$ref": "#/components/responses/ServiceUnavailable"
 					}
 				},
+				"security": [
+					{
+						"personalBearer": []
+					},
+					{
+						"cookieAuth": []
+					}
+				],
 				"summary": "Get log histogram",
 				"tags": [
 					"Log explorer"
@@ -11973,60 +14381,9 @@
 				]
 			}
 		},
-		"/api/indexes/{indexId}/saved-queries": {
-			"get": {
-				"operationId": "getApiIndexesByIndexIdSavedQueries",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "indexId",
-						"required": true,
-						"schema": {
-							"minLength": 1,
-							"type": "string"
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"items": {
-										"$ref": "#/components/schemas/SavedQueryResponse"
-									},
-									"type": "array"
-								}
-							}
-						},
-						"description": "Successful response"
-					},
-					"400": {
-						"$ref": "#/components/responses/BadRequest"
-					},
-					"401": {
-						"$ref": "#/components/responses/Unauthorized"
-					},
-					"403": {
-						"$ref": "#/components/responses/Forbidden"
-					},
-					"404": {
-						"$ref": "#/components/responses/NotFound"
-					},
-					"500": {
-						"$ref": "#/components/responses/InternalError"
-					},
-					"503": {
-						"$ref": "#/components/responses/ServiceUnavailable"
-					}
-				},
-				"summary": "List saved queries",
-				"tags": [
-					"Log explorer"
-				]
-			},
-			"post": {
-				"operationId": "postApiIndexesByIndexIdSavedQueries",
+		"/api/indexes/{indexId}/quickwit-config": {
+			"put": {
+				"operationId": "putApiIndexesByIndexIdQuickwitConfig",
 				"parameters": [
 					{
 						"in": "path",
@@ -12043,21 +14400,367 @@
 						"application/json": {
 							"schema": {
 								"properties": {
-									"description": {
+									"commitTimeoutSecs": {
+										"anyOf": [
+											{
+												"minimum": 1,
+												"type": "integer"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"defaultSearchFields": {
+										"items": {
+											"minLength": 1,
+											"type": "string"
+										},
+										"type": "array"
+									},
+									"indexFieldPresence": {
+										"type": "boolean"
+									},
+									"mode": {
+										"enum": [
+											"dynamic",
+											"lenient",
+											"strict"
+										],
 										"type": "string"
 									},
-									"name": {
-										"maxLength": 200,
-										"minLength": 1,
-										"type": "string"
+									"newFieldMappings": {
+										"items": {
+											"oneOf": [
+												{
+													"properties": {
+														"fast": {
+															"type": "boolean"
+														},
+														"fieldnorms": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"record": {
+															"enum": [
+																"basic",
+																"freq",
+																"position"
+															],
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"tokenizer": {
+															"enum": [
+																"raw",
+																"raw_lowercase",
+																"default",
+																"en_stem",
+																"whitespace",
+																"chinese_compatible",
+																"lowercase"
+															],
+															"type": "string"
+														},
+														"type": {
+															"const": "text"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"coerce": {
+															"type": "boolean"
+														},
+														"fast": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"type": {
+															"const": "i64"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"coerce": {
+															"type": "boolean"
+														},
+														"fast": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"type": {
+															"const": "u64"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"coerce": {
+															"type": "boolean"
+														},
+														"fast": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"type": {
+															"const": "f64"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"fast": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"type": {
+															"const": "bool"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"fast": {
+															"type": "boolean"
+														},
+														"fastPrecision": {
+															"enum": [
+																"seconds",
+																"milliseconds",
+																"microseconds",
+																"nanoseconds"
+															],
+															"type": "string"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"inputFormats": {
+															"items": {
+																"minLength": 1,
+																"type": "string"
+															},
+															"minItems": 1,
+															"type": "array"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"outputFormat": {
+															"enum": [
+																"rfc3339",
+																"unix_timestamp_secs",
+																"unix_timestamp_millis",
+																"unix_timestamp_micros",
+																"unix_timestamp_nanos"
+															],
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"type": {
+															"const": "datetime"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"fast": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"type": {
+															"const": "ip"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"expandDots": {
+															"type": "boolean"
+														},
+														"fast": {
+															"type": "boolean"
+														},
+														"indexed": {
+															"type": "boolean"
+														},
+														"name": {
+															"pattern": "^[@$_\\-a-zA-Z][@$_/.\\-a-zA-Z0-9]{0,254}$",
+															"type": "string"
+														},
+														"record": {
+															"enum": [
+																"basic",
+																"freq",
+																"position"
+															],
+															"type": "string"
+														},
+														"stored": {
+															"type": "boolean"
+														},
+														"tokenizer": {
+															"enum": [
+																"raw",
+																"raw_lowercase",
+																"default",
+																"en_stem",
+																"whitespace",
+																"chinese_compatible",
+																"lowercase"
+															],
+															"type": "string"
+														},
+														"type": {
+															"const": "json"
+														}
+													},
+													"required": [
+														"name",
+														"type"
+													],
+													"type": "object"
+												}
+											]
+										},
+										"type": "array"
 									},
-									"query": {
-										"type": "string"
+									"retention": {
+										"anyOf": [
+											{
+												"properties": {
+													"period": {
+														"minLength": 1,
+														"type": "string"
+													},
+													"schedule": {
+														"minLength": 1,
+														"type": "string"
+													}
+												},
+												"required": [
+													"period"
+												],
+												"type": "object"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"storeSource": {
+										"type": "boolean"
+									},
+									"tagFields": {
+										"items": {
+											"minLength": 1,
+											"type": "string"
+										},
+										"type": "array"
 									}
 								},
 								"required": [
-									"name",
-									"query"
+									"mode",
+									"defaultSearchFields",
+									"tagFields",
+									"storeSource",
+									"indexFieldPresence",
+									"commitTimeoutSecs",
+									"retention",
+									"newFieldMappings"
 								],
 								"type": "object"
 							}
@@ -12066,16 +14769,6 @@
 					"required": true
 				},
 				"responses": {
-					"201": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/SavedQueryResponse"
-								}
-							}
-						},
-						"description": "Saved query created"
-					},
 					"400": {
 						"$ref": "#/components/responses/BadRequest"
 					},
@@ -12098,154 +14791,9 @@
 						"$ref": "#/components/responses/ServiceUnavailable"
 					}
 				},
-				"summary": "Create saved query",
+				"summary": "Update Quickwit index configuration",
 				"tags": [
-					"Log explorer"
-				]
-			}
-		},
-		"/api/indexes/{indexId}/saved-queries/{savedQueryId}": {
-			"delete": {
-				"operationId": "deleteApiIndexesByIndexIdSavedQueriesBySavedQueryId",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "indexId",
-						"required": true,
-						"schema": {
-							"minLength": 1,
-							"type": "string"
-						}
-					},
-					{
-						"in": "path",
-						"name": "savedQueryId",
-						"required": true,
-						"schema": {
-							"minimum": 1,
-							"pattern": "^\\d+$",
-							"type": "integer"
-						}
-					}
-				],
-				"responses": {
-					"204": {
-						"description": "Saved query deleted"
-					},
-					"400": {
-						"$ref": "#/components/responses/BadRequest"
-					},
-					"401": {
-						"$ref": "#/components/responses/Unauthorized"
-					},
-					"403": {
-						"$ref": "#/components/responses/Forbidden"
-					},
-					"404": {
-						"$ref": "#/components/responses/NotFound"
-					},
-					"500": {
-						"$ref": "#/components/responses/InternalError"
-					},
-					"503": {
-						"$ref": "#/components/responses/ServiceUnavailable"
-					}
-				},
-				"summary": "Delete saved query",
-				"tags": [
-					"Log explorer"
-				]
-			},
-			"patch": {
-				"operationId": "patchApiIndexesByIndexIdSavedQueriesBySavedQueryId",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "indexId",
-						"required": true,
-						"schema": {
-							"minLength": 1,
-							"type": "string"
-						}
-					},
-					{
-						"in": "path",
-						"name": "savedQueryId",
-						"required": true,
-						"schema": {
-							"minimum": 1,
-							"pattern": "^\\d+$",
-							"type": "integer"
-						}
-					}
-				],
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"properties": {
-									"description": {
-										"anyOf": [
-											{
-												"type": "string"
-											},
-											{
-												"type": "null"
-											}
-										]
-									},
-									"name": {
-										"maxLength": 200,
-										"minLength": 1,
-										"type": "string"
-									},
-									"query": {
-										"type": "string"
-									}
-								},
-								"required": [],
-								"type": "object"
-							}
-						}
-					},
-					"required": true
-				},
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/SavedQueryResponse"
-								}
-							}
-						},
-						"description": "Successful response"
-					},
-					"400": {
-						"$ref": "#/components/responses/BadRequest"
-					},
-					"401": {
-						"$ref": "#/components/responses/Unauthorized"
-					},
-					"403": {
-						"$ref": "#/components/responses/Forbidden"
-					},
-					"404": {
-						"$ref": "#/components/responses/NotFound"
-					},
-					"409": {
-						"$ref": "#/components/responses/Conflict"
-					},
-					"500": {
-						"$ref": "#/components/responses/InternalError"
-					},
-					"503": {
-						"$ref": "#/components/responses/ServiceUnavailable"
-					}
-				},
-				"summary": "Update saved query",
-				"tags": [
-					"Log explorer"
+					"Index management"
 				]
 			}
 		},
@@ -12359,6 +14907,64 @@
 											"sourceId",
 											"sourceType",
 											"queueUrl"
+										],
+										"type": "object"
+									},
+									{
+										"properties": {
+											"clientLogLevel": {
+												"enum": [
+													"debug",
+													"info",
+													"warn",
+													"error"
+												],
+												"type": "string"
+											},
+											"clientParams": {
+												"additionalProperties": {},
+												"propertyNames": {
+													"type": "string"
+												},
+												"type": "object"
+											},
+											"enableBackfillMode": {
+												"type": "boolean"
+											},
+											"inputFormat": {
+												"enum": [
+													"json",
+													"plain_text",
+													"otlp_logs_json",
+													"otlp_logs_protobuf",
+													"otlp_traces_json",
+													"otlp_traces_protobuf"
+												],
+												"type": "string"
+											},
+											"numPipelines": {
+												"minimum": 1,
+												"type": "integer"
+											},
+											"sourceId": {
+												"pattern": "^[a-zA-Z][a-zA-Z0-9_-]{2,254}$",
+												"type": "string"
+											},
+											"sourceType": {
+												"const": "kafka"
+											},
+											"topic": {
+												"minLength": 1,
+												"type": "string"
+											},
+											"vrlScript": {
+												"type": "string"
+											}
+										},
+										"required": [
+											"sourceId",
+											"sourceType",
+											"topic"
 										],
 										"type": "object"
 									}
@@ -12693,6 +15299,59 @@
 											"queueUrl"
 										],
 										"type": "object"
+									},
+									{
+										"properties": {
+											"clientLogLevel": {
+												"enum": [
+													"debug",
+													"info",
+													"warn",
+													"error"
+												],
+												"type": "string"
+											},
+											"clientParams": {
+												"additionalProperties": {},
+												"propertyNames": {
+													"type": "string"
+												},
+												"type": "object"
+											},
+											"enableBackfillMode": {
+												"type": "boolean"
+											},
+											"inputFormat": {
+												"enum": [
+													"json",
+													"plain_text",
+													"otlp_logs_json",
+													"otlp_logs_protobuf",
+													"otlp_traces_json",
+													"otlp_traces_protobuf"
+												],
+												"type": "string"
+											},
+											"numPipelines": {
+												"minimum": 1,
+												"type": "integer"
+											},
+											"sourceType": {
+												"const": "kafka"
+											},
+											"topic": {
+												"minLength": 1,
+												"type": "string"
+											},
+											"vrlScript": {
+												"type": "string"
+											}
+										},
+										"required": [
+											"sourceType",
+											"topic"
+										],
+										"type": "object"
 									}
 								]
 							}
@@ -12859,9 +15518,373 @@
 				]
 			}
 		},
+		"/api/indexes/{indexId}/views": {
+			"get": {
+				"operationId": "getApiIndexesByIndexIdViews",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "indexId",
+						"required": true,
+						"schema": {
+							"minLength": 1,
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/SavedViewResponse"
+									},
+									"type": "array"
+								}
+							}
+						},
+						"description": "Successful response"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"summary": "List saved views",
+				"tags": [
+					"Log explorer"
+				]
+			},
+			"post": {
+				"operationId": "postApiIndexesByIndexIdViews",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "indexId",
+						"required": true,
+						"schema": {
+							"minLength": 1,
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"columns": {
+										"anyOf": [
+											{
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"description": {
+										"type": "string"
+									},
+									"filters": {
+										"items": {
+											"properties": {
+												"exclude": {
+													"type": "boolean"
+												},
+												"field": {
+													"minLength": 1,
+													"type": "string"
+												},
+												"value": {
+													"minLength": 1,
+													"type": "string"
+												}
+											},
+											"required": [
+												"field",
+												"value",
+												"exclude"
+											],
+											"type": "object"
+										},
+										"type": "array"
+									},
+									"name": {
+										"maxLength": 200,
+										"minLength": 1,
+										"type": "string"
+									},
+									"query": {
+										"type": "string"
+									},
+									"sortDirection": {
+										"enum": [
+											"asc",
+											"desc"
+										],
+										"type": "string"
+									}
+								},
+								"required": [
+									"name",
+									"query"
+								],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SavedViewResponse"
+								}
+							}
+						},
+						"description": "Saved view created"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"409": {
+						"$ref": "#/components/responses/Conflict"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"summary": "Create saved view",
+				"tags": [
+					"Log explorer"
+				]
+			}
+		},
+		"/api/indexes/{indexId}/views/{viewId}": {
+			"delete": {
+				"operationId": "deleteApiIndexesByIndexIdViewsByViewId",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "indexId",
+						"required": true,
+						"schema": {
+							"minLength": 1,
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "viewId",
+						"required": true,
+						"schema": {
+							"minimum": 1,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Saved view deleted"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"summary": "Delete saved view",
+				"tags": [
+					"Log explorer"
+				]
+			},
+			"patch": {
+				"operationId": "patchApiIndexesByIndexIdViewsByViewId",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "indexId",
+						"required": true,
+						"schema": {
+							"minLength": 1,
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "viewId",
+						"required": true,
+						"schema": {
+							"minimum": 1,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"columns": {
+										"anyOf": [
+											{
+												"items": {
+													"type": "string"
+												},
+												"type": "array"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"description": {
+										"anyOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "null"
+											}
+										]
+									},
+									"filters": {
+										"items": {
+											"properties": {
+												"exclude": {
+													"type": "boolean"
+												},
+												"field": {
+													"minLength": 1,
+													"type": "string"
+												},
+												"value": {
+													"minLength": 1,
+													"type": "string"
+												}
+											},
+											"required": [
+												"field",
+												"value",
+												"exclude"
+											],
+											"type": "object"
+										},
+										"type": "array"
+									},
+									"name": {
+										"maxLength": 200,
+										"minLength": 1,
+										"type": "string"
+									},
+									"query": {
+										"type": "string"
+									},
+									"sortDirection": {
+										"enum": [
+											"asc",
+											"desc"
+										],
+										"type": "string"
+									}
+								},
+								"required": [],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SavedViewResponse"
+								}
+							}
+						},
+						"description": "Successful response"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"409": {
+						"$ref": "#/components/responses/Conflict"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"summary": "Update saved view",
+				"tags": [
+					"Log explorer"
+				]
+			}
+		},
 		"/api/ingest/ndjson": {
 			"post": {
-				"description": "Proxies an NDJSON (or JSON array) log payload to Quickwit for the index associated with the ingest API key. Accepts application/x-ndjson or application/json content-type. The response body is passed through from Quickwit.",
+				"description": "Proxies an NDJSON (or JSON array) log payload to Quickwit for the index associated with the ingest API key. Accepts application/x-ndjson or application/json content-type. Success and 4xx responses are passed through from Quickwit (400 bodies carry per-document parse errors); upstream 5xx responses are mapped to the standard 503 error contract.",
 				"operationId": "postApiIngestNdjson",
 				"responses": {
 					"200": {
@@ -12910,75 +15933,18 @@
 				]
 			}
 		},
-		"/api/search/logs": {
+		"/api/service-accounts": {
 			"get": {
-				"operationId": "getApiSearchLogs",
-				"parameters": [
-					{
-						"in": "query",
-						"name": "q",
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"in": "query",
-						"name": "limit",
-						"schema": {
-							"maximum": 1000,
-							"minimum": 1,
-							"pattern": "^\\d+$",
-							"type": "integer"
-						}
-					},
-					{
-						"in": "query",
-						"name": "offset",
-						"schema": {
-							"minimum": 0,
-							"pattern": "^\\d+$",
-							"type": "integer"
-						}
-					},
-					{
-						"in": "query",
-						"name": "startTs",
-						"schema": {
-							"type": "number"
-						}
-					},
-					{
-						"in": "query",
-						"name": "endTs",
-						"schema": {
-							"type": "number"
-						}
-					},
-					{
-						"in": "query",
-						"name": "sortOrder",
-						"schema": {
-							"enum": [
-								"asc",
-								"desc"
-							],
-							"type": "string"
-						}
-					},
-					{
-						"in": "query",
-						"name": "countAll",
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
+				"operationId": "getApiServiceAccounts",
 				"responses": {
 					"200": {
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/LogSearchResponse"
+									"items": {
+										"$ref": "#/components/schemas/ServiceAccountResponse"
+									},
+									"type": "array"
 								}
 							}
 						},
@@ -13003,14 +15969,109 @@
 						"$ref": "#/components/responses/ServiceUnavailable"
 					}
 				},
-				"security": [
+				"summary": "List service accounts",
+				"tags": [
+					"Service accounts"
+				]
+			},
+			"post": {
+				"operationId": "postApiServiceAccounts",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"name": {
+										"maxLength": 128,
+										"minLength": 1,
+										"type": "string"
+									}
+								},
+								"required": [
+									"name"
+								],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ServiceAccountCreatedResponse"
+								}
+							}
+						},
+						"description": "Service account created"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"summary": "Create service account",
+				"tags": [
+					"Service accounts"
+				]
+			}
+		},
+		"/api/service-accounts/{userId}": {
+			"delete": {
+				"operationId": "deleteApiServiceAccountsByUserId",
+				"parameters": [
 					{
-						"searchBearer": []
+						"in": "path",
+						"name": "userId",
+						"required": true,
+						"schema": {
+							"minLength": 1,
+							"type": "string"
+						}
 					}
 				],
-				"summary": "Search logs",
+				"responses": {
+					"204": {
+						"description": "Service account deleted"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"summary": "Delete service account",
 				"tags": [
-					"Search"
+					"Service accounts"
 				]
 			}
 		},
@@ -13386,6 +16447,30 @@
 										"minimum": 0,
 										"type": "integer"
 									},
+									"filters": {
+										"default": [],
+										"items": {
+											"properties": {
+												"exclude": {
+													"type": "boolean"
+												},
+												"field": {
+													"minLength": 1,
+													"type": "string"
+												},
+												"value": {
+													"type": "string"
+												}
+											},
+											"required": [
+												"field",
+												"value",
+												"exclude"
+											],
+											"type": "object"
+										},
+										"type": "array"
+									},
 									"hit": {
 										"additionalProperties": {},
 										"propertyNames": {
@@ -13590,7 +16675,7 @@
 								}
 							}
 						},
-						"description": "User invited"
+						"description": "User created"
 					},
 					"400": {
 						"$ref": "#/components/responses/BadRequest"
@@ -13611,7 +16696,7 @@
 						"$ref": "#/components/responses/ServiceUnavailable"
 					}
 				},
-				"summary": "Invite user",
+				"summary": "Create user",
 				"tags": [
 					"User and invite"
 				]
@@ -14015,7 +17100,7 @@
 	],
 	"servers": [
 		{
-			"description": "Same-origin API",
+			"description": "Rootprint API",
 			"url": "https://example.com"
 		}
 	]
