@@ -5,13 +5,11 @@ description: 'Ship every pod in a cluster to Rootprint with the OpenTelemetry Co
 
 This page ships container logs from a Kubernetes cluster to Rootprint over OTLP. The **OpenTelemetry Collector** runs as a **DaemonSet** — one pod per node — tailing every pod's stdout/stderr off the kubelet. The chart's `logsCollection` preset wires up the `filelog` receiver; the `kubernetesAttributes` preset enriches each record with the pod, namespace, node, and container it came from. A small `transform` infers severity from the message body, the same way the [Docker](/send-logs/platforms/docker) path does.
 
-<Note>
-	Every path needs an **ingest API key**. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick `otel-logs-v0_9`. The value is shown once — copy it before clicking **Done**. API keys are scoped to one index; you cannot reuse one across indexes. Paste it into the config below as `<your-ingest-token>`.
-</Note>
+## Prerequisites
 
-<Note>
-	Requires `kubectl` and `helm` configured against your cluster. The DaemonSet needs to schedule on every node whose pods you want collected.
-</Note>
+- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A Kubernetes cluster with `kubectl` and `helm` configured against it. The DaemonSet schedules on every node whose pods you want collected.
+- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
 
 <Steps>
   <Step title="Add the OpenTelemetry Helm repo">
@@ -25,6 +23,7 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
     Save this as `values.yaml`. Replace `<your-rootprint>` with your Rootprint base URL and
     `<your-ingest-token>` with the API key you copied above.
 
+    <Expandable title="values.yaml">
     ```yaml
     mode: daemonset
 
@@ -58,6 +57,7 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
             processors: [memory_limiter, k8sattributes, transform, batch]
             exporters: [otlphttp]
     ```
+    </Expandable>
 
     The `service.pipelines.logs.processors` list is spelled out on purpose. The chart **replaces**
     this array rather than merging it, so the preset-injected processors (`memory_limiter`,

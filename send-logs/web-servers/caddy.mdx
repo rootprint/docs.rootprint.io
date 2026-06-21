@@ -5,14 +5,15 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
 
 [Caddy](https://caddyserver.com) writes structured JSON logs by default. This page ships them to Rootprint's OTLP endpoint with either the **OpenTelemetry Collector** or **Vector**. Both land records in the `otel-logs-v0_9` index with `service.name: caddy` and OpenTelemetry HTTP attributes (`http.request.method`, `url.path`, `http.response.status_code`, `client.address`, `user_agent.original`, …) pre-populated. Pick the tab for the agent you run.
 
-<Note>
-	Every path needs an **ingest API key**. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick `otel-logs-v0_9`. The value is shown once; copy it before clicking **Done**. API keys are scoped to one index; you cannot reuse one across indexes. Paste it into the config below as `<your-ingest-token>`.
-</Note>
+## Prerequisites
+
+- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A Linux host running Caddy and `systemd`. The file paths and `systemctl` commands below assume Linux.
+- A log agent on the host: the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/installation/) or [Vector](https://vector.dev/docs/setup/installation/). Configs for both are below; install whichever you run.
+- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
 
 <Tabs>
   <Tab title="OpenTelemetry Collector">
-    Use the **Contrib** distribution (`otelcol-contrib`); the `filelog` receiver and the OTTL `transform` processor are Contrib-only.
-
     ### Bare-metal
 
     <Steps>
@@ -40,14 +41,10 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
         sudo systemctl reload caddy
         ```
       </Step>
-      <Step title="Install the Collector">
-        Install `otelcol-contrib` from the [Collector installation page](https://opentelemetry.io/docs/collector/installation/). The package installs it as a `systemd` service.
-      </Step>
-      <Step title="Write /etc/otelcol-contrib/config.yaml">
-        `/etc/otelcol-contrib/config.yaml` is where the Debian/RPM package's `systemd` service reads its config. If you run the Collector another way (a downloaded binary, or the Docker setup below), save this file anywhere and point the Collector at it with `--config <path>`. The config itself is identical no matter how you run it.
-
+      <Step title="Configure the Collector">
         Replace `<your-rootprint>` with your Rootprint base URL and `<your-ingest-token>` with the key from above.
 
+        <Expandable title="config.yaml">
         ```yaml
         receivers:
           filelog:
@@ -111,19 +108,16 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
               processors: [resource, transform, batch]
               exporters: [otlphttp]
         ```
+        </Expandable>
       </Step>
       <Step title="Grant read access to /var/log/caddy">
         ```bash
         sudo usermod -aG caddy otelcol-contrib
         ```
-        The package installs an `otelcol-contrib` user; add it to the `caddy` group that owns the logs.
+        Add the user the Collector runs as to the `caddy` group that owns the logs (the Debian/RPM Collector package creates `otelcol-contrib`).
       </Step>
-      <Step title="Restart the Collector">
-        ```bash
-        sudo systemctl restart otelcol-contrib
-        sudo systemctl status otelcol-contrib
-        ```
-        Status should show `active (running)` with no config-parse or exporter errors.
+      <Step title="Start the Collector">
+        Start (or restart) the Collector so it loads the config. Startup logs should show no config-parse or exporter errors.
       </Step>
       <Step title="Send a test request">
         ```bash
@@ -241,16 +235,11 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
         ```
       </Step>
 
-      <Step title="Install Vector">
-        Install the Vector package for your platform from the [official installation
-        page](https://vector.dev/docs/setup/installation/). Per-distro instructions (Debian/Ubuntu apt,
-        RHEL/Fedora dnf, container images) are maintained upstream.
-      </Step>
-
       <Step title="Write the Vector config">
         Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint
         base URL and `<your-ingest-token>` with the API key you copied above.
 
+        <Expandable title="vector.yaml">
         ```yaml
         sources:
           caddy_logs:
@@ -404,6 +393,7 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
                 timeout_secs: 1
                 max_bytes: 8388608
         ```
+        </Expandable>
 
         `read_from: end` skips existing content on first start, so installing Vector against an
         existing `access.log` does not replay every historical request. Flip it to `beginning` if
@@ -489,6 +479,7 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
         Save the following as `vector.yaml` next to your `compose.yml`. Replace `<your-rootprint>` with
         your Rootprint base URL and `<your-ingest-token>` with the API key you copied above.
 
+        <Expandable title="vector.yaml">
         ```yaml
         sources:
           caddy:
@@ -652,6 +643,7 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
                 timeout_secs: 1
                 max_bytes: 8388608
         ```
+        </Expandable>
       </Step>
 
       <Step title="Start Vector and restart Caddy if needed">

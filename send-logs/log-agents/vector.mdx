@@ -10,17 +10,16 @@ description: 'Tail log files on a Linux host with Vector and ship them to Rootpr
 	on macOS and Windows, but this page does not cover those platforms.
 </Warning>
 
+## Prerequisites
+
+- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A Linux host running `systemd`. The `file` source paths and `systemctl` commands below assume Linux.
+- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
+
 ## Setup
 
 <Steps>
-  <Step title="Pick the target index and create an ingest API key">
-    Logs land in whichever index your ingest token is scoped to. These guides use the built-in
-    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick
-    `otel-logs-v0_9`. The value is shown once. Copy it before
-    clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
-  </Step>
-
-<Step title="Install Vector">
+  <Step title="Install Vector">
 	Install the Vector package for your platform from the [official installation
 	page](https://vector.dev/docs/setup/installation/). Per-distro instructions (Debian/Ubuntu apt,
 	RHEL/Fedora dnf, container images, macOS, Windows) are maintained upstream.
@@ -31,6 +30,7 @@ description: 'Tail log files on a Linux host with Vector and ship them to Rootpr
     URL, `<your-ingest-token>` with the API key you copied in step 1, `/var/log/myapp/*.log` with
     the glob that matches your application's log files, and `myapp` with your service name.
 
+    <Expandable title="vector.yaml">
     ```yaml
     sources:
       app_logs:
@@ -95,6 +95,7 @@ description: 'Tail log files on a Linux host with Vector and ship them to Rootpr
             timeout_secs: 1
             max_bytes: 8388608
     ```
+    </Expandable>
 
     `read_from: end` skips existing content on first start, so installing Vector against an
     existing log file does not replay everything that was already there. Flip it to `beginning`

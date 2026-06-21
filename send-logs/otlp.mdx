@@ -31,7 +31,7 @@ Every major OTEL SDK already defaults to protobuf for HTTP logs, with one except
 
 ## Encoding
 
-- `Content-Encoding`: Rootprint decompresses the body before indexing. Supported values: `gzip` / `x-gzip`, `zstd`, `deflate` / `x-deflate`, and `identity` (or no header) for uncompressed. Any other value is rejected. OTEL SDKs send `gzip` or no compression.
+`Content-Encoding`: `gzip` / `x-gzip`, `zstd`, `deflate` / `x-deflate`, and `identity` (or no header) for uncompressed. Any other value is rejected. OTEL SDKs send `gzip` or no compression.
 
 ## Response codes
 
@@ -46,6 +46,8 @@ Rootprint maps OTLP errors to gRPC-style status codes. Upstream rejections (malf
 | `415`  | `Content-Type` is not `application/x-protobuf`.                         |
 | `429`  | Upstream Quickwit is rate-limited. `Retry-After` is echoed (default 5). |
 | `503`  | Upstream Quickwit error or network failure. `Retry-After: 5`.           |
+
+A `413` never originates from Rootprint — it means a reverse proxy in front of Rootprint rejected an oversized request body. Lower the agent's batch size (`batch.max_bytes` in Vector, `send_batch_max_size` on the Collector's `batch` processor) or raise the proxy's body limit.
 
 ## Environment variables
 

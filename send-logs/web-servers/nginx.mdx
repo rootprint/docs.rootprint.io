@@ -5,30 +5,27 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
 
 [nginx](https://nginx.org) writes plain-text logs by default: a `combined` access log and a separate error log. This page tails both and ships them to Rootprint over OTLP with either the **OpenTelemetry Collector** or **Vector**. Records land in `otel-logs-v0_9` tagged `service.name: nginx`, with access-log fields mapped to OpenTelemetry HTTP semantic conventions so they arrive as queryable attributes. Pick the tab for the agent you run.
 
-<Note>
-	Every path needs an **ingest API key**. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick `otel-logs-v0_9`. The value is shown once; copy it before clicking **Done**. API keys are scoped to one index; you cannot reuse one across indexes. Paste it into the config below as `<your-ingest-token>`.
-</Note>
+## Prerequisites
+
+- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A Linux host running nginx and `systemd`. The file paths and `systemctl` commands below assume Linux.
+- A log agent on the host: the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/installation/) or [Vector](https://vector.dev/docs/setup/installation/). Configs for both are below; install whichever you run.
+- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
 
 <Tabs>
   <Tab title="OpenTelemetry Collector">
-    Use the **Contrib** distribution (`otelcol-contrib`); the `filelog` receiver and the OTTL `transform` processor are Contrib-only.
-
     ### Bare-metal
 
-    Run the Collector as a `systemd` service on the host alongside nginx.
+    Run the Collector on the host alongside nginx.
 
     <Steps>
       <Step title="Confirm nginx is logging to file">
         Stock nginx writes `combined`-format access logs to `/var/log/nginx/access.log` and error logs to `/var/log/nginx/error.log`. These defaults are what the config below expects. No `nginx.conf` changes are required.
       </Step>
-      <Step title="Install the Collector">
-        Install `otelcol-contrib` from the [Collector installation page](https://opentelemetry.io/docs/collector/installation/). The package installs it as a `systemd` service.
-      </Step>
-      <Step title="Write /etc/otelcol-contrib/config.yaml">
-        `/etc/otelcol-contrib/config.yaml` is where the Debian/RPM package's `systemd` service reads its config. If you run the Collector another way (a downloaded binary, or the Docker setup below), save this file anywhere and point the Collector at it with `--config <path>`. The config itself is identical no matter how you run it.
-
+      <Step title="Configure the Collector">
         Replace `<your-rootprint>` with your Rootprint base URL and `<your-ingest-token>` with the key from above.
 
+        <Expandable title="config.yaml">
         ```yaml
         receivers:
           filelog:
@@ -128,19 +125,16 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
               processors: [resource, transform, batch]
               exporters: [otlphttp]
         ```
+        </Expandable>
       </Step>
       <Step title="Grant read access to /var/log/nginx">
         ```bash
         sudo usermod -aG adm otelcol-contrib
         ```
-        nginx's Debian/Ubuntu package owns `/var/log/nginx/` with the `adm` group as the read-side convention. The package installs an `otelcol-contrib` user; add it to the `adm` group that can read the logs.
+        nginx's Debian/Ubuntu package owns `/var/log/nginx/` with the `adm` group as the read-side convention. Add the user the Collector runs as to that `adm` group (the Debian/RPM Collector package creates `otelcol-contrib`).
       </Step>
-      <Step title="Restart the Collector">
-        ```bash
-        sudo systemctl restart otelcol-contrib
-        sudo systemctl status otelcol-contrib
-        ```
-        Status should show `active (running)` with no config-parse or exporter errors.
+      <Step title="Start the Collector">
+        Start (or restart) the Collector so it loads the config. Startup logs should show no config-parse or exporter errors.
       </Step>
       <Step title="Send a test request">
         ```bash
@@ -200,13 +194,10 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
         Stock nginx already writes `combined`-format access logs to `/var/log/nginx/access.log` and error logs to `/var/log/nginx/error.log`. This guide assumes those defaults. No `nginx.conf` changes are required.
       </Step>
 
-      <Step title="Install Vector">
-        Install the Vector package for your platform from the [official installation page](https://vector.dev/docs/setup/installation/).
-      </Step>
-
       <Step title="Write the Vector config">
         Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint base URL and `<your-ingest-token>` with the API key you copied above.
 
+        <Expandable title="vector.yaml">
         ```yaml
         sources:
           nginx_logs:
@@ -407,6 +398,7 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
                 timeout_secs: 1
                 max_bytes: 8388608
         ```
+        </Expandable>
 
         `read_from: end` skips existing content on first start, so installing Vector against an existing `access.log` does not replay every historical request. Flip it to `beginning` if you want a one-time backfill of the whole file. For a bounded backfill (capture recent history without replaying months of logs), pair `read_from: beginning` with `ignore_older_secs: 600`, which ignores any line older than 10 minutes on startup.
       </Step>

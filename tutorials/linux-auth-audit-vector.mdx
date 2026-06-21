@@ -30,6 +30,7 @@ description: 'Ship /var/log/auth.log to Rootprint with Vector and search SSH, su
     Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint base
     URL and `<your-ingest-token>` with the API key you copied in step 1.
 
+    <Expandable title="vector.yaml">
     ```yaml
     sources:
       auth_logs:
@@ -155,6 +156,7 @@ description: 'Ship /var/log/auth.log to Rootprint with Vector and search SSH, su
             timeout_secs: 1
             max_bytes: 8388608
     ```
+    </Expandable>
 
     `read_from: end` skips existing content on first start, so installing Vector against an
     existing `auth.log` does not replay every historical event. Flip it to `beginning` if you want

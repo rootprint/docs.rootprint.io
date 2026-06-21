@@ -12,17 +12,16 @@ description: 'Tail log files on a Linux host with Fluent Bit and ship them to Ro
 	release if you can.
 </Warning>
 
+## Prerequisites
+
+- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A Linux host running `systemd`. The `tail` paths and `systemctl` commands below assume Linux.
+- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
+
 ## Setup
 
 <Steps>
-  <Step title="Pick the target index and create an ingest API key">
-    Logs land in whichever index your ingest token is scoped to. These guides use the built-in
-    `otel-logs-v0_9` index. See [Indexes](/indexes) for its schema. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick
-    `otel-logs-v0_9`. The value is shown once. Copy it before
-    clicking **Done**. API keys are scoped to one index. You cannot reuse one across indexes.
-  </Step>
-
-<Step title="Install Fluent Bit">
+  <Step title="Install Fluent Bit">
 	Install the Fluent Bit package for your platform from the [official downloads
 	page](https://docs.fluentbit.io/manual/installation/downloads). Per-distro instructions
 	(Debian/Ubuntu apt, RHEL/Fedora dnf, container images, Windows installer) are maintained upstream.

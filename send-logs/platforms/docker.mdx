@@ -3,11 +3,14 @@ title: 'Send logs from Docker'
 description: 'Ship every container on a Linux host to Rootprint with Vector (Docker socket, default) or the OpenTelemetry Collector (filelog), emitting OTLP.'
 ---
 
-This page ships container logs from a Linux host to Rootprint over OTLP. **Vector** (default tab) reads the Docker daemon socket: it auto-discovers containers and attaches `container.name`, `container.image.name`, and friends with no extra wiring. The **OpenTelemetry Collector** reads container log files off disk; it works without the socket but cannot resolve friendly container names the same way; see the caveats in its tab. Vector is the recommended path for Docker.
+This page ships container logs from a Linux host to Rootprint over OTLP. **Vector** reads the Docker daemon socket: it auto-discovers containers and attaches `container.name`, `container.image.name`, and friends with no extra wiring. The **OpenTelemetry Collector** reads container log files off disk; it works without the socket but cannot resolve friendly container names the same way; see the caveats in its tab.
 
-<Note>
-	Every path needs an **ingest API key**. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick `otel-logs-v0_9`. The value is shown once; copy it before clicking **Done**. API keys are scoped to one index; you cannot reuse one across indexes. Paste it into the config below as `<your-ingest-token>`.
-</Note>
+## Prerequisites
+
+- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A Linux host with Docker (and Docker Compose for the examples below).
+- A log agent: [Vector](https://vector.dev/docs/setup/installation/) or the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/installation/). Configs for both are below; run whichever you prefer.
+- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
 
 <Tabs>
   <Tab title="Vector">
@@ -20,8 +23,9 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
     <Steps>
       <Step title="Create the Vector config">
         Save this as `vector.yaml` next to your `docker-compose.yml`. Replace `<your-rootprint>` with
-        your Rootprint base URL and `<your-ingest-token>` with the API key you copied above.
+        your Rootprint base URL and `<your-ingest-token>` with the API key.
 
+        <Expandable title="vector.yaml">
         ```yaml
         sources:
           docker:
@@ -117,6 +121,7 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
                 timeout_secs: 1
                 max_bytes: 8388608
         ```
+        </Expandable>
 
       </Step>
 
@@ -221,6 +226,7 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
       <Step title="Save otel-config.yaml">
         Replace `<your-rootprint>` and `<your-ingest-token>`.
 
+        <Expandable title="otel-config.yaml">
         ```yaml
         receivers:
           filelog:
@@ -259,6 +265,7 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
               processors: [transform, batch]
               exporters: [otlphttp]
         ```
+        </Expandable>
       </Step>
 
       <Step title="Start the sidecar">
