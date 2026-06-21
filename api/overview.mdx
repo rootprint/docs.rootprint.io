@@ -23,7 +23,6 @@ Rootprint uses these authentication modes, depending on the endpoint.
 | ---------------------------------------- | ------------------------------------------------ | ------------------------------------- |
 | Send logs over NDJSON or OTLP            | Ingest API key (bearer, prefix `lwit_`)          | **Settings → API keys**               |
 | Read logs from an external tool          | Query API key (bearer, prefix `rpk_`)            | **Settings → Profile** or **Settings → Service accounts** |
-| Manage indexes, users, settings, UI data | Better Auth session cookie                       | Sign in through the Rootprint web app |
 | Check health                             | None                                             | `GET /api/health` is public           |
 
 Bearer-token endpoints use the standard `Authorization` header.

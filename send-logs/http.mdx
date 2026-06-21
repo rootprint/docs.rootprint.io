@@ -1,20 +1,20 @@
 ---
 title: 'Send logs over HTTP'
-description: 'Authenticated HTTP endpoint in front of Quickwit: push logs to the index attached to your ingest API key using whatever schema that index expects.'
+description: 'Authenticated HTTP endpoint: push logs to the index attached to your ingest API key using whatever schema that index expects.'
 ---
 
-Rootprint exposes an authenticated HTTP endpoint at `/api/ingest/ndjson`. Each ingest API key is scoped to a single index; Rootprint forwards the request body unmodified to Quickwit. Use this endpoint when you already control the wire format and want to write to a custom-schema index.
+Rootprint exposes an authenticated HTTP endpoint at `/api/ingest/ndjson`. Each ingest API key is scoped to a single index. Use this endpoint when you already control the wire format and want to write to a custom-schema index.
 
 <Note>
 	For OpenTelemetry-instrumented apps, prefer the [OTLP endpoint](/send-logs/otlp). It handles
-	batching, retries, and schema mapping automatically.
+	batching, retries, and schema mapping for you.
 </Note>
 
 ## Setup
 
 <Steps>
   <Step title="Pick the target index">
-    Decide which Quickwit index you'll write to. The built-in OTEL index is `otel-logs-v0_9`: see [Indexes](/indexes) for its schema, or follow [Create a custom index](/configuration/custom-indexes) to define your own first.
+    Decide which index you'll write to. The built-in OTEL index is `otel-logs-v0_9`: see [Indexes](/indexes) for its schema, or follow [Create a custom index](/configuration/custom-indexes) to define your own first.
   </Step>
 
 <Step title="Create an ingest API key">
@@ -35,9 +35,6 @@ Rootprint exposes an authenticated HTTP endpoint at `/api/ingest/ndjson`. Each i
     {"timestamp_nanos":$(date +%s)000000000,"severity_text":"ERROR","body":{"message":"Checkout failed"},"service_name":"frontend","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":17,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
     EOF
     ```
-
-    The unquoted heredoc lets `$(date +%s)000000000` stamp each entry with the current time in Unix epoch nanoseconds (UTC, second precision, which is plenty here) so they appear in Search right away instead of in the past. This works the same on Linux and macOS.
-
   </Step>
 
   <Step title="Verify in Rootprint">
@@ -47,7 +44,7 @@ Rootprint exposes an authenticated HTTP endpoint at `/api/ingest/ndjson`. Each i
 
 ## Payload format
 
-Rootprint forwards the body unchanged. You must send the format your API key's Quickwit index expects: typically NDJSON with `Content-Type: application/x-ndjson` (the endpoint also accepts `application/json`). The payload must match the target index schema; Quickwit rejects documents that don't. See [Indexes](/indexes) for the built-in `otel-logs-v0_9` schema, or the index's [Configuration tab](/configuration/manage-indexes#field-role-mappings) for Rootprint's display mapping over your custom schema.
+Rootprint forwards the body unchanged. You must send the format your API key's index expects: typically NDJSON with `Content-Type: application/x-ndjson` (the endpoint also accepts `application/json`). The payload must match the target index schema; See [Indexes](/indexes) for the built-in `otel-logs-v0_9` schema, or the index's [Configuration tab](/configuration/manage-indexes#field-role-mappings) for Rootprint's display mapping over your custom schema.
 
 ## Troubleshooting
 

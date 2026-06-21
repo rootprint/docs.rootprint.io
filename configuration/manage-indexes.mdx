@@ -18,17 +18,9 @@ Navigate to **Settings → Indexes** to see every index currently known to Quick
 
 ## Create an index
 
-Click **Create index** on the **Settings → Indexes** page to define a new Quickwit index from a form, with no YAML or direct Quickwit calls. The form covers:
+Click **Create index** on the **Settings → Indexes** page to define a new Quickwit index from a form — index ID, schema mode, field mappings, timestamp field, retention, and more — with no YAML or direct Quickwit calls. Rootprint creates the index in Quickwit and opens its detail page when you save. The same form is available over the API as `POST /api/indexes`.
 
-- The **index ID** (starts with a letter, 3–255 characters of letters, digits, `-`, or `_`).
-- The schema **mode** (`dynamic`, `lenient`, or `strict`), which decides what Quickwit does with the fields you didn't declare.
-- The **field mappings**: each field's name, type, and per-type options such as tokenizer and the `fast` and `stored` flags.
-- The **timestamp field**, picked from the datetime fields you defined.
-- An optional **retention policy**, **storage URI**, **tag fields**, and **commit timeout**.
-
-Rootprint creates the index in Quickwit and opens its detail page when you save. The same form is available over the API as `POST /api/indexes`.
-
-Some schemas need a type or setting the form doesn't expose: `bytes`, `array<T>`, `object`, or `dynamic_mapping` tuning. For those, write the index definition in YAML and send it to Quickwit directly. See [Create a custom index](/configuration/custom-indexes) for the full schema reference.
+See [Create a custom index](/configuration/custom-indexes) for a walkthrough of every field, the field types and tokenizers the form offers, and the schemas that need direct Quickwit configuration.
 
 ## Index detail page
 
@@ -60,7 +52,7 @@ These settings tell Rootprint which fields in your index carry specific log data
 | ------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Level field**     | `severity_text`                    | The field carrying the log severity (e.g. `INFO`, `ERROR`, `WARN`). Drives row color-coding and the severity filter. Required.                                                |
 | **Message field**   | `body.message`                     | The primary human-readable message shown per row in the log list. Required.                                                                                                   |
-| **Traceback field** | `attributes.exception.stacktrace`  | Dot-notation path to stacktrace data. When set and a log entry contains it, a **Traceback** tab appears in the log detail drawer. Optional — clear it if your schema has none. |
+| **Traceback field** | `attributes.exception.stacktrace`  | Dot-notation path to stacktrace data. When set and a log entry contains it, a **Traceback** tab appears in the log detail drawer. Optional; clear it if your schema has none. |
 | **Context fields**  | _(none)_                           | Fields used for log-context search. Leave empty to search across all fields. Supports dot-notation; entered as tags (press Enter to add).                                      |
 
 All field settings accept dot-notation paths to reach nested or JSON-object fields. Because the defaults match the OpenTelemetry log schema, the bundled `otel-logs-v0_9` index (and any other index using the same field names) works without configuration. For custom-schema indexes, override the values here so the level, message, and traceback render correctly. If your OTel instrumentation captures exception stacktraces, the default traceback path (`attributes.exception.stacktrace`) enables the Traceback tab with syntax-highlighted stacktrace rendering.
@@ -71,7 +63,7 @@ Lists every field in the index schema with its type and a **Fast** indicator (wh
 
 ### Sources tab
 
-Data sources are the pipelines Quickwit uses to receive or pull documents for the index, for example the built-in `_ingest-api-source` that backs the HTTP and OTLP ingest endpoints, or an external source that pulls from Amazon Kinesis, Apache Kafka, Apache Pulsar, or files announced over SQS. Each row shows the source ID, its type, and whether it is enabled. Click a row to open the source detail page, or use **Create source** to add a new one.
+Data sources are the pipelines Quickwit uses to receive or pull documents for the index, for example the built-in `_ingest-api-source` that backs the HTTP and OTLP ingest endpoints, or an external source that pulls from Amazon Kinesis, Apache Kafka, or files announced over SQS. Each row shows the source ID, its type, and whether it is enabled. Click a row to open the source detail page, or use **Create source** to add a new one.
 
 #### Built-in sources
 
@@ -79,14 +71,13 @@ Quickwit's own sources (`_ingest-api-source`, `_ingest-cli-source`, and any sour
 
 #### Creating a source
 
-Click **Create source** on the Sources tab. Rootprint can create four source types; pick one and Quickwit starts pulling documents into this index as soon as the source is saved.
+Click **Create source** on the Sources tab. Rootprint can create three source types; pick one and Quickwit starts pulling documents into this index as soon as the source is saved.
 
 | Source type                            | Pulls from                                                                                            |
 | -------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | **Amazon Kinesis**                     | A Kinesis data stream.                                                                                 |
-| **File (S3 / SQS notifications)**      | Files referenced by messages on an SQS queue — typically S3 event notifications, or raw object URIs.  |
+| **File (S3 / SQS notifications)**      | Files referenced by messages on an SQS queue, typically S3 event notifications, or raw object URIs.  |
 | **Apache Kafka**                       | A Kafka topic.                                                                                         |
-| **Apache Pulsar**                      | One or more Pulsar topics.                                                                             |
 
 Every source needs a **Source ID** that starts with a letter and is 3–255 characters of letters, digits, `-`, or `_`. The source ID and type are fixed once the source is created.
 
@@ -98,7 +89,7 @@ The form is split into two tabs: **Connection** (where the data comes from) and 
 | Field            | Required | Notes                                                                                                                  |
 | ---------------- | -------- | ---------------------------------------------------------------------------------------------------------------------- |
 | **Stream name**  | Yes      | The Kinesis stream to consume.                                                                                         |
-| **AWS endpoint** | Yes      | Provide either a **Region** (e.g. `us-east-1`) **or** a **Custom endpoint** (e.g. `http://localhost:4566`) — not both. |
+| **AWS endpoint** | Yes      | Provide either a **Region** (e.g. `us-east-1`) **or** a **Custom endpoint** (e.g. `http://localhost:4566`); not both. |
 
 AWS credentials are **not** entered in the form. Quickwit reads them from the environment of the container it runs in (standard `AWS_*` environment variables, an instance role, or other ambient credentials).
 
@@ -118,33 +109,24 @@ As with Kinesis, AWS credentials come from the environment, not the form.
 | Field                | Required | Notes                                                                                                                                                                  |
 | -------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Topic**            | Yes      | The Kafka topic to consume.                                                                                                                                            |
-| **Client params**    | No       | A JSON object of `librdkafka` client properties, including `bootstrap.servers` — for example `{ "bootstrap.servers": "localhost:9092" }`.                              |
+| **Client params**    | No       | A JSON object of `librdkafka` client properties, including `bootstrap.servers`, for example `{ "bootstrap.servers": "localhost:9092" }`.                              |
 | **Client log level** | No       | Verbosity of the Kafka client log: `debug`, `info` (the default), `warn`, or `error`.                                                                                  |
 | **Backfill mode**    | No       | When enabled, Quickwit reads the topic from the beginning once and then stops, instead of following it continuously. Use it for a one-time import.                     |
 
 </Tab>
-<Tab title="Apache Pulsar">
-
-| Field             | Required | Notes                                                                                |
-| ----------------- | -------- | ------------------------------------------------------------------------------------ |
-| **Topics**        | Yes      | One or more Pulsar topics, one per line (e.g. `persistent://public/default/my-topic`). |
-| **Address**       | Yes      | The Pulsar broker URL (e.g. `pulsar://localhost:6650`).                              |
-| **Consumer name** | No       | The consumer name Quickwit registers with Pulsar. Defaults to `quickwit`.            |
-
-</Tab>
 </Tabs>
 
-All four source types also accept three optional fields:
+All three source types also accept three optional fields:
 
 | Field                  | Notes                                                                                                                                                            |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Input format**       | The document format on the wire. Defaults to JSON. Other choices: `json`, `plain_text`, `otlp_logs_json`, `otlp_logs_protobuf`, `otlp_traces_json`, `otlp_traces_protobuf`. |
 | **Number of pipelines**| How many indexing pipelines Quickwit runs for this source. Leave blank to use Quickwit's default of one.                                                          |
-| **VRL script**         | An optional [Vector Remap Language](https://vector.dev/docs/reference/vrl/) program run on each document before indexing — see below. Leave blank to disable.     |
+| **VRL script**         | An optional [Vector Remap Language](https://vector.dev/docs/reference/vrl/) program run on each document before indexing; see below. Leave blank to disable.     |
 
 #### Editing a source
 
-Open any Rootprint-created source — Kinesis, file, Kafka, or Pulsar — from the list to edit it in place. The same Connection and Transform tabs appear, pre-filled with the current configuration; the source ID and type are read-only. Saving applies the change to Quickwit immediately. Sources created directly in Quickwit and built-in sources are shown read-only.
+Open any Rootprint-created source (Kinesis, file, or Kafka) from the list to edit it in place. The same Connection and Transform tabs appear, pre-filled with the current configuration; the source ID and type are read-only. Saving applies the change to Quickwit immediately. Sources created directly in Quickwit and built-in sources are shown read-only.
 
 #### Transforms (VRL)
 
@@ -183,5 +165,5 @@ To prevent accidents, the modal requires you to type the exact index ID before t
 ## Related pages
 
 - [Indexes](/indexes): schema details for the built-in OpenTelemetry index and custom index concepts.
-- [Create a custom index](/configuration/custom-indexes): the YAML structure for non-OpenTelemetry schemas.
+- [Create a custom index](/configuration/custom-indexes): the Create-index form for non-OpenTelemetry schemas.
 - [HTTP endpoint](/send-logs/http): how ingest API keys and the endpoint interact with these sources.

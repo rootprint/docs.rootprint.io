@@ -1,0 +1,71 @@
+---
+title: 'Manage users'
+description: 'Invite teammates, assign admin or user roles, reset passwords, and remove accounts from the Rootprint admin UI.'
+---
+
+**Settings → Users** is where admins control who can sign in to Rootprint and what they can do. It lists every account, and from here admins invite new users, change roles, reset passwords, and delete accounts. Regular users cannot open this screen.
+
+<Note>
+	Rootprint issues invites and password resets as **links**, not emails. It never sends mail
+	itself. You copy the generated setup link and share it with the person over your own channel
+	(chat, email, a ticket), and they use it to choose their password.
+</Note>
+
+## Roles
+
+Every account is either an **admin** or a **user**.
+
+| Role      | Can do                                                                                                                                                                                          |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Admin** | Everything: open **Settings** to manage users, authentication, indexes, service accounts, and API keys. Query every index, including [Admins and Hidden](/configuration/manage-indexes#visibility) ones. |
+| **User**  | Search and read logs in indexes with [Public](/configuration/manage-indexes#visibility) visibility. Cannot open **Settings** or query Admins/Hidden indexes.                                   |
+
+## Invite a user
+
+1. Sign in as an admin.
+2. Open **Settings → Users**.
+3. Click **Invite user**.
+4. Enter the person's **name** and **email**, and pick a **role** (admin or user).
+5. Click **Create**. Rootprint generates a one-time **setup link**.
+6. Copy the link and send it to the person.
+
+When they open the link, Rootprint asks them to choose a password and then signs them in. The account stays inactive until they finish this step.
+
+<Note>
+	If a setup link is lost or expires before it is used, open the user from the list and click
+	**Reissue invite** to generate a fresh one. The old link stops working.
+</Note>
+
+## Change a role
+
+Open a user from the list and switch their role between **admin** and **user**. The change takes effect on their next request. Promote a teammate to **admin** to grant Settings access; demote an admin to **user** to take it away.
+
+<Warning>
+	Keep at least one admin account. If you demote or delete the last admin and lose access, you have
+	to recover at the database level — see [Reset admin password](/configuration/reset-admin-password).
+</Warning>
+
+## Reset a password
+
+When someone is locked out or you want to rotate their credentials, open the user and click **Reset password**. Rootprint clears the current password, signs the user out of all sessions, and generates a fresh **setup link** for them to choose a new one. Share the link the same way as an invite.
+
+<Warning>
+	Users who only ever signed in with Google or GitHub never set a password, so **Reset password**
+	is unavailable for them. Manage their access from the
+	[Authentication](/configuration/google-auth) provider instead.
+</Warning>
+
+## Delete a user
+
+Open the user and click **Delete**. This permanently removes the account and everything it owns: sessions, linked OAuth accounts, API keys, saved views, shared links, and search preferences. There is no undo.
+
+## Single sign-on users
+
+When [Google](/configuration/google-auth) or [GitHub](/configuration/github-auth) OAuth is enabled, the first time someone signs in through an allowed domain or organization Rootprint provisions them automatically with the **user** role — no invite needed. If their email matches an existing account, the two are linked. Promote them to **admin** here if they need it.
+
+## Related
+
+- [Service accounts](/configuration/service-accounts) — non-human credentials for integrations.
+- [Enable Google OAuth](/configuration/google-auth) and [Enable GitHub OAuth](/configuration/github-auth) — let teammates sign in with SSO.
+- [Reset admin password](/configuration/reset-admin-password) — recover a locked-out admin.
+- [User and invite API](/api/overview) — manage users programmatically.

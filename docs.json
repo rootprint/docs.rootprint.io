@@ -109,6 +109,7 @@
             "group": "Get Started",
             "pages": [
               "index",
+              "architecture",
               {
                 "group": "Installation",
                 "pages": ["install/docker-compose", "install/scaling"]
@@ -121,7 +122,6 @@
             "pages": [
               "send-logs/overview",
               "send-logs/otlp",
-              "send-logs/http",
               {
                 "group": "Languages",
                 "pages": [
@@ -133,7 +133,7 @@
               },
               {
                 "group": "Platforms",
-                "pages": ["send-logs/platforms/docker"]
+                "pages": ["send-logs/platforms/docker", "send-logs/platforms/kubernetes"]
               },
               {
                 "group": "Web Servers",
@@ -149,7 +149,8 @@
                   "send-logs/log-agents/fluent-bit",
                   "send-logs/log-agents/vector"
                 ]
-              }
+              },
+              "send-logs/http"
             ]
           },
           {
@@ -160,12 +161,28 @@
             "group": "Manage Rootprint",
             "pages": [
               "configuration/environment-variables",
-              "configuration/google-auth",
-              "configuration/github-auth",
-              "configuration/service-accounts",
-              "configuration/reset-admin-password",
-              "configuration/manage-indexes",
-              "configuration/custom-indexes"
+              {
+                "group": "Authentication",
+                "pages": [
+                  "configuration/google-auth",
+                  "configuration/github-auth"
+                ]
+              },
+              {
+                "group": "Indexes",
+                "pages": [
+                  "configuration/manage-indexes",
+                  "configuration/custom-indexes"
+                ]
+              },
+              {
+                "group": "Users & access",
+                "pages": [
+                  "configuration/users",
+                  "configuration/service-accounts",
+                  "configuration/reset-admin-password"
+                ]
+              }
             ]
           },
           {
@@ -222,10 +239,7 @@
               "source": "api/openapi.json",
               "directory": "api/reference"
             },
-            "pages": [
-              "POST /api/shares",
-              "GET /api/shares/{code}"
-            ]
+            "pages": ["POST /api/shares", "GET /api/shares/{code}"]
           },
           {
             "group": "Index management API",
