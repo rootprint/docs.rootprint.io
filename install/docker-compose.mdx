@@ -9,7 +9,7 @@ Install [Docker](https://www.docker.com) and [Docker Compose](https://docs.docke
 
 ## Self-contained deployment (recommended)
 
-This option deploys Rootprint together with PostgreSQL and a bundled Quickwit instance. Best for getting started quickly or running a self-contained setup.
+This option deploys Rootprint together with PostgreSQL and its embedded Quickwit search engine. Best for getting started quickly or running a self-contained setup.
 
 Download the Compose file and start the services:
 
@@ -78,7 +78,7 @@ This starts three containers:
 
 - **Rootprint**: the web UI, exposed on port `8282`.
 - **PostgreSQL**: Rootprint application state, stored in the `rootprint-db` Docker volume.
-- **Quickwit**: the search and indexing backend, reachable only from the Compose network by default.
+- **Quickwit**: Rootprint's embedded search engine, reachable only from the Compose network by default.
 
 Run `docker compose ps` to confirm all containers are healthy, then open [http://localhost:8282](http://localhost:8282).
 

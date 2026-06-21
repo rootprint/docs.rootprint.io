@@ -1,6 +1,6 @@
 ---
 title: 'Create a custom index'
-description: 'Define a Quickwit index with your own schema, tokenizers, and retention from the Rootprint Create-index form: no YAML required.'
+description: 'Define a custom index with your own schema, tokenizers, and retention from the Rootprint'
 ---
 
 The bundled `otel-logs-v0_9` index works for any application that emits OpenTelemetry logs. For everything else (audit trails, third-party log formats, application events with a specialized schema), create an index with the fields and types your data needs.
@@ -18,7 +18,7 @@ Create indexes from **Settings → Indexes → Create index**: a form, with no Y
 	<img src="/images/indexes/create-index-top.png" alt="Create index form: Index ID, Mode, and Timestamp field" />
 </Frame>
 
-Starts with a letter; 3–255 characters of letters, digits, `-`, or `_`. This is the ID Quickwit stores the index under and the value you pass as the `index` when ingesting.
+Starts with a letter; 3–255 characters of letters, digits, `-`, or `_`. This is the index ID, and the value you pass as the `index` when ingesting.
 
 ## Mode
 
@@ -32,7 +32,7 @@ The schema mode decides what Quickwit does with fields you didn't declare in the
 
 ## Timestamp field
 
-Pick the `datetime` field Quickwit treats as the index's time axis, chosen from the datetime fields you define below. Quickwit uses it to:
+Pick the `datetime` field the index uses as its time axis, chosen from the datetime fields you define below. It is used to:
 
 - Partition splits by time, so time-bounded searches only scan relevant splits.
 - Drive the retention policy.
@@ -46,7 +46,7 @@ Rootprint always stores the timestamp field as `fast`, so its `fast` toggle is h
 	<img src="/images/indexes/create-index-fields.png" alt="Create index field editor: a field with its type, tokenizer, and per-type options" />
 </Frame>
 
-Add a row per field with **Add field**, then set its name, type, and options. At least one field is required, and the toggles come preselected to Quickwit's defaults (`indexed`, `stored`, and `fast` on).
+Add a row per field with **Add field**, then set its name, type, and options. At least one field is required, and the toggles come preselected to the recommended defaults (`indexed`, `stored`, and `fast` on).
 
 ### Field types
 
@@ -123,7 +123,7 @@ The rest of the form is optional and most deployments leave it untouched:
 | Setting                  | What it does                                                                                                                             |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
 | **Index URI**            | Where splits are stored. Defaults to the configured index root. Set it to put this index on a different bucket or path.                 |
-| **Tag fields**           | Field names (one per line) whose values are indexed as split tags, letting Quickwit prune splits before scanning. Best for low-cardinality fields. |
+| **Tag fields**           | Low-cardinality field names (one per line) indexed so the engine can skip data efficiently before scanning. |
 | **Commit timeout (secs)** | How long indexing waits before forcing a commit. Defaults to `60`. Lower it to make new documents searchable sooner, at the cost of more, smaller splits. |
 | **Store source**         | Keep the original document JSON in the index alongside the mapped fields.                                                                |
 | **Index field presence** | Track which fields exist per document so presence queries (does this field exist?) work.                                                 |

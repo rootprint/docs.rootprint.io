@@ -1,24 +1,24 @@
 ---
 title: 'Manage indexes'
-description: 'Inspect, configure, and delete Quickwit indexes from the Rootprint admin UI: the index list, per-index field-role mapping and visibility, fields, sources, and deletion.'
+description: 'Inspect, configure, and delete indexes from Rootprint: the index list, per-index field-role mapping and visibility, fields, sources, and deletion.'
 ---
 
-The **Settings → Indexes** section gives admins a single place to create indexes, inspect every index Quickwit knows about, configure how each is presented in the search UI, manage the data sources that feed it, and delete indexes that are no longer needed.
+The **Settings → Indexes** section gives admins a single place to create indexes, inspect every configured index, configure how each is presented in the search UI, manage the data sources that feed it, and delete indexes that are no longer needed.
 
 <Note>
-	Index actions proxy directly to the Quickwit metastore. Reads (the index list, fields, and
-	sources) are fetched live from Quickwit, and changes such as deleting an index or creating,
-	editing, toggling, or deleting a source apply to Quickwit itself, not just Rootprint's local
-	metadata.
+	Structural changes such as deleting an index or creating, editing, toggling, or deleting a
+	source persist to the index storage backend (the embedded Quickwit engine), not just
+	Rootprint's local presentation metadata. The index list, fields, and sources are read live on
+	each load.
 </Note>
 
 ## Indexes list
 
-Navigate to **Settings → Indexes** to see every index currently known to Quickwit. The list is read live from the metastore on each page load, so an index you create in Quickwit appears here on the next refresh with no restart required. Each row shows the index ID and its visibility (**Public**, **Admins**, or **Hidden**). Use the search box to filter by ID, and click any row to open its detail page.
+Navigate to **Settings → Indexes** to see every configured index. The list is read live on each page load, so an index already present in your attached Quickwit appears here on the next refresh with no restart required. Each row shows the index ID and its visibility (**Public**, **Admins**, or **Hidden**). Use the search box to filter by ID, and click any row to open its detail page.
 
 ## Create an index
 
-Click **Create index** on the **Settings → Indexes** page to define a new Quickwit index from a form — index ID, schema mode, field mappings, timestamp field, retention, and more — with no YAML or direct Quickwit calls. Rootprint creates the index in Quickwit and opens its detail page when you save. The same form is available over the API as `POST /api/indexes`.
+Click **Create index** on the **Settings → Indexes** page to define a new index from a form — index ID, schema mode, field mappings, timestamp field, retention, and more — with no YAML required. Rootprint creates the index and opens its detail page when you save. The same form is available over the API as `POST /api/indexes`.
 
 See [Create a custom index](/configuration/custom-indexes) for a walkthrough of every field, the field types and tokenizers the form offers, and the schemas that need direct Quickwit configuration.
 
@@ -28,11 +28,11 @@ The detail page header shows the index ID and a **Delete** action. Below it are 
 
 ### Configuration tab
 
-The Configuration tab holds the Rootprint-specific presentation settings for the index: a display name, search visibility, and the field-role mappings that tell Rootprint which fields carry the log level, message, stacktrace, and search context. These settings live in Rootprint, not Quickwit, and changing them never touches the underlying index data.
+The Configuration tab holds the Rootprint-specific presentation settings for the index: a display name, search visibility, and the field-role mappings that tell Rootprint which fields carry the log level, message, stacktrace, and search context. These settings control presentation only and never touch the underlying index data.
 
 #### Display name
 
-An optional human-readable label shown in the index selector and throughout the search UI. When left blank, Rootprint uses the raw Quickwit index ID. Use a display name to present friendlier names to your users (e.g. "Application Logs" instead of `otel-logs-v0_9`).
+An optional human-readable label shown in the index selector and throughout the search UI. When left blank, Rootprint uses the index ID. Use a display name to present friendlier names to your users (e.g. "Application Logs" instead of `otel-logs-v0_9`).
 
 #### Visibility
 
@@ -59,7 +59,7 @@ All field settings accept dot-notation paths to reach nested or JSON-object fiel
 
 ### Fields tab
 
-Lists every field in the index schema with its type and a **Fast** indicator (whether the field is stored in column-oriented storage for efficient ranges, aggregations, and sorting). Filter by name to find a specific field. This is a read-only view of what Quickwit reports. To change field definitions you must recreate the index in Quickwit.
+Lists every field in the index schema with its type and a **Fast** indicator (whether the field is stored in column-oriented storage for efficient ranges, aggregations, and sorting). Filter by name to find a specific field. This is a read-only view of the index schema. To change field definitions, recreate the index from the Create-index form.
 
 ### Sources tab
 
@@ -121,12 +121,12 @@ All three source types also accept three optional fields:
 | Field                  | Notes                                                                                                                                                            |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Input format**       | The document format on the wire. Defaults to JSON. Other choices: `json`, `plain_text`, `otlp_logs_json`, `otlp_logs_protobuf`, `otlp_traces_json`, `otlp_traces_protobuf`. |
-| **Number of pipelines**| How many indexing pipelines Quickwit runs for this source. Leave blank to use Quickwit's default of one.                                                          |
+| **Number of pipelines**| Ingestion concurrency for this source. Leave blank to use the default of one.                                                          |
 | **VRL script**         | An optional [Vector Remap Language](https://vector.dev/docs/reference/vrl/) program run on each document before indexing; see below. Leave blank to disable.     |
 
 #### Editing a source
 
-Open any Rootprint-created source (Kinesis, file, or Kafka) from the list to edit it in place. The same Connection and Transform tabs appear, pre-filled with the current configuration; the source ID and type are read-only. Saving applies the change to Quickwit immediately. Sources created directly in Quickwit and built-in sources are shown read-only.
+Open any Rootprint-created source (Kinesis, file, or Kafka) from the list to edit it in place. The same Connection and Transform tabs appear, pre-filled with the current configuration; the source ID and type are read-only. Saving applies the change immediately. Sources created directly in the attached Quickwit and system sources are shown read-only.
 
 #### Transforms (VRL)
 
@@ -144,7 +144,7 @@ Leave the script blank to ingest documents unchanged.
 The source detail page header offers three actions for editable sources:
 
 - **Disable / Enable** pauses or resumes ingestion from the source without removing it.
-- **Reset checkpoint** clears Quickwit's position for the source so it re-processes from the beginning.
+- **Reset checkpoint** clears the source's ingestion position so it re-processes from the beginning.
 - **Delete** removes the source from Quickwit (confirmation required). Ingestion stops; you can recreate it later.
 
 <Warning>
@@ -154,13 +154,9 @@ The source detail page header offers three actions for editable sources:
 
 ## Deleting an index
 
-The **Delete** button in the index header permanently removes the index from Quickwit along with every document, split, and source configured on it. After the Quickwit delete succeeds, Rootprint also cleans up its own records for the index:
+The **Delete** button in the index header permanently removes the index along with every document and source configured on it.
 
-- Field-role and visibility configuration.
-- Per-user preferences, saved views, shared links, and search audit records tied to the index.
-- Ingest API keys: because each key is scoped to exactly one index, any key pointing at the deleted index is removed.
-
-To prevent accidents, the modal requires you to type the exact index ID before the **Delete** button becomes active. There is no undo.
+To prevent accidents, the modal requires you to type the exact index ID before the **Delete**.
 
 ## Related pages
 

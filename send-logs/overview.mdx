@@ -6,7 +6,7 @@ description: 'Pick the right ingestion path: OTLP for anything OpenTelemetry, th
 Rootprint accepts logs two ways:
 
 - **OTLP HTTP**: OpenTelemetry logs over HTTP (protobuf). Use this with any OTEL SDK, the OTEL Collector, or a sidecar that speaks OTLP.
-- **Rootprint HTTP endpoint**: an authenticated endpoint that forwards NDJSON straight to a Quickwit ingest API. Use this when you control the wire format and want to write to a custom-schema index.
+- **Rootprint HTTP endpoint**: an authenticated endpoint that ingests NDJSON into your target index. Use this when you control the wire format and want to write to a custom-schema index.
 
 ## Pick a path
 
