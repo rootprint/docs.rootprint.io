@@ -7,6 +7,8 @@ description: 'Install Rootprint with Docker Compose'
 
 Install [Docker](https://www.docker.com) and [Docker Compose](https://docs.docker.com/compose/) before continuing.
 
+Rootprint requires **Quickwit `0.9.0`**. The bundled Compose files pin `quickwit/quickwit:v0.9.0`. Earlier releases are not supported: some features are missing and others behave incorrectly.
+
 ## Self-contained deployment (recommended)
 
 This option deploys Rootprint together with PostgreSQL and its embedded Quickwit search engine. Best for getting started quickly or running a self-contained setup.
@@ -37,7 +39,7 @@ services:
       retries: 10
 
   quickwit:
-    image: quickwit/quickwit:v0.9.0-rc
+    image: quickwit/quickwit:v0.9.0
     restart: unless-stopped
     volumes:
       - rootprint-quickwit:/quickwit/qwdata
@@ -91,7 +93,7 @@ Add the following environment variables to the `quickwit` service in your `docke
 ```yaml
 services:
   quickwit:
-    image: quickwit/quickwit:v0.9.0-rc
+    image: quickwit/quickwit:v0.9.0
     environment:
       QW_DEFAULT_INDEX_ROOT_URI: s3://your-bucket-name/indexes
       QW_METASTORE_URI: s3://your-bucket-name/metastore
@@ -142,9 +144,10 @@ Quickwit will then be reachable at `http://<host-ip>:7280` from other machines o
 ## Connect to an existing Quickwit instance
 
 <Warning>
-	**Prerequisite: Quickwit `0.9` required.** Rootprint relies on Quickwit `0.9`
-	Ingest V2 behavior and does not support `0.8` or earlier. Confirm your instance's version before
-	connecting it.
+	**Prerequisite: Quickwit `0.9.0` required.** Rootprint relies on Quickwit `0.9.0` Ingest V2
+	behavior and the `otel-logs-v0_9` schema. Anything older — `0.8.x` and earlier — is unsupported and may fail or silently lose functionality. Confirm your
+	instance's version with `curl http://your-quickwit-host:7280/api/v1/version` before connecting
+	it.
 </Warning>
 
 If you already have a Quickwit cluster running, deploy Rootprint with PostgreSQL and point it at your Quickwit instance.
@@ -188,7 +191,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://rootprint:rootprint@db:5432/rootprint
-      QUICKWIT_URL: http://your-quickwit-host:7280
+      QUICKWIT_URL: http://your-quickwit-host:7280   # Quickwit 0.9.0 required
       ORIGIN: http://localhost:8282   # change to your public URL
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8282/api/health || exit 1"]

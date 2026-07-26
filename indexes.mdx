@@ -7,7 +7,7 @@ Indexes organize your logs into searchable log sources. Each index defines a sch
 
 ## Built-in OpenTelemetry index
 
-Rootprint ships with `otel-logs-v0_9` as its default OpenTelemetry logs index, the current schema version bundled with Quickwit `v0.9.0-rc`. If you attach an older Quickwit release (0.8.x and earlier), the default index is named `otel-logs-v0_7` instead, so check the index name before assuming. The schema maps directly to the [OpenTelemetry Log Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/) and is ready to use without any configuration.
+Rootprint ships with `otel-logs-v0_9` as its default OpenTelemetry logs index, the schema version bundled with Quickwit `v0.9.0`. Older Quickwit releases ship `otel-logs-v0_7` instead and are not supported. The schema maps directly to the [OpenTelemetry Log Data Model](https://opentelemetry.io/docs/specs/otel/logs/data-model/) and is ready to use without any configuration.
 
 ### Rootprint field defaults
 
