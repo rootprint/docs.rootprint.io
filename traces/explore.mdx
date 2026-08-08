@@ -1,0 +1,60 @@
+---
+title: 'Read a trace'
+description: 'Open a trace from a log or by ID, read the waterfall and span details, and configure which log field carries the trace ID.'
+---
+
+A trace opens as a waterfall of spans with a detail panel for the selected span. Trace exploration is detail-only — see [Traces](/traces/overview) for why there is no trace list.
+
+## Open a trace
+
+**From a log.** Open any log in the detail drawer. If the log carries a trace ID, a **Trace** tab appears alongside the other tabs, showing the waterfall inline. Click through for the full page.
+
+**By trace ID.** Paste a 32-character hex trace ID into the log search box. Rootprint recognizes it and opens that trace directly instead of running a search.
+
+**By URL.** A trace has a permanent address at `/traces/<traceId>`. Share it like any other link.
+
+## The waterfall
+
+Each span is a bar positioned by its start offset and sized by its duration. Spans are colored by service, so a request crossing four services is four colors. The root span's status is shown in the header, and spans that ended in an error are marked.
+
+Selecting a span opens its detail panel.
+
+## Span details
+
+The detail panel has three tabs. A tab with nothing in it is disabled and skipped when you move between spans with the keyboard.
+
+| Tab | Contents |
+| --- | -------- |
+| **Overview** | The span's name, service, timing, status, and its attributes. |
+| **Parameters** | Attributes the span carries as call parameters. |
+| **Events** | Timestamped events recorded on the span, each with its own fields. |
+
+Two attributes are hidden from the panel because they restate the span's own error state, which the waterfall already shows: `otel.status_code` and `error`. `span.kind` and `otel.status_description` are kept — they carry information nothing else displays.
+
+## Jump back to logs
+
+A span links to the logs it produced, with a count. This is the reverse of opening a trace from a log: from a slow or failing span, you go straight to what that span logged.
+
+When a trace's logs number 1,000 or more, Rootprint stops computing per-span counts and omits them; the trace-wide link back to logs still works.
+
+## Truncated traces
+
+A trace larger than 2,000 spans returns a subset, and the view says so. Because the underlying query is unsorted, the spans you get are an arbitrary subset rather than the first 2,000 by time — a truncated waterfall is not the beginning of the trace, it is a sample of it.
+
+## Correlate logs with traces
+
+Correlation in both directions depends on one per-index setting: **Trace ID field**.
+
+| Setting | Default | What it controls |
+| ------- | ------- | ---------------- |
+| **Trace ID field** | `trace_id` | The dot-notation path to the trace ID inside a log document. |
+
+The default matches the OpenTelemetry log schema, so the bundled `otel-logs-v0_9` index needs no configuration. For a custom schema, set this to wherever your trace ID lives — for example `attributes.traceId` — on the index's **Configuration** tab under **Settings → Indexes**. See [Manage indexes](/configuration/manage-indexes#field-role-mappings).
+
+Until this points at a real field, logs and traces stay unlinked: no **Trace** tab in the log drawer, and no log counts on spans.
+
+## Related
+
+- [Traces](/traces/overview)
+- [Send traces](/traces/send)
+- [Manage indexes](/configuration/manage-indexes#field-role-mappings)

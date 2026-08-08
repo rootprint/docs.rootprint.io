@@ -100,6 +100,13 @@ NOT service_name:IN [cron healthcheck] AND severity_text:ERROR
 trace_id:4bf92f3577b34da6a3ce929d0e0e4736
 ```
 
+<Tip>
+	Pasting a bare 32-character hex trace ID into the search box opens that trace directly instead of
+	running a search. Wrap it in quotes to search for it as text instead. Use the `trace_id:` field
+	query above when you want the **logs** for a trace rather than its spans. See
+	[Read a trace](/traces/explore).
+</Tip>
+
 ## Escaping special characters
 
 These characters are reserved by the query parser and must be backslash-escaped to appear in a value:

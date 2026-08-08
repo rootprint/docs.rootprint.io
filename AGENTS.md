@@ -9,9 +9,12 @@ For repo-wide rules (Bun, Prettier, no tests), see the root `AGENTS.md`. For Min
 ## Run / Build
 
 ```bash
-mint dev               # local preview
-mint broken-links      # link check — run before merging content changes
+mint dev                                            # local preview
+mint broken-links --check-anchors --check-redirects # link check — run before merging content changes
+mint validate                                       # strict-mode build validation
 ```
+
+`mint` parses every `.md` file under the repo root, not just docs content — move scratch or process-artifact directories aside before a run, or the check aborts on a parse error before reaching any real page.
 
 (Mintlify's `mint` CLI is run directly, not through Bun — this workspace doesn't have a `package.json`.)
 
@@ -25,6 +28,7 @@ mint broken-links      # link check — run before merging content changes
 | `install/` | Install guides (Docker Compose, scaling, etc.) |
 | `configuration/` | Env vars, index config, auth, admin operations |
 | `send-logs/` | Language SDKs (`languages/`), log agents (`log-agents/`), web servers (`web-servers/`), platforms (`platforms/`), and protocol guides (HTTP, OTLP) |
+| `traces/` | Trace overview, sending spans over OTLP, and reading a trace |
 | `search/` | Query language reference |
 | `api/` | HTTP API reference |
 | `tutorials/` | End-to-end recipes (e.g. Linux auth audit with Vector) |
@@ -38,7 +42,9 @@ Use these terms consistently across pages:
 
 - **index** — a Quickwit index. Not "dataset" or "collection".
 - **view** — a saved search/filter combination. Not "preset" or "filter set".
-- **ingest API key** — the bearer credential for log ingestion, created in **Settings → API keys**. It uses the `lwit_` prefix and is scoped to one index.
+- **ingest API key** — the bearer credential for log and span ingestion, created in **Settings → API keys**. It uses the `rp_` prefix and is scoped to one index. That index applies to log ingestion only; spans always go to the span store.
+- **span store** — the single Quickwit index holding OTLP spans, named by `TRACE_INDEX_ID`. Not "trace index" in user-facing copy.
+- **trace ID field** — the per-index setting naming the path to a trace ID inside a log document. Not "correlation field".
 - **query API key** — umbrella term for read-only `rpk_` credentials that grant `logs: read` on log query endpoints. Use the specific term when the owner matters.
 - **personal API key** / **personal access token (PAT)** — a query API key created by a signed-in user from **Settings → Profile**. It authenticates as that user.
 - **service account** — a non-human account created by an admin from **Settings → Service accounts**. Service account API keys are query API keys for shared integrations.

@@ -9,7 +9,7 @@ A **query API key** lets a tool, script, dashboard, or AI agent call Rootprint's
 
 - **Prefix `rpk_`.** Personal keys and service account keys use the same prefix. Rootprint shows the full value once, at creation. Store it like a password; Rootprint only keeps a short display fragment afterwards.
 - **Read-only.** A query key grants `logs: read`. Management endpoints for indexes, sources, users, settings, and keys reject it with `401`.
-- **Scoped to the owner, not an index.** A personal key inherits its user's visibility. A service account key inherits the service account's visibility. Ingest API keys use a different `lwit_` prefix and are scoped to one write target.
+- **Not index-scoped.** A query key reads every index. Ingest API keys use a different `rp_` prefix and are scoped to one write target.
 - **No expiry.** Query keys do not expire. Revoke a key to cut off access.
 
 ## Create a personal key

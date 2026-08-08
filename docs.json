@@ -154,6 +154,10 @@
             ]
           },
           {
+            "group": "Traces",
+            "pages": ["traces/overview", "traces/send", "traces/explore"]
+          },
+          {
             "group": "Search Logs",
             "pages": ["search/query-language", "indexes"]
           },
@@ -215,6 +219,14 @@
               "GET /api/indexes/{indexId}/fields/values",
               "GET /api/indexes/{indexId}/logs/export"
             ]
+          },
+          {
+            "group": "Traces API",
+            "openapi": {
+              "source": "api/openapi.json",
+              "directory": "api/reference"
+            },
+            "pages": ["POST /v1/traces", "GET /api/traces/{traceId}"]
           },
           {
             "group": "Saved views",
