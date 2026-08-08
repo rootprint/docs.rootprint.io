@@ -5,6 +5,15 @@ description: 'How Rootprint stores OTLP spans, how a trace is reached from a log
 
 Rootprint ingests OpenTelemetry spans over OTLP and pairs them with your logs. A log carrying a trace ID opens the trace it belongs to, and every span in that trace links back to the logs it produced.
 
+<Frame>
+	<img
+		src="/images/traces/trace-detail.png"
+		alt="A trace in Rootprint: a 24-span waterfall colored by service, with the selected span's Overview tab showing status, HTTP method, timing, and top operations"
+	/>
+</Frame>
+
+A trace opens as a waterfall. Spans are colored by service, the header carries the root operation and total duration, and selecting a span opens its details beside the waterfall. **Logs for this trace** jumps to the logs those spans produced.
+
 ## The span store
 
 Every span goes into **one** Quickwit index, the span store, named by the `TRACE_INDEX_ID` environment variable. It defaults to `otel-traces-v0_9`.
