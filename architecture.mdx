@@ -40,11 +40,10 @@ flowchart LR
     idx -->|publish metadata| meta
 ```
 
-1. **Producers** push logs to Rootprint's ingest gateway: OTLP over HTTP at `/v1/logs` or NDJSON at `/api/ingest/ndjson`. Both require an ingest API key (prefix `rp_`) that is scoped to exactly one index.
+1. **Producers** push telemetry to Rootprint's ingest gateway: OTLP logs at `/v1/logs`, OTLP spans at `/v1/traces`, or NDJSON logs at `/api/ingest/ndjson`. All three require an ingest API key (prefix `rp_`) that is scoped to exactly one index. That scope routes **logs** only — spans always go to the span store named by `TRACE_INDEX_ID`, whatever index the key is scoped to. See [Traces](/traces/overview).
 2. Rootprint authenticates the key and **hands the data to its Quickwit engine's ingest API**. It does not transform the payload. The target index defines the schema.
 3. **Pull-based sources** (Kinesis, Kafka, S3/SQS) are the exception: you configure them through Rootprint, but Quickwit pulls that data **directly from the source, bypassing the gateway**.
 4. Quickwit **indexers** write the indexed data as *splits* to index storage and **publish their metadata to the metastore**.
-5. **Spans** arriving at `/v1/traces` are the exception to per-key routing: they always go to the span store named by `TRACE_INDEX_ID`, whatever index the key is scoped to. See [Traces](/traces/overview).
 
 See [Send logs](/send-logs/overview) for the full list of ingestion paths.
 

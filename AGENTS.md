@@ -84,5 +84,6 @@ Invoke the `mintlify` skill for:
 No automated tests. Pre-merge checks:
 
 ```bash
-mint broken-links
+mint broken-links --check-anchors --check-redirects
+mint validate
 ```

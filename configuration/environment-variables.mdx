@@ -26,7 +26,7 @@ Rootprint refuses to start if any required variable is missing, empty, or (for U
 | `BETTER_AUTH_SECRET` | Auto-generated   | Secret used to sign session tokens. If unset, Rootprint generates a random 32-byte secret on first boot and persists it in the `app_settings` table; subsequent boots read the row. If set, must be ≥32 characters or startup fails.       |
 | `FRONTEND_URL`       | Same as `ORIGIN` | Additional allowed CORS origin. Use this only in split deployments where the SPA is hosted on a different origin than the API. Cookie domain, invite link host, and Better Auth `baseURL` always derive from `ORIGIN`, not this.    |
 | `PORT`               | `8282`           | HTTP listen port. Remap the port with the compose `ports:` block instead of changing this.                                                                                                                                     |
-| `TRACE_INDEX_ID`     | `otel-traces-v0_9` | Quickwit index holding OTLP spans. Every trace read and write resolves to this one index. |
+| `TRACE_INDEX_ID`     | `otel-traces-v0_9` | The **span store**: the one Quickwit index holding OTLP spans. Every trace read and write resolves to it. |
 
 <Warning>
 	A wrong `TRACE_INDEX_ID` fails silently. Rootprint treats a missing span store as an empty trace

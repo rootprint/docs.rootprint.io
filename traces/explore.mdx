@@ -3,15 +3,15 @@ title: 'Read a trace'
 description: 'Open a trace from a log or by ID, read the waterfall and span details, and configure which log field carries the trace ID.'
 ---
 
-A trace opens as a waterfall of spans with a detail panel for the selected span. Trace exploration is detail-only — see [Traces](/traces/overview) for why there is no trace list.
+A trace opens as a waterfall of spans with a detail panel for the selected span. You arrive at a specific trace rather than browsing a list — see [Traces](/traces/overview#how-you-reach-a-trace) for the ways in.
 
 ## Open a trace
 
 **From a log.** Open any log in the detail drawer. If the log carries a trace ID, a **Trace** tab appears alongside the other tabs, showing the waterfall inline. Click through for the full page.
 
-**By trace ID.** Paste a 32-character hex trace ID into the log search box. Rootprint recognizes it and opens that trace directly instead of running a search.
+**By trace ID.** Paste a trace ID — 32 hexadecimal characters — into the log search box. Rootprint recognizes it and opens that trace directly instead of running a search. Case does not matter here: the search box lowercases what you paste. An all-zeros ID falls through to a normal search, because OTLP writes that value on logs that carry no trace context.
 
-**By URL.** A trace has a permanent address at `/traces/<traceId>`. Share it like any other link.
+**By URL.** A trace has a permanent address at `/traces/<traceId>`. Share it like any other link. The URL and `GET /api/traces/{traceId}` both take the canonical form only — exactly 32 lowercase hex characters, not all zeros — and reject anything else with `400`.
 
 ## The waterfall
 

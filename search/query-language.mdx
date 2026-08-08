@@ -101,10 +101,11 @@ trace_id:4bf92f3577b34da6a3ce929d0e0e4736
 ```
 
 <Tip>
-	Pasting a bare 32-character hex trace ID into the search box opens that trace directly instead of
-	running a search. Wrap it in quotes to search for it as text instead. Use the `trace_id:` field
-	query above when you want the **logs** for a trace rather than its spans. See
-	[Read a trace](/traces/explore).
+	Pasting a bare trace ID — 32 hexadecimal characters, in any case — into the search box opens that
+	trace directly instead of running a search. An all-zeros ID is exempt and searches as normal,
+	since OTLP writes it on logs with no trace context. Wrap the ID in quotes to search for it as text
+	instead. Use the `trace_id:` field query above when you want the **logs** for a trace rather than
+	its spans. See [Read a trace](/traces/explore).
 </Tip>
 
 ## Escaping special characters
