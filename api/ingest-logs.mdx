@@ -34,7 +34,7 @@ Set `Content-Type: application/x-ndjson` (or `application/json`). The body must 
 
 ```bash
 curl -X POST 'https://your-rootprint-host/api/ingest/ndjson' \
-  -H 'Authorization: Bearer lwit_abc123' \
+  -H 'Authorization: Bearer rp_abc123' \
   -H 'Content-Type: application/x-ndjson' \
   --data-binary @- <<'EOF'
 {"timestamp_nanos":1776340800000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{"user_id":"alice"},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":1776340800000000000,"severity_number":9,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
@@ -66,6 +66,11 @@ Example success response:
 	search engine logs the failure on the server but the API response stays the same. Inspect the
 	search engine's stdout (or your log shipper) when you suspect documents are being silently dropped.
 </Note>
+
+<Tip>
+	The OTLP endpoint behaves differently as of 0.4.0: `POST /v1/logs` reports per-record rejections
+	through `partial_success`. See [OTLP reference](/send-logs/otlp#response-codes).
+</Tip>
 
 ## Error responses
 

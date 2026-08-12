@@ -35,19 +35,21 @@ Every major OTEL SDK already defaults to protobuf for HTTP logs, with one except
 
 ## Response codes
 
-Rootprint maps OTLP errors to gRPC-style status codes. Upstream rejections (malformed protobuf, schema mismatch, oversized payload) are normalized to `400`, and any upstream `5xx` or network failure is clamped to a retryable `503`.
+Rootprint maps OTLP errors to gRPC-style status codes. Upstream `4xx` statuses pass through as sent, and any upstream `5xx` or network failure is clamped to a retryable `503`.
 
 | Status | Meaning                                                                 |
 | ------ | ----------------------------------------------------------------------- |
-| `200`  | Accepted. Empty body.                                                   |
+| `200`  | Accepted. Empty body when every record was accepted, or carrying `partial_success` when Quickwit rejected some. |
 | `400`  | Empty request body, or Quickwit rejected the payload.                   |
 | `401`  | Missing Bearer API key.                                                 |
 | `403`  | Invalid or unknown ingest API key.                                      |
+| `413`  | Payload too large. Usually a reverse proxy, but an upstream `413` passes through too.  |
 | `415`  | `Content-Type` is not `application/x-protobuf`.                         |
 | `429`  | Upstream Quickwit is rate-limited. `Retry-After` is echoed (default 5). |
 | `503`  | Upstream Quickwit error or network failure. `Retry-After: 5`.           |
 
-A `413` never originates from Rootprint — it means a reverse proxy in front of Rootprint rejected an oversized request body. Lower the agent's batch size (`batch.max_bytes` in Vector, `send_batch_max_size` on the Collector's `batch` processor) or raise the proxy's body limit.
+
+A `413` usually means a reverse proxy in front of Rootprint rejected an oversized request body, though an upstream `413` from Quickwit now passes through unchanged as well. Lower the agent's batch size (`batch.max_bytes` in Vector, `send_batch_max_size` on the Collector's `batch` processor) or raise the proxy's body limit.
 
 ## Environment variables
 
@@ -63,8 +65,16 @@ A `413` never originates from Rootprint — it means a reverse proxy in front of
 
 The target index is pinned by the ingest API key, not by the SDK. To write to a different index, create an ingest API key scoped to that index in **Settings → API keys** and use its value in the `Authorization` header. See [Manage indexes](/configuration/manage-indexes).
 
+<Note>
+	Rootprint also accepts OTLP **traces** at `POST /v1/traces`, with the same ingest key and the
+	same protobuf-only rule. Spans ignore the index scope described above: they always go to the span
+	store named by `TRACE_INDEX_ID`, whatever index the key is pinned to. See
+	[Send traces](/traces/send).
+</Note>
+
 ## Related
 
 - [Send logs overview](/send-logs/overview)
+- [Send traces](/traces/send)
 - [Indexes](/indexes)
 - [Manage indexes](/configuration/manage-indexes)

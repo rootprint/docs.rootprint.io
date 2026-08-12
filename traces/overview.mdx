@@ -1,0 +1,64 @@
+---
+title: 'Traces'
+description: 'How Rootprint stores OTLP spans, how a trace is reached from a log, and what trace support does and does not cover in this release.'
+---
+
+Rootprint ingests OpenTelemetry spans over OTLP and pairs them with your logs. A log carrying a trace ID opens the trace it belongs to, and every span in that trace links back to the logs it produced.
+
+<Frame>
+	<img
+		src="/images/traces/trace-detail.png"
+		alt="A trace in Rootprint: a 24-span waterfall colored by service, with the selected span's Overview tab showing status, HTTP method, timing, and top operations"
+	/>
+</Frame>
+
+A trace opens as a waterfall. Spans are colored by service, the header carries the root operation and total duration, and selecting a span opens its details beside the waterfall. **Logs for this trace** jumps to the logs those spans produced.
+
+## The span store
+
+Every span goes into **one** Quickwit index, the span store, named by the `TRACE_INDEX_ID` environment variable. It defaults to `otel-traces-v0_9`.
+
+Spans always land there regardless of which index the ingest key was created against. There is no per-key span destination.
+
+The span store is not readable as a log index. The log explorer, histogram, field-values, and export endpoints all reject it with `404`.
+
+## How you reach a trace
+
+There are exactly two ways in:
+
+- **From a log.** Open a log in the detail drawer and switch to the **Trace** tab.
+- **By trace ID.** Paste a trace ID — 32 hexadecimal characters — into the log search box.
+
+## Trace retention and time ranges
+
+Opening a trace runs a raw `trace_id` search with **no time bound**, so a trace stays openable for as long as its spans are retained. The search window you had applied to your logs does not limit it.
+
+## Limits
+
+| Limit | Behavior |
+| ----- | -------- |
+| 2,000 spans per trace | Past the cap, the response sets `truncated` and the trace view says so. The spans you get are an arbitrary subset, not the first 2,000 by time. |
+| Duplicate spans | OTLP retries produce duplicate span documents. Rootprint collapses them by `span_id`. |
+| No per-index authorization | Any user or query API key with `logs: read` can read any trace by ID. |
+
+<Note>
+	**Trace IDs are not authorization.** The trace endpoint is not nested under an index, so there is
+	no per-index gate on it. This matches log search, where the same holds for any index a key can
+	reach.
+</Note>
+
+## Requirements
+
+- Quickwit `0.9.0` or later. See [Environment variables](/configuration/environment-variables).
+- An ingest API key. Any existing key works — you do not create a separate one for spans.
+
+## Next steps
+
+<CardGroup cols={2}>
+	<Card title="Send traces" icon="send" href="/traces/send">
+		Point an OpenTelemetry SDK or Collector at the trace endpoint.
+	</Card>
+	<Card title="Read a trace" icon="git-branch" href="/traces/explore">
+		The waterfall, span details, and correlating spans with logs.
+	</Card>
+</CardGroup>

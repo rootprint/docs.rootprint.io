@@ -26,6 +26,33 @@ Rootprint refuses to start if any required variable is missing, empty, or (for U
 | `BETTER_AUTH_SECRET` | Auto-generated   | Secret used to sign session tokens. If unset, Rootprint generates a random 32-byte secret on first boot and persists it in the `app_settings` table; subsequent boots read the row. If set, must be ≥32 characters or startup fails.       |
 | `FRONTEND_URL`       | Same as `ORIGIN` | Additional allowed CORS origin. Use this only in split deployments where the SPA is hosted on a different origin than the API. Cookie domain, invite link host, and Better Auth `baseURL` always derive from `ORIGIN`, not this.    |
 | `PORT`               | `8282`           | HTTP listen port. Remap the port with the compose `ports:` block instead of changing this.                                                                                                                                     |
+| `TRACE_INDEX_ID`     | `otel-traces-v0_9` | The **span store**: the one Quickwit index holding OTLP spans. Every trace read and write resolves to it. |
+| `LOG_LEVEL`          | `info`           | API log level. Accepts any Pino level: `trace`, `debug`, `info`, `warn`, `error`, `fatal`.                                                                                                                                       |
+
+## Rate limiting
+
+Two in-memory limiters share one window. Both are per process, so a horizontally scaled deployment multiplies the effective limit by the replica count — put the authoritative limit at your reverse proxy if you need a cluster-wide one.
+
+| Variable                | Default | Description                                                                                                                                            |
+| ----------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `RATE_LIMIT_WINDOW_MS`  | `60000` | Window length in milliseconds, shared by both limiters. Also the `Retry-After` value returned with a `429`.                                             |
+| `PUBLIC_AUTH_RATE_LIMIT`| `30`    | Requests per client IP per window on unauthenticated auth routes (sign-in, password reset, invite acceptance).                                          |
+| `READ_RATE_LIMIT`       | `300`   | Requests per signed-in user per window on search, histogram, field values, trace reads, and share resolution.                                           |
+| `TRUST_PROXY_HOPS`      | `0`     | Number of trusted reverse proxies in front of Rootprint that append to `X-Forwarded-For`. `0` uses the TCP peer address.                                |
+
+<Warning>
+	Set `TRUST_PROXY_HOPS` to your **real** proxy count — `1` for a single nginx or Caddy, `2` for a CDN
+	in front of a load balancer. Setting it higher than the actual number lets a client prepend
+	`X-Forwarded-For` entries and pick which IP the auth limiter counts against, defeating it.
+</Warning>
+
+Ingest endpoints (`/v1/logs`, `/v1/traces`, `/api/ingest`) are **not** rate-limited by Rootprint. A `429` from them is Quickwit's, passed through.
+
+<Warning>
+	A wrong `TRACE_INDEX_ID` fails silently. Rootprint treats a missing span store as an empty trace
+	so that a logs-only deployment does not error, which means a typo looks like "no spans" rather
+	than a misconfiguration.
+</Warning>
 
 ## Docker Compose example
 

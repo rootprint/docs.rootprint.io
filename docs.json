@@ -154,6 +154,10 @@
             ]
           },
           {
+            "group": "Traces",
+            "pages": ["traces/overview", "traces/send", "traces/explore"]
+          },
+          {
             "group": "Search Logs",
             "pages": ["search/query-language", "indexes"]
           },
@@ -217,6 +221,14 @@
             ]
           },
           {
+            "group": "Traces API",
+            "openapi": {
+              "source": "api/openapi.json",
+              "directory": "api/reference"
+            },
+            "pages": ["POST /v1/traces", "GET /api/traces/{traceId}"]
+          },
+          {
             "group": "Saved views",
             "openapi": {
               "source": "api/openapi.json",
@@ -245,11 +257,13 @@
             },
             "pages": [
               "GET /api/indexes",
+              "POST /api/indexes",
               "GET /api/indexes/{indexId}",
               "PATCH /api/indexes/{indexId}",
               "DELETE /api/indexes/{indexId}",
               "GET /api/indexes/{indexId}/fields",
               "GET /api/indexes/{indexId}/config",
+              "PUT /api/indexes/{indexId}/quickwit-config",
               "GET /api/indexes/{indexId}/stats",
               "GET /api/indexes/{indexId}/preferences",
               "PUT /api/indexes/{indexId}/preferences"
@@ -372,6 +386,7 @@
             "pages": [
               "GET /api/health",
               "GET /api/admin/cluster",
+              "GET /api/admin/cluster/document-status",
               "GET /api/admin/activity/summary",
               "GET /api/admin/activity/latency",
               "GET /api/admin/activity/top-actors",

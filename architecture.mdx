@@ -11,10 +11,10 @@ Rootprint owns the entire log experience: who can sign in, which indexes they se
 
 | Layer | Responsibilities |
 | ----- | ---------------- |
-| **Rootprint**, the platform (single-node) | Web UI, authentication and users, OAuth (Google/GitHub), the ingest gateway, the search and API layer, index **visibility** and access rules, **field-role** presentation mapping, saved views, share links, and the activity/audit trail. |
+| **Rootprint**, the platform (single-node) | Web UI, authentication and users, OAuth (Google/GitHub), the ingest gateway, the search and API layer, access rules, **field-role** presentation mapping, log-to-trace correlation, saved views, share links, and the activity/audit trail. |
 | **Quickwit**, the search engine (scales horizontally) | Indexing pipelines, full-text search and aggregations, split storage, the metastore, and pull-based sources (Amazon Kinesis, Apache Kafka, files via S3/SQS). |
 
-The engine carries the indexing and search load, so Rootprint stays lightweight and single-node while Quickwit grows to match your volume. See [Scaling beyond a single node](/install/scaling) for how to grow it.q
+The engine carries the indexing and search load, so Rootprint stays lightweight and single-node while Quickwit grows to match your volume. See [Scaling beyond a single node](/install/scaling) for how to grow it.
 
 ## How data flows
 
@@ -25,7 +25,7 @@ flowchart LR
     apps[Apps and log agents]
     pull[Kinesis · Kafka · S3/SQS]
     subgraph rp[Rootprint]
-        gw["Ingest gateway<br/>OTLP + NDJSON"]
+        gw["Ingest gateway<br/>OTLP logs + traces · NDJSON"]
     end
     subgraph qw[Quickwit]
         idx[Indexers]
@@ -33,14 +33,14 @@ flowchart LR
     store[("Object storage<br/>splits")]
     meta[("Metastore<br/>index metadata")]
 
-    apps -->|"OTLP /v1/logs · NDJSON /api/ingest/ndjson<br/>(ingest key, scoped to one index)"| gw
+    apps -->|"OTLP /v1/logs · /v1/traces · NDJSON /api/ingest/ndjson<br/>(ingest key)"| gw
     gw -->|forward| idx
     pull -.->|Quickwit pulls directly| idx
     idx -->|write splits| store
     idx -->|publish metadata| meta
 ```
 
-1. **Producers** push logs to Rootprint's ingest gateway: OTLP over HTTP at `/v1/logs` or NDJSON at `/api/ingest/ndjson`. Both require an ingest API key (prefix `lwit_`) that is scoped to exactly one index.
+1. **Producers** push telemetry to Rootprint's ingest gateway: OTLP logs at `/v1/logs`, OTLP spans at `/v1/traces`, or NDJSON logs at `/api/ingest/ndjson`. All three require an ingest API key (prefix `rp_`) that is scoped to exactly one index. That scope routes **logs** only — spans always go to the span store named by `TRACE_INDEX_ID`, whatever index the key is scoped to. See [Traces](/traces/overview).
 2. Rootprint authenticates the key and **hands the data to its Quickwit engine's ingest API**. It does not transform the payload. The target index defines the schema.
 3. **Pull-based sources** (Kinesis, Kafka, S3/SQS) are the exception: you configure them through Rootprint, but Quickwit pulls that data **directly from the source, bypassing the gateway**.
 4. Quickwit **indexers** write the indexed data as *splits* to index storage and **publish their metadata to the metastore**.
@@ -53,7 +53,7 @@ See [Send logs](/send-logs/overview) for the full list of ingestion paths.
 flowchart LR
     user[Browser · query key · external tools]
     subgraph rp[Rootprint]
-        api["API layer<br/>auth · visibility · field-role mapping"]
+        api["API layer<br/>auth · field-role mapping"]
     end
     subgraph qw[Quickwit]
         srch[Searchers]
@@ -70,7 +70,7 @@ flowchart LR
 ```
 
 1. A request arrives from the **web UI** (session cookie) or an **external tool** (query API key, prefix `rpk_`).
-2. Rootprint **authorizes** the request, reads its own application state from Postgres (saved views, preferences), and applies **index visibility** and **field-role mappings**.
+2. Rootprint **authorizes** the request, reads its own application state from Postgres (saved views, preferences), and applies **field-role mappings**.
 3. Rootprint **runs the search on its Quickwit engine**, whose **searchers** read the metastore to plan the query, then read the relevant splits from object storage and return results.
 
 ## What's stored where
@@ -79,9 +79,9 @@ Three independent stores hold all durable state. Once you know which is which, y
 
 | Store | What lives here | Single-node default | Scaled |
 | ----- | --------------- | ------------------- | ------ |
-| **Rootprint Postgres** | Users, API keys, saved views, preferences, field-role and visibility config, share links, search audit records. | Bundled `postgres:17` container. | External/managed Postgres. |
+| **Rootprint Postgres** | Users, API keys, saved views, preferences, field-role config, share links, search audit records. | Bundled `postgres:17` container. | External/managed Postgres. |
 | **Quickwit metastore** | Index configuration, split metadata, source checkpoints, index-creation state. | File on local disk. | PostgreSQL (Quickwit's distributed metastore). |
-| **Index storage** | The splits: your actual indexed logs. | Local Docker volume. | S3, Azure Blob, or GCS object storage. |
+| **Index storage** | The splits: your indexed logs, and the span store's spans. | Local Docker volume. | S3, Azure Blob, or GCS object storage. |
 
 <Warning>
 	These three stores are separate from each other. Rootprint's Postgres database and Quickwit's

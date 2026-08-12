@@ -51,13 +51,19 @@ Key-value metadata on the log event and its resource.
 
 #### Trace context
 
-Fields for correlating logs with distributed traces.
+Fields for correlating logs with distributed traces. A log carrying `trace_id` opens its trace — see [Read a trace](/traces/explore).
 
 | Field         | Type    | Search  | Description                           |
 | ------------- | ------- | ------- | ------------------------------------- |
 | `trace_id`    | `bytes` | indexed | 16-byte trace ID in hex.              |
 | `span_id`     | `bytes` | indexed | 8-byte span ID in hex.                |
 | `trace_flags` | `u64`   | —       | W3C trace flags bitmask. Stored only. |
+
+<Note>
+	`trace_id` is the default path Rootprint reads. For a custom schema whose trace ID lives
+	elsewhere, override it with the **Trace ID field** setting on the index. See
+	[Correlate logs with traces](/traces/explore#correlate-logs-with-traces).
+</Note>
 
 #### Instrumentation scope
 
