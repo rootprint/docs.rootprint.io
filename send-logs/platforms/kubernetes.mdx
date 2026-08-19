@@ -1,9 +1,15 @@
 ---
 title: 'Send logs from Kubernetes'
-description: 'Ship every pod in a cluster to Rootprint with the OpenTelemetry Collector running as a DaemonSet, emitting OTLP with pod/namespace/node metadata attached.'
+description: 'Ship pod logs to Rootprint with the OpenTelemetry Collector running as a DaemonSet, emitting OTLP with pod/namespace/node metadata attached.'
 ---
 
 This page ships container logs from a Kubernetes cluster to Rootprint over OTLP. The **OpenTelemetry Collector** runs as a **DaemonSet** — one pod per node — tailing every pod's stdout/stderr off the kubelet. The chart's `logsCollection` preset wires up the `filelog` receiver; the `kubernetesAttributes` preset enriches each record with the pod, namespace, node, and container it came from. A small `transform` infers severity from the message body, the same way the [Docker](/send-logs/platforms/docker) path does.
+
+<Note>
+  Use this for workloads that don't instrument themselves. A service using an OpenTelemetry SDK
+  should send records straight to [OTLP](/send-logs/otlp); collecting both paths stores every event
+  twice. See [Choose what to collect](#choose-what-to-collect).
+</Note>
 
 ## Prerequisites
 
@@ -27,26 +33,51 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
     ```yaml
     mode: daemonset
 
+    # Required: the chart ships no default image. -k8s carries every component used below.
+    image:
+      repository: otel/opentelemetry-collector-k8s
+
     presets:
       logsCollection:
         enabled: true
       kubernetesAttributes:
         enabled: true
 
+    # A log tailer needs no inbound ports, and the defaults claim hostPorts that
+    # collide with any other Collector on the node.
+    ports:
+      otlp:
+        enabled: false
+      otlp-http:
+        enabled: false
+      jaeger-compact:
+        enabled: false
+      jaeger-thrift:
+        enabled: false
+      jaeger-grpc:
+        enabled: false
+      zipkin:
+        enabled: false
+
     config:
+      receivers:
+        filelog:
+          # Skips the Collector's own logs, and Rootprint's if you self-host here.
+          exclude:
+            - /var/log/pods/rootprint_*/*/*.log
       processors:
         transform:
           log_statements:
             - context: log
               statements:
-                - set(severity_number, SEVERITY_NUMBER_ERROR) where IsString(body) and IsMatch(body, "(?i)\\b(error|fatal|panic|exception)\\b")
-                - set(severity_text, "ERROR") where severity_number == SEVERITY_NUMBER_ERROR
-                - set(severity_number, SEVERITY_NUMBER_WARN) where severity_number == 0 and IsString(body) and IsMatch(body, "(?i)\\b(warn|warning|deprecated|retry)\\b")
-                - set(severity_text, "WARN") where severity_number == SEVERITY_NUMBER_WARN
-                - set(severity_number, SEVERITY_NUMBER_INFO) where severity_number == 0
-                - set(severity_text, "INFO") where severity_text == ""
+                - set(log.severity_number, SEVERITY_NUMBER_ERROR) where IsString(log.body) and IsMatch(log.body, "(?i)\\b(error|fatal|panic|exception)\\b")
+                - set(log.severity_text, "ERROR") where log.severity_number == SEVERITY_NUMBER_ERROR
+                - set(log.severity_number, SEVERITY_NUMBER_WARN) where log.severity_number == 0 and IsString(log.body) and IsMatch(log.body, "(?i)\\b(warn|warning|deprecated|retry)\\b")
+                - set(log.severity_text, "WARN") where log.severity_number == SEVERITY_NUMBER_WARN
+                - set(log.severity_number, SEVERITY_NUMBER_INFO) where log.severity_number == 0
+                - set(log.severity_text, "INFO") where log.severity_text == ""
       exporters:
-        otlphttp:
+        otlp_http:
           logs_endpoint: https://<your-rootprint>/v1/logs
           compression: gzip
           headers:
@@ -54,16 +85,14 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
       service:
         pipelines:
           logs:
-            processors: [memory_limiter, k8sattributes, transform, batch]
-            exporters: [otlphttp]
+            processors: [memory_limiter, k8s_attributes, transform, batch]
+            exporters: [otlp_http]
     ```
     </Expandable>
 
-    The `service.pipelines.logs.processors` list is spelled out on purpose. The chart **replaces**
-    this array rather than merging it, so the preset-injected processors (`memory_limiter`,
-    `k8sattributes`, `batch`) have to be listed alongside `transform` — drop one and the chart drops
-    it from the pipeline.
-
+    - **`processors` and `exclude` are replaced, not merged.** List every entry you want, including the preset-injected `memory_limiter`, `k8s_attributes` and `batch`.
+    - **Override the receiver as `filelog`, not `file_log`.** The preset uses the old key and the chart renames it afterwards; a `file_log` block is ignored. Helm prints a `[DEPRECATION]` notice for it.
+    - **`otlp_http` requires Collector 0.158.0 or newer.** Older images name it `otlphttp`.
   </Step>
 
   <Step title="Install the chart">
@@ -78,6 +107,10 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
     ```bash
     kubectl get pods -n rootprint -l app.kubernetes.io/name=opentelemetry-collector
     ```
+
+    Self-hosting Rootprint in this cluster? Install the Collector into Rootprint's own namespace so
+    the `exclude` above covers both. Otherwise the DaemonSet tails Rootprint and its Quickwit
+    backend, and their logs feed back into the index.
   </Step>
 
   <Step title="Send a test log line">
@@ -94,34 +127,106 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
 
   <Step title="Verify in Rootprint">
     Open Search, pick `otel-logs-v0_9` from the index selector, and query for
-    `hello from rootprint`. The record typically arrives within a few seconds.
-    `attributes.k8s.pod.name` reads `rootprint-smoke-test`, and `k8s.namespace.name`,
-    `k8s.node.name`, and `k8s.container.name` are populated.
+    `hello from rootprint`. Allow up to a minute for the batch to flush and Quickwit to commit.
+    `resource_attributes.k8s.pod.name` reads `rootprint-smoke-test`.
   </Step>
 </Steps>
 
 ## What you get in Rootprint
 
-The `kubernetesAttributes` preset attaches cluster context to every record:
+The `k8s.*` keys are OTLP **resource** attributes, so query them under `resource_attributes`:
 
-| OTLP attribute        | Value                                  |
-| --------------------- | -------------------------------------- |
-| `k8s.pod.name`        | pod the log came from                  |
-| `k8s.namespace.name`  | pod's namespace                        |
-| `k8s.node.name`       | node the pod is scheduled on           |
-| `k8s.container.name`  | container within the pod               |
-| `k8s.pod.uid`         | pod UID                                |
-| severity              | inferred from the message body         |
+| Field                                     | Value                                           |
+| ----------------------------------------- | ----------------------------------------------- |
+| `resource_attributes.k8s.pod.name`        | pod the log came from                           |
+| `resource_attributes.k8s.namespace.name`  | pod's namespace                                 |
+| `resource_attributes.k8s.node.name`       | node the pod is scheduled on                    |
+| `resource_attributes.k8s.container.name`  | container within the pod                        |
+| `resource_attributes.k8s.pod.uid`         | pod UID                                         |
+| `resource_attributes.k8s.deployment.name` | owning Deployment, when there is one            |
+| `service_name`                            | derived from the workload                       |
+| `attributes.log.file.path`                | the `/var/log/pods/...` file the line came from  |
+| `attributes.log.iostream`                 | `stdout` or `stderr`                            |
+| severity                                  | inferred from the message body                  |
 
 ### Severity inference
 
-The `transform` lowercases the body and matches two pattern families:
+The `transform` matches two pattern families against the body:
 
 - `error`, `fatal`, `panic`, or `exception` (word-boundary) → `severityText: ERROR` (severity number 17).
 - `warn` / `warning`, `deprecated`, or `retry` → `severityText: WARN` (13).
 - Everything else → `severityText: INFO` (9).
 
-`DEBUG` is not inferred — `\bdebug\b` against arbitrary pod output false-positives constantly. Apps that need debug-level visibility should emit it via an OpenTelemetry SDK that sets `severityNumber` itself; that record carries through unchanged because the SDK writes to the same endpoint.
+`DEBUG` is not inferred: `\bdebug\b` false-positives too often against arbitrary pod output. Emit debug records through an OpenTelemetry SDK that sets `severityNumber` itself.
+
+## Choose what to collect
+
+`logsCollection` tails every pod on the node. Exclude what you don't want before pointing it at a busy cluster.
+
+### Workloads that already send OTLP
+
+<Warning>
+  A service instrumented with an OpenTelemetry SDK emits structured records carrying `traceId`,
+  `spanId` and its own `severityNumber`, and usually prints the same events to stdout as well. Tail
+  that stdout too and you store both copies, the second one flat and uncorrelated. Pick one path per
+  workload.
+</Warning>
+
+Exclude the namespaces whose services report over OTLP:
+
+```yaml
+config:
+  receivers:
+    filelog:
+      exclude:
+        - /var/log/pods/rootprint_*/*/*.log
+        - /var/log/pods/<instrumented-namespace>_*/*/*.log
+```
+
+Path excludes never open the file. To filter on something the path doesn't carry, add a `filter` processor after `k8s_attributes` and drop on `resource_attributes`.
+
+### Collect selectively instead
+
+To have workloads opt **in**, use annotation-based discovery and drop the `filelog` block:
+
+```yaml
+presets:
+  logsCollection:
+    enabled: false
+  annotationDiscovery:
+    logs:
+      enabled: true
+```
+
+Annotate the pods to collect:
+
+```yaml
+metadata:
+  annotations:
+    io.opentelemetry.discovery.logs/enabled: 'true'
+```
+
+Per-container variants (`io.opentelemetry.discovery.logs.<container>/enabled`) and per-pod filelog settings via `io.opentelemetry.discovery.logs/config` are documented [upstream](https://opentelemetry.io/blog/2025/otel-collector-k8s-discovery/).
+
+## Multi-line logs
+
+The preset's `container` operator rejoins lines split by the **container runtime**, not multi-line output from the application. A stack trace or a pretty-printed object arrives as one record per line.
+
+Add a `recombine` operator, restating the container parser because `operators` is replaced wholesale:
+
+```yaml
+config:
+  receivers:
+    filelog:
+      operators:
+        - type: container
+          id: container-parser
+        - type: recombine
+          combine_field: body
+          is_first_entry: body matches "^[^\\s]"
+```
+
+`is_first_entry` marks a record boundary — above, any line not starting with whitespace, which covers indented stack frames. Use a timestamp or level prefix instead if that fits your output better. `source_identifier` defaults to `attributes["log.file.path"]`, so lines from different containers never merge.
 
 ## Cluster events (optional)
 
@@ -130,12 +235,14 @@ The steps above collect **pod logs**. To also capture cluster-level events — s
 ```yaml
 mode: deployment
 replicaCount: 1
+image:
+  repository: otel/opentelemetry-collector-k8s
 presets:
   kubernetesEvents:
     enabled: true
 config:
   exporters:
-    otlphttp:
+    otlp_http:
       logs_endpoint: https://<your-rootprint>/v1/logs
       compression: gzip
       headers:
@@ -143,18 +250,24 @@ config:
   service:
     pipelines:
       logs:
-        exporters: [otlphttp]
+        exporters: [otlp_http]
 ```
 
 Install it under a separate release name (e.g. `rootprint-otel-events`) so it doesn't collide with the DaemonSet.
 
+To keep a single workload instead, enable `presets.kubernetesObjects` alongside `kubernetesEvents` on the DaemonSet: it adds a leader election lease so only one pod watches, and also ingests the cluster's object inventory on a schedule.
+
 ## Troubleshooting
 
-- **No pods in the DaemonSet**: nodes may carry taints the Collector doesn't tolerate. Add the matching `tolerations` to `values.yaml`, or check `kubectl describe daemonset -n rootprint`.
-- **`401` from Rootprint**: the `Authorization` header is missing or the token is wrong. Check the token value in `values.yaml`.
-- **`403` from Rootprint**: the API key exists but is not scoped to `otel-logs-v0_9`. Create a new key scoped to that index.
+- **`helm install` fails with `[ERROR] 'image.repository' must be set`**: add the `image.repository` block from the values above.
+- **DaemonSet pod stays `Pending` with `didn't have free ports`**: another Collector holds the default hostPorts. Disable them as shown above.
+- **No pods in the DaemonSet**: nodes may carry taints the Collector doesn't tolerate. Add the matching `tolerations`, or check `kubectl describe daemonset -n rootprint`.
+- **Records arrive as single lines of a larger message**: application-level multi-line output. See [Multi-line logs](#multi-line-logs).
+- **Every event appears twice**: a workload is both exporting OTLP and printing to stdout. Compare `attributes.log.file.path:*` against `NOT attributes.log.file.path:*` to see the split, then exclude that namespace.
+- **`401` from Rootprint**: the `Authorization` header is missing or the token is wrong.
+- **`403` from Rootprint**: the API key is not scoped to `otel-logs-v0_9`. Create a new key scoped to that index.
 - **`413` from Rootprint**: the batch is too large. Add `send_batch_max_size` to the `batch` processor.
-- **`415` from Rootprint**: the `Content-Type` is not `application/x-protobuf`. The Collector sets this automatically; if you see a 415, check for a proxy stripping headers.
+- **`415` from Rootprint**: the `Content-Type` is not `application/x-protobuf`. The Collector sets this automatically; check for a proxy stripping headers.
 - **Logs arrive without `k8s.*` attributes**: the `kubernetesAttributes` preset needs RBAC to read pod metadata. The chart creates the `ClusterRole` automatically — if you disabled RBAC creation, grant `get`/`list`/`watch` on `pods` and `namespaces`.
 
 ## Related
