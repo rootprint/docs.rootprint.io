@@ -174,8 +174,9 @@ Use the **Contrib** distribution (`otelcol-contrib`). The `filelog` receiver liv
 
 - **`401` from Rootprint**: the `Authorization` header is missing or malformed. Confirm the
   `headers.Authorization` value reads exactly `Bearer <token>`, with a single space.
-- **`403` from Rootprint**: the API key's index scope does not match `otel-logs-v0_9`, or the key
-  has been deleted. Mint a fresh ingest API key for `otel-logs-v0_9` in **Settings → API keys**.
+- **`403` from Rootprint**: the ingest API key is invalid, unknown, or revoked. Mint a fresh one
+  in **Settings → API keys**. A key scoped to a different index does not return `403` — it writes
+  there silently, so check the key's index if records land somewhere unexpected.
 - **`404 unrecognized receiver "filelog"`** on startup: you are running the core Collector, not
   Contrib. Install `otelcol-contrib`.
 - **`413` from a proxy in front of Rootprint**: a single batch was too large on the wire. Rootprint

@@ -43,6 +43,7 @@ The generated endpoint reference is arranged around the audience for each endpoi
 | Log ingest API         | NDJSON and OTLP endpoints for log producers                   |
 | Log explorer API       | Search, histograms, field values, and exports. Query API keys work on search, histogram, field-value, and field-discovery endpoints. |
 | Traces API             | OTLP span ingest and single-trace lookup                      |
+| Monitoring API         | Service health panels computed from server spans: request rate, errors, latency, and top endpoints |
 | Saved views            | Create, list, update, and delete saved searches scoped to an index |
 | Share links            | Create and resolve public share links for log views           |
 | Index management API   | Index metadata, field discovery, preferences, and stats       |
@@ -116,7 +117,7 @@ OTLP endpoints follow OTLP-style error responses instead of the app JSON error s
 
 <Note>
   Rootprint rate-limits unauthenticated auth routes per client IP and read routes (search, histogram,
-  field values, traces, share resolution) per signed-in user. Ingest endpoints are **not** limited by
+  field values, traces, service health, share resolution) per signed-in user. Ingest endpoints are **not** limited by
   Rootprint — apply rate limiting at your reverse proxy or load balancer if your deployment needs it.
   See [Rate limiting](/configuration/environment-variables#rate-limiting) for the tunables.
 </Note>

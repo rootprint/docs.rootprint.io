@@ -8,6 +8,10 @@ Rootprint is a self-hosted log management platform that runs search directly on 
 Get started or explore:
 
 <CardGroup cols={2}>
+  <Card title="Live demo" icon="play" href="https://demo.rootprint.io">
+    Read-only logs and traces from a running demo cluster. No signup, nothing to install.
+  </Card>
+
   <Card title="Installation" icon="docker" href="/install/docker-compose">
     Choose between a self-contained deployment or connect to an existing Quickwit instance.
   </Card>
@@ -30,6 +34,7 @@ Get started or explore:
 - **Log export**: download filtered results as NDJSON, CSV, or plain text
 - **Log ingestion**: push logs over OTEL or custom NDJSON HTTP endpoint
 - **Trace correlation**: ingest OpenTelemetry spans over OTLP and link them to the logs they produced
+- **Service health**: request rate, error rate, and latency per service and endpoint, derived from your spans
 - **Pull-based sources**: ingest from Amazon Kinesis, Apache Kafka, or SQS
 - **Index management**: create, configure, and delete custom indexes and their sources 
 - **Programmatic access**: personal and service-account API keys for read-only log queries from scripts, dashboards, and agents

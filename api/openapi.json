@@ -824,13 +824,17 @@
 							"type": "string"
 						},
 						"type": "object"
+					},
+					"omittedCount": {
+						"type": "number"
 					}
 				},
 				"required": [
 					"key",
 					"keyAsString",
 					"docCount",
-					"levels"
+					"levels",
+					"omittedCount"
 				],
 				"type": "object"
 			},
@@ -1391,6 +1395,173 @@
 				],
 				"type": "object"
 			},
+			"MonitoringBucket": {
+				"properties": {
+					"avg": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"errors": {
+						"type": "number"
+					},
+					"keyMs": {
+						"type": "number"
+					},
+					"p50": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p95": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"requests": {
+						"type": "number"
+					}
+				},
+				"required": [
+					"keyMs",
+					"requests",
+					"errors",
+					"p50",
+					"p95",
+					"avg"
+				],
+				"type": "object"
+			},
+			"MonitoringEndpoint": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"p50": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p95": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"requests": {
+						"type": "number"
+					},
+					"routeAvailable": {
+						"type": "boolean"
+					},
+					"service": {
+						"type": "string"
+					},
+					"totalMillis": {
+						"type": "number"
+					}
+				},
+				"required": [
+					"id",
+					"service",
+					"name",
+					"routeAvailable",
+					"requests",
+					"totalMillis",
+					"p50",
+					"p95"
+				],
+				"type": "object"
+			},
+			"MonitoringServiceLatency": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"p95": {
+						"items": {
+							"anyOf": [
+								{
+									"type": "number"
+								},
+								{
+									"type": "null"
+								}
+							]
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"name",
+					"p95"
+				],
+				"type": "object"
+			},
+			"MonitoringSummary": {
+				"properties": {
+					"errors": {
+						"type": "number"
+					},
+					"p50": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p95": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"requests": {
+						"type": "number"
+					}
+				},
+				"required": [
+					"requests",
+					"errors",
+					"p50",
+					"p95"
+				],
+				"type": "object"
+			},
 			"PerIndexOverviewResponse": {
 				"properties": {
 					"capturedAt": {
@@ -1709,16 +1880,6 @@
 						"format": "date-time",
 						"type": "string"
 					},
-					"description": {
-						"anyOf": [
-							{
-								"type": "string"
-							},
-							{
-								"type": "null"
-							}
-						]
-					},
 					"filters": {
 						"items": {
 							"properties": {
@@ -1762,6 +1923,65 @@
 						],
 						"type": "string"
 					},
+					"timeRange": {
+						"anyOf": [
+							{
+								"oneOf": [
+									{
+										"properties": {
+											"preset": {
+												"enum": [
+													"5m",
+													"15m",
+													"30m",
+													"1h",
+													"3h",
+													"6h",
+													"24h",
+													"3d",
+													"7d",
+													"30d"
+												],
+												"type": "string"
+											},
+											"type": {
+												"const": "relative"
+											}
+										},
+										"required": [
+											"type",
+											"preset"
+										],
+										"type": "object"
+									},
+									{
+										"properties": {
+											"end": {
+												"minimum": 0,
+												"type": "integer"
+											},
+											"start": {
+												"minimum": 0,
+												"type": "integer"
+											},
+											"type": {
+												"const": "absolute"
+											}
+										},
+										"required": [
+											"type",
+											"start",
+											"end"
+										],
+										"type": "object"
+									}
+								]
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
 					"updatedAt": {
 						"format": "date-time",
 						"type": "string"
@@ -1771,11 +1991,11 @@
 					"id",
 					"indexId",
 					"name",
-					"description",
 					"query",
 					"filters",
 					"sortDirection",
 					"columns",
+					"timeRange",
 					"createdAt",
 					"updatedAt"
 				],
@@ -1886,6 +2106,68 @@
 					"name",
 					"createdAt",
 					"keyCount"
+				],
+				"type": "object"
+			},
+			"ServiceHealthResponse": {
+				"properties": {
+					"buckets": {
+						"items": {
+							"$ref": "#/components/schemas/MonitoringBucket"
+						},
+						"type": "array"
+					},
+					"endpoints": {
+						"items": {
+							"$ref": "#/components/schemas/MonitoringEndpoint"
+						},
+						"type": "array"
+					},
+					"intervalSeconds": {
+						"type": "number"
+					},
+					"latencyKeysMs": {
+						"items": {
+							"type": "number"
+						},
+						"type": "array"
+					},
+					"serviceLatencies": {
+						"items": {
+							"$ref": "#/components/schemas/MonitoringServiceLatency"
+						},
+						"type": "array"
+					},
+					"services": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"servicesTruncated": {
+						"type": "boolean"
+					},
+					"summary": {
+						"$ref": "#/components/schemas/MonitoringSummary"
+					},
+					"telemetryStatus": {
+						"enum": [
+							"available",
+							"span_store_missing"
+						],
+						"type": "string"
+					}
+				},
+				"required": [
+					"telemetryStatus",
+					"services",
+					"servicesTruncated",
+					"intervalSeconds",
+					"summary",
+					"buckets",
+					"latencyKeysMs",
+					"serviceLatencies",
+					"endpoints"
 				],
 				"type": "object"
 			},
@@ -2656,7 +2938,7 @@
 	"info": {
 		"description": "HTTP API for the Rootprint log management platform.",
 		"title": "Rootprint API",
-		"version": "0.4.0"
+		"version": "0.4.1"
 	},
 	"openapi": "3.1.0",
 	"paths": {
@@ -16070,9 +16352,6 @@
 											}
 										]
 									},
-									"description": {
-										"type": "string"
-									},
 									"filters": {
 										"items": {
 											"properties": {
@@ -16111,6 +16390,65 @@
 											"desc"
 										],
 										"type": "string"
+									},
+									"timeRange": {
+										"anyOf": [
+											{
+												"oneOf": [
+													{
+														"properties": {
+															"preset": {
+																"enum": [
+																	"5m",
+																	"15m",
+																	"30m",
+																	"1h",
+																	"3h",
+																	"6h",
+																	"24h",
+																	"3d",
+																	"7d",
+																	"30d"
+																],
+																"type": "string"
+															},
+															"type": {
+																"const": "relative"
+															}
+														},
+														"required": [
+															"type",
+															"preset"
+														],
+														"type": "object"
+													},
+													{
+														"properties": {
+															"end": {
+																"minimum": 0,
+																"type": "integer"
+															},
+															"start": {
+																"minimum": 0,
+																"type": "integer"
+															},
+															"type": {
+																"const": "absolute"
+															}
+														},
+														"required": [
+															"type",
+															"start",
+															"end"
+														],
+														"type": "object"
+													}
+												]
+											},
+											{
+												"type": "null"
+											}
+										]
 									}
 								},
 								"required": [
@@ -16255,16 +16593,6 @@
 											}
 										]
 									},
-									"description": {
-										"anyOf": [
-											{
-												"type": "string"
-											},
-											{
-												"type": "null"
-											}
-										]
-									},
 									"filters": {
 										"items": {
 											"properties": {
@@ -16303,6 +16631,65 @@
 											"desc"
 										],
 										"type": "string"
+									},
+									"timeRange": {
+										"anyOf": [
+											{
+												"oneOf": [
+													{
+														"properties": {
+															"preset": {
+																"enum": [
+																	"5m",
+																	"15m",
+																	"30m",
+																	"1h",
+																	"3h",
+																	"6h",
+																	"24h",
+																	"3d",
+																	"7d",
+																	"30d"
+																],
+																"type": "string"
+															},
+															"type": {
+																"const": "relative"
+															}
+														},
+														"required": [
+															"type",
+															"preset"
+														],
+														"type": "object"
+													},
+													{
+														"properties": {
+															"end": {
+																"minimum": 0,
+																"type": "integer"
+															},
+															"start": {
+																"minimum": 0,
+																"type": "integer"
+															},
+															"type": {
+																"const": "absolute"
+															}
+														},
+														"required": [
+															"type",
+															"start",
+															"end"
+														],
+														"type": "object"
+													}
+												]
+											},
+											{
+												"type": "null"
+											}
+										]
 									}
 								},
 								"required": [],
@@ -16405,6 +16792,107 @@
 				"summary": "Ingest NDJSON log documents",
 				"tags": [
 					"Log ingest"
+				]
+			}
+		},
+		"/api/monitoring/services": {
+			"get": {
+				"operationId": "getApiMonitoringServices",
+				"parameters": [
+					{
+						"in": "query",
+						"name": "service",
+						"schema": {
+							"maxLength": 200,
+							"minLength": 1,
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "startTs",
+						"required": true,
+						"schema": {
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"in": "query",
+						"name": "endTs",
+						"required": true,
+						"schema": {
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"in": "query",
+						"name": "interval",
+						"required": true,
+						"schema": {
+							"pattern": "^[1-9]\\d*[smhd]$",
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "endpointLimit",
+						"schema": {
+							"default": "10",
+							"maximum": 100,
+							"minimum": 1,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ServiceHealthResponse"
+								}
+							}
+						},
+						"description": "Successful response"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"429": {
+						"$ref": "#/components/responses/TooManyRequests"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"security": [
+					{
+						"personalBearer": []
+					},
+					{
+						"cookieAuth": []
+					}
+				],
+				"summary": "Get service health panels",
+				"tags": [
+					"Monitoring"
 				]
 			}
 		},
