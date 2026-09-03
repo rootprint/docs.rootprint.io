@@ -1,6 +1,6 @@
 ---
 title: 'Create a custom index'
-description: 'Define a custom index with your own schema, tokenizers, and retention from the Rootprint'
+description: 'Define a custom index with your own schema, tokenizers, and retention from the Rootprint Create-index form.'
 ---
 
 The bundled `otel-logs-v0_9` index works for any application that emits OpenTelemetry logs. For everything else (audit trails, third-party log formats, application events with a specialized schema), create an index with the fields and types your data needs.
@@ -18,7 +18,7 @@ Create indexes from **Settings → Indexes → Create index**: a form, with no Y
 	<img src="/images/indexes/create-index-top.png" alt="Create index form: Index ID, Mode, and Timestamp field" />
 </Frame>
 
-Starts with a letter; 3–255 characters of letters, digits, `-`, or `_`. This is the index ID, and the value you pass as the `index` when ingesting.
+Starts with a letter; 3–255 characters of letters, digits, `-`, or `_`. This is the index ID. Ingest requests never name it — the ingest API key you scope to this index is what routes writes here.
 
 ## Mode
 
@@ -26,7 +26,7 @@ The schema mode decides what Quickwit does with fields you didn't declare in the
 
 | Mode      | Behavior                                                                                                                            |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `dynamic` | Default. Unknown fields are stored under a JSON catch-all and remain searchable. Most flexible — recommended unless you need rigour. |
+| `dynamic` | Default. Unknown fields are stored under a JSON catch-all and remain searchable. Most flexible — recommended unless you need strict validation. |
 | `lenient` | Unknown fields are silently dropped at indexing. A stable schema without noisy errors from extra fields.                            |
 | `strict`  | Unknown fields cause Quickwit to reject the document. The bundled `otel-logs-v0_9` index uses this mode.                            |
 
@@ -127,7 +127,6 @@ The rest of the form is optional and most deployments leave it untouched:
 | **Commit timeout (secs)** | How long indexing waits before forcing a commit. Defaults to `60`. Lower it to make new documents searchable sooner, at the cost of more, smaller splits. |
 | **Store source**         | Keep the original document JSON in the index alongside the mapped fields.                                                                |
 | **Index field presence** | Track which fields exist per document so presence queries (does this field exist?) work.                                                 |
-
 
 ## Use it from Rootprint
 

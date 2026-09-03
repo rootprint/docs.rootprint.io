@@ -1,0 +1,111 @@
+---
+title: 'Service health'
+description: 'Read request rate, error rate, latency, downstream calls, and failing spans from the spans you already send.'
+---
+
+The **Services** page (at `/monitoring`) turns the spans in your span store into the request-level view of a deployment: how much traffic each service takes, how much of it fails, how slow it is, which endpoints account for the time, what each service calls downstream, and which individual spans failed.
+
+Nothing extra is ingested for it. The page reads the same OTLP spans as the trace waterfall — see [Send traces](/traces/send) — so it stays empty until spans are arriving.
+
+## The summary strip
+
+Every view opens with the same five figures for the current service and time range:
+
+| Figure          | Meaning                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| **Error spans** | Spans with an `error` status, across every span kind, including outbound calls.          |
+| **Requests**    | Inbound server spans in the range.                                                         |
+| **Throughput**  | Those requests per minute.                                                                 |
+| **Error rate**  | Failing requests as a share of requests. Server spans only.                                |
+| **p95 latency** | p95 over the selected service's requests. With no service selected it reads **Slowest p95** — the worst service's p95, named beside the figure. |
+
+A service can serve every request successfully while its outbound calls fail, so a non-zero **Error spans** count next to a `0%` **Error rate** is a valid combination.
+
+## Tabs
+
+Below the strip, the rest of the page is tabbed. The tabs you see depend on whether a service is selected in the picker.
+
+| Tab              | Shown for     | Contents                                                                                                  |
+| ---------------- | ------------- | --------------------------------------------------------------------------------------------------------- |
+| **Overview**     | Both          | The charts. All services: p95 latency per service, request rate, error rate. One service: request rate, error rate, and p50/p95/average request latency. |
+| **Services**     | All services  | Every service ranked by request volume, with failure share and p50/p95. Selecting a row scopes the page to it. |
+| **Endpoints**    | Both          | Endpoints ranked by the total time they account for, with request count, p50, and p95.                    |
+| **Dependencies** | One service   | Outbound client and producer spans the service emits, ranked by total time. Hidden when it has none.      |
+| **Errors**       | Both          | Individual failing spans, newest first. The tab carries the error-span count and turns red when it is non-zero. |
+
+All charts share one cursor: hovering any of them moves the readout on all. Dragging across any chart narrows the whole page to that window.
+
+## What counts as a request
+
+Only **SERVER** spans (`span_kind:2`) are counted as requests — one span per inbound request. Client, internal, and producer/consumer spans are ignored there, so a request crossing three services counts once per service rather than once per hop. A request is an error when its span status is `error`.
+
+The **Errors** tab is the exception: it lists failing spans of every kind.
+
+## How an endpoint is identified
+
+An endpoint name comes from the first of these that the span carries:
+
+1. `http.route` — the templated route (`/users/:id`), which is what you want
+2. `url.path`
+3. `http.target`
+4. `url.full`
+5. the span name
+
+Rows built from anything other than `http.route` or a path are marked, because a raw URL yields one endpoint per distinct URL: `/users/1` and `/users/2` become two rows instead of one. If the table reads as a long tail of near-duplicates, the fix is in the instrumentation — enable HTTP route recording in the SDK or framework instrumentation that produces those spans.
+
+## Downstream calls
+
+The **Dependencies** tab groups a service's outbound spans — client (`span_kind:3`) and producer (`span_kind:4`) — by span name, and ranks them by total time, with call count, p50, and p95. Under each call name it lists up to three peers, read from `server.address`, so an HTTP client span shows which hosts it talked to.
+
+Select a service to see it.
+
+## Failing spans
+
+The **Errors** tab lists error spans newest first, one row per span: time, service, kind, operation, message, HTTP status, and duration. A row opens its trace in a new tab with that span preselected in the waterfall.
+
+The message is the span's own status message, falling back to `exception.message` (then `exception.type`) from the first exception event on the span, truncated at 300 characters. HTTP status is read from `http.response.status_code`, or `http.status_code` from older SDKs; a span carrying neither shows `—`.
+
+Three filters narrow the list, and each one is part of the URL:
+
+- **Kind** — server, client, producer, consumer, or internal.
+- **HTTP** — `4xx`, `5xx`, or spans with no HTTP status at all.
+- **Top operations** — chips for the 20 operations with the most errors in the range. Click one to scope the list to it.
+
+The list loads 50 spans at a time behind **Load more**.
+
+## Limits
+
+| Limit                   | Behavior                                                                                       |
+| ----------------------- | ---------------------------------------------------------------------------------------------- |
+| 30 days per range       | A wider range is rejected with `400`. Applies to both monitoring endpoints.                    |
+| 2,000 buckets           | An interval that would produce more buckets for the range is rejected with `400`. The UI picks the interval for you and stays inside this. |
+| 10 services charted     | The p95-by-service comparison charts the 10 most active services.                              |
+| 100 services listed     | Past that, the page says it is showing the most active services only.                          |
+| 30 endpoint rows        | The UI requests 30 and trims to the row count locally; `endpointLimit` accepts up to `100`.    |
+| 20 dependencies         | The 20 downstream calls with the most total time, with up to 3 peers each.                     |
+| 20 operation chips      | The 20 operations with the most errors in the range.                                           |
+| 50 failing spans a page | `limit` accepts up to `100`; `offset` stops at `5,000`, so the list ends there.                |
+
+## Access and auditing
+
+Reading service health or failing spans needs `logs: read` — a session cookie or a personal API key. Neither is admin-only, and neither is scoped per index: any actor that can read logs can read them.
+
+Each request is recorded in the search audit like any other search, and both count against the read rate limit. See [Rate limiting](/configuration/environment-variables#rate-limiting).
+
+<Warning>
+	A missing span store is not an error. If `TRACE_INDEX_ID` points at an index that does not
+	exist, the page reports that trace telemetry is unavailable rather than failing. See
+	[Environment variables](/configuration/environment-variables).
+</Warning>
+
+## Next steps
+
+<CardGroup cols={2}>
+	<Card title="Send traces" icon="send" href="/traces/send">
+		Point an OpenTelemetry SDK or Collector at the trace endpoint.
+	</Card>
+	<Card title="Monitoring API" icon="activity" href="/api/overview">
+		`GET /api/monitoring/services` and `GET /api/monitoring/errors`, the endpoints behind the page,
+		for your own dashboards.
+	</Card>
+</CardGroup>

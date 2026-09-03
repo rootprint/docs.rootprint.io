@@ -8,7 +8,7 @@ Rootprint exposes an authenticated HTTP endpoint at `/api/ingest/ndjson` that fo
 <Note>
 	For OpenTelemetry-instrumented apps, prefer the [OTLP endpoint](/send-logs/otlp). It is tied to
 	the OTEL schema (the built-in `otel-logs-v0_9` index) and handles batching, retries, and schema
-	mapping for you. This endpoint does none of that — it relays bytes.
+	mapping for you. This endpoint relays bytes and does none of that.
 </Note>
 
 ## When to use this endpoint
@@ -16,11 +16,11 @@ Rootprint exposes an authenticated HTTP endpoint at `/api/ingest/ndjson` that fo
 - You run a **custom index** whose schema you defined — audit events, billing records, app logs with your own field names. You control the wire format; the endpoint passes it through unchanged.
 - You already emit JSON and don't want to adopt OpenTelemetry.
 
-The trade-off is delivery: this endpoint is a thin proxy, so batching, retries, and back-pressure are yours to handle. The curl example below is a one-shot POST; the Vector example hands batching and retries to an agent. For OpenTelemetry-shaped logs going to `otel-logs-v0_9`, the [OTLP endpoint](/send-logs/otlp) is the better fit.
+This endpoint is a thin proxy: batching, retries, and back-pressure are yours to handle. The curl example below is a one-shot POST; the Vector example hands batching and retries to an agent.
 
 ## Prerequisites
 
-- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
 - A target index to write to: the built-in `otel-logs-v0_9` (see [Indexes](/indexes) for its schema) or a [custom index](/configuration/custom-indexes) you define first.
 - An **ingest API key** scoped to that index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the target index. See [API keys](/api/overview).
 - An HTTP client or log agent to send the request. The examples cover `curl` and [Vector](https://vector.dev).
@@ -110,13 +110,13 @@ These examples write to the built-in `otel-logs-v0_9` index, so they run with no
   </Step>
 
   <Step title="Verify in Rootprint">
-    A successful POST returns `{"num_docs_for_processing": <count>}` — the number of documents Quickwit queued, not a guarantee they are searchable yet. Open Search, pick your index from the selector, and look for the records you just sent (or that Vector shipped). Allow a few seconds for Quickwit to commit.
+    A successful POST returns `{"num_docs_for_processing": <count>}` — the number of documents Quickwit queued, not a guarantee they are searchable yet. Open Search, pick your index from the selector, and look for the records you sent (or that Vector shipped). Allow a few seconds for Quickwit to commit.
   </Step>
 </Steps>
 
 ## Shipping to a custom index
 
-The example above uses the built-in OTEL schema. Your own logs rarely look like that — and they don't have to. The full workflow:
+The example above uses the built-in OTEL schema. Your own logs do not have to match it. The full workflow:
 
 <Steps>
   <Step title="Define the index">

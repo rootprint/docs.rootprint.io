@@ -15,7 +15,7 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
 
 ## Prerequisites
 
-- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
 - A Linux host with Docker (and Docker Compose for the examples below).
 - A log agent: [Vector](https://vector.dev/docs/setup/installation/) or the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/installation/).
 - An **ingest API key** scoped to your target index. See [API keys](/api/overview).
@@ -31,7 +31,7 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
     <Steps>
       <Step title="Create the Vector config">
         Save this as `vector.yaml` next to your `docker-compose.yml`. Replace `<your-rootprint>` with
-        your Rootprint base URL and `<your-ingest-token>` with the API key.
+        your Rootprint host and `<your-ingest-token>` with the API key.
 
         <Expandable title="vector.yaml">
         ```yaml
@@ -190,7 +190,7 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
     - `warn` / `warning`, `deprecated`, or `retry` → `severityText: WARN` (13).
     - Everything else → `severityText: INFO` (9).
 
-    `DEBUG` is not inferred. `\bdebug\b` against arbitrary container output false-positives constantly. Apps that need debug-level visibility should emit it via an OpenTelemetry SDK that sets `severityNumber` itself; the OTLP record will carry that through unchanged because the SDK writes to the same endpoint.
+    `DEBUG` is not inferred. Emit debug records through an OpenTelemetry SDK that sets `severityNumber` itself; the OTLP record carries that value through unchanged.
 
     #### Apps that emit JSON
 
@@ -306,7 +306,7 @@ Per-event attributes by agent:
 
 The Vector path populates all rows. The OTEL Collector path populates `container.id`, `container.runtime`, and severity only; it cannot resolve `container.name` or `container.image.name` from the json-file path without the Docker socket.
 
-Container labels are not promoted by default. They're user-defined and unbounded, and adding all of them risks attribute-cardinality issues. To promote a specific label with Vector, add one line to the `to_otlp` remap before the `. = { ... }` assignment:
+Container labels are not promoted by default. To promote a specific label with Vector, add one line to the `to_otlp` remap before the `. = { ... }` assignment:
 
 ```vrl
 if exists(.label."com.example.team") {
@@ -317,7 +317,7 @@ if exists(.label."com.example.team") {
 ## Troubleshooting
 
 - **`401` from Rootprint**: the `Authorization` header is missing or the token is wrong. Check the token value in your config.
-- **`403` from Rootprint**: the API key exists but is not scoped to `otel-logs-v0_9`. Create a new key scoped to that index.
+- **`403` from Rootprint**: the ingest API key is invalid, unknown, or revoked. Create a new one in **Settings → API keys**. A key scoped to a different index does not return `403` — it writes there silently, so check the key's index if records land somewhere unexpected.
 - **`413` from Rootprint**: the batch is too large. Lower `max_bytes` (Vector) or add `send_batch_max_size` to the `batch` processor (OTEL Collector).
 - **`415` from Rootprint**: the `Content-Type` is not `application/x-protobuf`. Both agents set this automatically; if you see a 415, check for a proxy stripping headers.
 

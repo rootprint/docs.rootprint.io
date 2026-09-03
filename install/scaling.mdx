@@ -3,8 +3,8 @@ title: 'Scaling beyond a single node'
 description: 'Run Rootprint with a larger Quickwit deployment, and know which parts are single-node only.'
 ---
 
-The bundled Docker Compose is optimized for one active Rootprint container, one Quickwit
-container, local-disk Quickwit storage, and Quickwit's file-backed metastore. That setup handles substantial ingest on modest hardware.
+The bundled Docker Compose runs one Rootprint container, one Quickwit container, local-disk
+Quickwit storage, and Quickwit's file-backed metastore.
 
 Scaling Rootprint means keeping Rootprint single-node and moving scale-sensitive work into
 Quickwit, its search engine. See [Architecture](/architecture) for the full responsibility split
@@ -22,7 +22,7 @@ If you need a bigger deployment, keep one Rootprint instance and point `QUICKWIT
 Quickwit REST endpoint, load balancer, or Kubernetes service. Quickwit nodes serve the REST API and
 can redirect requests to the right service in the cluster.
 
-## The Metastore is the first thing to fix
+## The metastore
 
 Quickwit uses the metastore to track index configuration, split metadata, source checkpoints, and
 index creation state. Indexers write split data to index storage and publish metadata to the
@@ -48,13 +48,12 @@ services:
 The Quickwit database must already exist. Quickwit creates and migrates its own tables on startup.
 Use a managed Postgres service unless you already operate Postgres yourself.
 
-See [Quickwit metastore configuration](https://quickwit.io/docs/main-branch/configuration/metastore-config) for connection-string options and metastore behavior.
+See [Quickwit metastore configuration](https://quickwit.io/docs/configuration/metastore-config) for connection-string options and metastore behavior.
 
 ## Move index storage to object storage
 
-Quickwit decouples compute from storage: indexers and searchers are stateless and share their state
-through object storage and the metastore, not a local disk. That decoupling lets the cluster
-scale, but it only works once index data lives somewhere every node can reach.
+Quickwit indexers and searchers are stateless: they share state through object storage and the
+metastore, not a local disk. Every node must be able to reach the index data.
 
 The bundled Compose keeps index data in a local Docker volume, which is single-node only. For any
 multi-node cluster, move it to shared object storage:
@@ -64,7 +63,7 @@ multi-node cluster, move it to shared object storage:
 
 Quickwit supports S3 and S3-compatible storage (MinIO, Garage, DigitalOcean Spaces), Azure Blob
 Storage, and Google Cloud Storage. The [Docker Compose install page](/install/docker-compose#use-s3-for-storage)
-shows the S3 setup; the [storage reference](https://quickwit.io/docs/main-branch/configuration/storage-config)
+shows the S3 setup; the [storage reference](https://quickwit.io/docs/configuration/storage-config)
 covers the other backends.
 
 ## Scale the Quickwit cluster to your load
@@ -78,7 +77,7 @@ Your workload drives how far you scale: add **indexers** when ingest throughput
 is the bottleneck, and add **searchers** (stateless, sized by query concurrency) when search or
 aggregations are. The control plane, metastore service, and janitor are lightweight. One of each is
 usually enough. For Kubernetes, start from the official
-[Quickwit Helm chart](https://quickwit.io/docs/main-branch/deployment/kubernetes/helm).
+[Quickwit Helm chart](https://quickwit.io/docs/deployment/kubernetes/helm).
 
 ## Sizing rough numbers
 
@@ -97,7 +96,7 @@ Use these as starting points and measure.
 
 - [Docker Compose install](/install/docker-compose): the single-node setup and S3 configuration.
 - [Environment variables](/configuration/environment-variables): the Rootprint-side configuration surface.
-- [Quickwit deployment modes](https://quickwit.io/docs/main-branch/deployment/deployment-modes): upstream cluster topology.
-- [Quickwit cluster sizing](https://quickwit.io/docs/main-branch/deployment/cluster-sizing): upstream sizing guidance.
-- [Quickwit metastore configuration](https://quickwit.io/docs/main-branch/configuration/metastore-config): PostgreSQL and file-backed metastore rules.
-- [Quickwit storage configuration](https://quickwit.io/docs/main-branch/configuration/storage-config): supported index storage backends.
+- [Quickwit deployment modes](https://quickwit.io/docs/deployment/deployment-modes): upstream cluster topology.
+- [Quickwit cluster sizing](https://quickwit.io/docs/deployment/cluster-sizing): upstream sizing guidance.
+- [Quickwit metastore configuration](https://quickwit.io/docs/configuration/metastore-config): PostgreSQL and file-backed metastore rules.
+- [Quickwit storage configuration](https://quickwit.io/docs/configuration/storage-config): supported index storage backends.

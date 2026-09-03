@@ -13,7 +13,7 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
 
 ## Prerequisites
 
-- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
 - A Kubernetes cluster with `kubectl` and `helm` configured against it. The DaemonSet schedules on every node whose pods you want collected.
 - An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
 
@@ -26,7 +26,7 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
   </Step>
 
   <Step title="Create values.yaml">
-    Save this as `values.yaml`. Replace `<your-rootprint>` with your Rootprint base URL and
+    Save this as `values.yaml`. Replace `<your-rootprint>` with your Rootprint host and
     `<your-ingest-token>` with the API key you copied above.
 
     <Expandable title="values.yaml">
@@ -91,7 +91,7 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
     </Expandable>
 
     - **`processors` and `exclude` are replaced, not merged.** List every entry you want, including the preset-injected `memory_limiter`, `k8s_attributes` and `batch`.
-    - **Override the receiver as `filelog`, not `file_log`.** The preset uses the old key and the chart renames it afterwards; a `file_log` block is ignored. Helm prints a `[DEPRECATION]` notice for it.
+    - **Override the receiver as `filelog`, not `file_log`.** A `file_log` block is ignored; Helm prints a `[DEPRECATION]` notice for it.
     - **`otlp_http` requires Collector 0.158.0 or newer.** Older images name it `otlphttp`.
   </Step>
 
@@ -157,7 +157,7 @@ The `transform` matches two pattern families against the body:
 - `warn` / `warning`, `deprecated`, or `retry` → `severityText: WARN` (13).
 - Everything else → `severityText: INFO` (9).
 
-`DEBUG` is not inferred: `\bdebug\b` false-positives too often against arbitrary pod output. Emit debug records through an OpenTelemetry SDK that sets `severityNumber` itself.
+`DEBUG` is not inferred. Emit debug records through an OpenTelemetry SDK that sets `severityNumber` itself.
 
 ## Choose what to collect
 
@@ -265,7 +265,7 @@ To keep a single workload instead, enable `presets.kubernetesObjects` alongside 
 - **Records arrive as single lines of a larger message**: application-level multi-line output. See [Multi-line logs](#multi-line-logs).
 - **Every event appears twice**: a workload is both exporting OTLP and printing to stdout. Compare `attributes.log.file.path:*` against `NOT attributes.log.file.path:*` to see the split, then exclude that namespace.
 - **`401` from Rootprint**: the `Authorization` header is missing or the token is wrong.
-- **`403` from Rootprint**: the API key is not scoped to `otel-logs-v0_9`. Create a new key scoped to that index.
+- **`403` from Rootprint**: the ingest API key is invalid, unknown, or revoked. Create a new one in **Settings → API keys**. A key scoped to a different index does not return `403` — it writes there silently, so check the key's index if records land somewhere unexpected.
 - **`413` from Rootprint**: the batch is too large. Add `send_batch_max_size` to the `batch` processor.
 - **`415` from Rootprint**: the `Content-Type` is not `application/x-protobuf`. The Collector sets this automatically; check for a proxy stripping headers.
 - **Logs arrive without `k8s.*` attributes**: the `kubernetesAttributes` preset needs RBAC to read pod metadata. The chart creates the `ClusterRole` automatically — if you disabled RBAC creation, grant `get`/`list`/`watch` on `pods` and `namespaces`.

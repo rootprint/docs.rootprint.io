@@ -8,7 +8,7 @@ Rootprint accepts OTLP spans at a single endpoint, authenticated with an ingest 
 ## Endpoint
 
 ```
-POST https://your-rootprint-host/v1/traces
+POST https://<your-rootprint>/v1/traces
 ```
 
 ## Authentication
@@ -49,7 +49,7 @@ Set `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` on any runtime that can pick a p
 | Variable | Value |
 | -------- | ----- |
 | `OTEL_SERVICE_NAME` | Your service name (lands in the span's `service_name`). |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | `https://your-rootprint-host/v1/traces` |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | `https://<your-rootprint>/v1/traces` |
 | `OTEL_EXPORTER_OTLP_TRACES_HEADERS` | `Authorization=Bearer%20<your-ingest-token>` |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` |
 
@@ -76,7 +76,7 @@ Set the environment. Metrics and logs are switched off here — they default to 
 ```bash
 export OTEL_SERVICE_NAME=my-python-service
 export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://your-rootprint-host/v1/traces
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT='https://<your-rootprint>/v1/traces'
 export OTEL_EXPORTER_OTLP_TRACES_HEADERS=Authorization=Bearer%20rp_your-ingest-token
 export OTEL_METRICS_EXPORTER=none
 export OTEL_LOGS_EXPORTER=none
@@ -102,7 +102,7 @@ Set the environment. Metrics and logs are switched off here — they default to 
 ```bash
 export OTEL_SERVICE_NAME=my-node-service
 export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://your-rootprint-host/v1/traces
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT='https://<your-rootprint>/v1/traces'
 export OTEL_EXPORTER_OTLP_TRACES_HEADERS=Authorization=Bearer%20rp_your-ingest-token
 export OTEL_METRICS_EXPORTER=none
 export OTEL_LOGS_EXPORTER=none
@@ -133,7 +133,7 @@ Set the environment. The exporter reads these automatically — no code changes 
 
 ```bash
 export OTEL_SERVICE_NAME=my-go-service
-export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://your-rootprint-host/v1/traces
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT='https://<your-rootprint>/v1/traces'
 export OTEL_EXPORTER_OTLP_TRACES_HEADERS=Authorization=Bearer%20rp_your-ingest-token
 ```
 
@@ -186,7 +186,7 @@ processors:
 
 exporters:
   otlphttp:
-    traces_endpoint: https://your-rootprint-host/v1/traces
+    traces_endpoint: https://<your-rootprint>/v1/traces
     compression: gzip
     headers:
       Authorization: "Bearer rp_your-ingest-token"
@@ -236,7 +236,7 @@ For the Collector, pairing works once the application's own log records carry tr
 | `403` | Invalid or unknown ingest API key. |
 | `413` | Payload too large. |
 | `415` | `Content-Type` is not `application/x-protobuf`. |
-| `429` | Upstream rate limit exceeded. Honour `Retry-After`. |
+| `429` | Upstream rate limit exceeded. Honor `Retry-After`. |
 | `503` | Upstream unavailable. Every upstream `5xx` is reported as `503`, which OTLP clients treat as retryable. |
 
 Errors use the `google.rpc.Status` encoding. `415` is JSON; every other error is binary protobuf, because an exporter that sent the wrong content type may not decode protobuf back.

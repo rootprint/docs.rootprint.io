@@ -52,6 +52,10 @@
   "navbar": {
     "links": [
       {
+        "label": "Live demo",
+        "href": "https://demo.rootprint.io"
+      },
+      {
         "label": "Website",
         "href": "https://rootprint.io"
       }
@@ -155,7 +159,12 @@
           },
           {
             "group": "Traces",
-            "pages": ["traces/overview", "traces/send", "traces/explore"]
+            "pages": [
+              "traces/overview",
+              "traces/send",
+              "traces/explore",
+              "traces/services"
+            ]
           },
           {
             "group": "Search Logs",
@@ -180,7 +189,7 @@
                 ]
               },
               {
-                "group": "Users & access",
+                "group": "Users & Access",
                 "pages": [
                   "configuration/users",
                   "configuration/service-accounts",
@@ -227,6 +236,17 @@
               "directory": "api/reference"
             },
             "pages": ["POST /v1/traces", "GET /api/traces/{traceId}"]
+          },
+          {
+            "group": "Monitoring API",
+            "openapi": {
+              "source": "api/openapi.json",
+              "directory": "api/reference"
+            },
+            "pages": [
+              "GET /api/monitoring/services",
+              "GET /api/monitoring/errors"
+            ]
           },
           {
             "group": "Saved views",

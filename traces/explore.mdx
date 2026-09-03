@@ -29,7 +29,7 @@ The detail panel has three tabs. A tab with nothing in it is disabled and skippe
 | **Parameters** | Attributes the span carries as call parameters. |
 | **Events** | Timestamped events recorded on the span, each with its own fields. |
 
-Two attributes are hidden from the panel because they restate the span's own error state, which the waterfall already shows: `otel.status_code` and `error`. `span.kind` and `otel.status_description` are kept — they carry information nothing else displays.
+Two attributes are hidden from the panel: `otel.status_code` and `error`. `span.kind` and `otel.status_description` are shown.
 
 ## Jump back to logs
 
@@ -39,7 +39,7 @@ When a trace's logs number 1,000 or more, Rootprint stops computing per-span cou
 
 ## Truncated traces
 
-A trace larger than 2,000 spans returns a subset, and the view says so. Because the underlying query is unsorted, the spans you get are an arbitrary subset rather than the first 2,000 by time — a truncated waterfall is not the beginning of the trace, it is a sample of it.
+A trace larger than 2,000 spans returns a subset, and the view says so. The underlying query is unsorted, so the spans you get are an arbitrary subset rather than the first 2,000 by time.
 
 ## Correlate logs with traces
 

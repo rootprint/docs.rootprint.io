@@ -22,7 +22,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://rootprint:rootprint@db:5432/rootprint
-      QUICKWIT_URL: http://your-quickwit-host:7280   # Quickwit 0.9.0+ required
+      QUICKWIT_URL: http://your-quickwit-host:7280   # Quickwit 0.9.0 required
       ORIGIN: http://localhost:8282   # change to your public URL
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8282/api/health || exit 1"]

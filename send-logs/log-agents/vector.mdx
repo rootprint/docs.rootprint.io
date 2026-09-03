@@ -12,7 +12,7 @@ description: 'Tail log files with Vector — on bare metal or in Docker — and 
 
 ## Prerequisites
 
-- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
 - A Linux host. The **Bare Metal** tab uses `systemd`; the **Docker** tab uses Docker Compose.
 - An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
 
@@ -26,8 +26,8 @@ description: 'Tail log files with Vector — on bare metal or in Docker — and 
       </Step>
 
       <Step title="Write the Vector config">
-        Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint base
-        URL, `<your-ingest-token>` with the API key you copied in step 1, `/var/log/myapp/*.log` with
+        Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint
+        host, `<your-ingest-token>` with the API key you copied in step 1, `/var/log/myapp/*.log` with
         the glob that matches your application's log files, and `myapp` with your service name.
 
         <Expandable title="vector.yaml">
@@ -224,8 +224,9 @@ Field-by-field:
 - **`401` from Rootprint**: the `Authorization` header is missing or malformed. Confirm the value
   under `sinks.rootprint.protocol.request.headers.Authorization` reads exactly `Bearer <token>`,
   with a single space between `Bearer` and the token.
-- **`403` from Rootprint**: the API key's index scope does not match `otel-logs-v0_9`, or the key
-  has been deleted. Mint a fresh ingest API key for `otel-logs-v0_9` in **Settings → API keys**.
+- **`403` from Rootprint**: the ingest API key is invalid, unknown, or revoked. Mint a fresh one
+  in **Settings → API keys**. A key scoped to a different index does not return `403` — it writes
+  there silently, so check the key's index if records land somewhere unexpected.
 - **`413` from a proxy in front of Rootprint**: a single batch was too large on the wire. Rootprint
   itself sets no OTLP body-size limit, but a reverse proxy may. Lower
   `sinks.rootprint.protocol.batch.max_bytes`.

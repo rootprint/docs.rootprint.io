@@ -7,7 +7,7 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
 
 ## Prerequisites
 
-- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
 - A host running nginx that writes access and error logs to files. Stock nginx logs to `/var/log/nginx/` on Debian/Ubuntu; the paths below assume those defaults.
 - A log agent that can read those files — the [OpenTelemetry Collector](/send-logs/log-agents/otel-collector) or [Vector](/send-logs/log-agents/vector).
 - An **ingest API key** scoped to your target index. See [API keys](/api/overview).
@@ -23,7 +23,7 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
         Stock nginx writes `combined`-format access logs to `/var/log/nginx/access.log` and error logs to `/var/log/nginx/error.log`. These defaults are what the config below expects. No `nginx.conf` changes are required.
       </Step>
       <Step title="Configure the Collector">
-        Replace `<your-rootprint>` with your Rootprint base URL and `<your-ingest-token>` with the key from above.
+        Replace `<your-rootprint>` with your Rootprint host and `<your-ingest-token>` with the key from above.
 
         <Expandable title="config.yaml">
         ```yaml
@@ -157,7 +157,7 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
       </Step>
 
       <Step title="Write the Vector config">
-        Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint base URL and `<your-ingest-token>` with the API key you copied above.
+        Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint host and `<your-ingest-token>` with the API key you copied above.
 
         <Expandable title="vector.yaml">
         ```yaml
