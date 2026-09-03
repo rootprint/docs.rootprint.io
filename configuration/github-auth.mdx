@@ -54,7 +54,7 @@ Rootprint supports GitHub OAuth as an additional sign-in method alongside the de
 
 ## How organization membership is checked
 
-Rootprint requests the `read:org` and `user:email` scopes when a user signs in with GitHub. At sign-in time it queries GitHub for the user's membership in each allowed organization and grants access only if the user is an **active** member of at least one of them.
+Rootprint requests the `read:org` and `user:email` scopes when a user signs in with GitHub. At sign-in time it lists the user's **active** organization memberships (`GET /user/memberships/orgs`, paging through up to 10 pages of 100) and grants access only if one of them matches an allowed organization. Matching ignores case, so an allow-list entry does not have to reproduce the organization login's capitalization. If the check fails or errors — GitHub unreachable, a 5-second timeout, rate limiting — the sign-in is denied and the reason is logged.
 
 <Warning>
 	If an organization has **OAuth App access restrictions** enabled, your OAuth App must be approved

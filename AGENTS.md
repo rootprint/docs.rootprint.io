@@ -1,10 +1,10 @@
-# apps/docs — Agent Guide
+# docs.rootprint.io — Agent Guide
 
 ## About
 
 User-facing documentation served at docs.rootprint.io. Built with [Mintlify](https://mintlify.com): pages are MDX files with YAML frontmatter, navigation and theming are configured in `docs.json`.
 
-For repo-wide rules (Bun, Prettier, no tests), see the root `AGENTS.md`. For Mintlify component/configuration/writing-standards reference, use the `mintlify` skill.
+This is a standalone repository, not part of the `rootprint` monorepo. For Mintlify component/configuration/writing-standards reference, use the `mintlify` skill.
 
 ## Run / Build
 
@@ -16,14 +16,14 @@ mint validate                                       # strict-mode build validati
 
 `mint` parses every `.md` file under the repo root, not just docs content — move scratch or process-artifact directories aside before a run, or the check aborts on a parse error before reaching any real page.
 
-(Mintlify's `mint` CLI is run directly, not through Bun — this workspace doesn't have a `package.json`.)
+(Mintlify's `mint` CLI is run directly — this repository has no `package.json`.)
 
 ## Source Layout
 
 | Path | Purpose |
 | --- | --- |
 | `index.mdx` | Site landing |
-| `quickstart.mdx` | Top-level quickstart linked from the root README |
+| `quickstart.mdx` | Top-level quickstart linked from the `rootprint` repo README |
 | `indexes.mdx` | Indexes overview |
 | `install/` | Install guides (Docker Compose, scaling, etc.) |
 | `configuration/` | Env vars, index config, auth, admin operations |
@@ -31,8 +31,7 @@ mint validate                                       # strict-mode build validati
 | `traces/` | Trace overview, sending spans over OTLP, and reading a trace |
 | `search/` | Query language reference |
 | `api/` | HTTP API reference |
-| `tutorials/` | End-to-end recipes (e.g. Linux auth audit with Vector) |
-| `files/` | Downloadable assets — notably `docker-compose.yml` referenced from the root `README.md` curl line |
+| `files/` | Downloadable Compose files (`docker-compose.full.yaml`, `docker-compose.standalone.yaml`) served at `docs.rootprint.io/files/…` and fetched by the curl lines in `quickstart.mdx` and `install/docker-compose.mdx` |
 | `images/`, `favicon.ico` | Static assets |
 | `docs.json` | Mintlify config: navigation, theme, redirects |
 
@@ -68,8 +67,8 @@ Use these terms consistently across pages:
 
 ## Cross-File Dependencies
 
-- The root `README.md` Quick Start curl line links to `files/docker-compose.yml`. If you rename or move that file, update the README in the same PR.
-- The standalone Docker Compose file (`files/docker-compose.standalone.yml`) is referenced from install docs; keep it in sync with the main `docker-compose.yml`.
+- `files/docker-compose.full.yaml` is fetched by curl from `quickstart.mdx` and `install/docker-compose.mdx`, and by the `rootprint` repo README. If you rename or move it, update all three in the same PR.
+- `install/docker-compose.mdx` embeds both Compose files inline in `<Expandable>` blocks. Those copies are manual — edit `files/*.yaml` and the embedded snippet together or they drift.
 
 ## Authoring Help
 

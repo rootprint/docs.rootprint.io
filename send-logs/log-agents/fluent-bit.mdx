@@ -197,8 +197,9 @@ If your systemd unit drops privileges to a non-root user, also `sudo chown -R fl
 - **`401` from Rootprint**: the `Authorization` header is missing or malformed. Confirm the value
   on the `Header` line reads exactly `Authorization Bearer <token>`, with one space between
   `Authorization` and `Bearer` and one between `Bearer` and the token.
-- **`403` from Rootprint**: the API key's index scope does not match `otel-logs-v0_9`, or the key
-  has been deleted. Mint a fresh ingest API key for `otel-logs-v0_9` in **Settings → API keys**.
+- **`403` from Rootprint**: the ingest API key is invalid, unknown, or revoked. Mint a fresh one
+  in **Settings → API keys**. A key scoped to a different index does not return `403` — it writes
+  there silently, so check the key's index if records land somewhere unexpected.
 - **`413` from a proxy in front of Rootprint**: a single batch was too large on the wire. Rootprint
   itself sets no OTLP body-size limit, but a reverse proxy may. Lower the output batch size
   by setting `Workers 1` and reducing `Mem_Buf_Limit` on the `[INPUT]` block, or split the

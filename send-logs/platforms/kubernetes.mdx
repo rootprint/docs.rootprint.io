@@ -265,7 +265,7 @@ To keep a single workload instead, enable `presets.kubernetesObjects` alongside 
 - **Records arrive as single lines of a larger message**: application-level multi-line output. See [Multi-line logs](#multi-line-logs).
 - **Every event appears twice**: a workload is both exporting OTLP and printing to stdout. Compare `attributes.log.file.path:*` against `NOT attributes.log.file.path:*` to see the split, then exclude that namespace.
 - **`401` from Rootprint**: the `Authorization` header is missing or the token is wrong.
-- **`403` from Rootprint**: the API key is not scoped to `otel-logs-v0_9`. Create a new key scoped to that index.
+- **`403` from Rootprint**: the ingest API key is invalid, unknown, or revoked. Create a new one in **Settings → API keys**. A key scoped to a different index does not return `403` — it writes there silently, so check the key's index if records land somewhere unexpected.
 - **`413` from Rootprint**: the batch is too large. Add `send_batch_max_size` to the `batch` processor.
 - **`415` from Rootprint**: the `Content-Type` is not `application/x-protobuf`. The Collector sets this automatically; check for a proxy stripping headers.
 - **Logs arrive without `k8s.*` attributes**: the `kubernetesAttributes` preset needs RBAC to read pod metadata. The chart creates the `ClusterRole` automatically — if you disabled RBAC creation, grant `get`/`list`/`watch` on `pods` and `namespaces`.

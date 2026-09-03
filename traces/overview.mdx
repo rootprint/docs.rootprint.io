@@ -49,7 +49,7 @@ Opening a trace runs a raw `trace_id` search with **no time bound**, so a trace 
 
 ## Requirements
 
-- Quickwit `0.9.0` or later. See [Environment variables](/configuration/environment-variables).
+- Quickwit `0.9.0`. Earlier releases are not supported. See [Environment variables](/configuration/environment-variables).
 - An ingest API key. Any existing key works — you do not create a separate one for spans.
 
 ## Next steps
@@ -60,5 +60,8 @@ Opening a trace runs a raw `trace_id` search with **no time bound**, so a trace 
 	</Card>
 	<Card title="Read a trace" icon="git-branch" href="/traces/explore">
 		The waterfall, span details, and correlating spans with logs.
+	</Card>
+	<Card title="Service health" icon="activity" href="/traces/services">
+		Request rate, error rate, and latency per service and endpoint, from the same spans.
 	</Card>
 </CardGroup>

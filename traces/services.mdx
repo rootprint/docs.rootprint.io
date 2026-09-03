@@ -1,0 +1,73 @@
+---
+title: 'Service health'
+description: 'Read request rate, error rate, and latency per service and endpoint from the spans you already send.'
+---
+
+The **Services** page (**Monitoring → Services**, at `/monitoring`) turns the spans in your span store into the request-level view of a deployment: how much traffic each service takes, how much of it fails, how slow it is, and which endpoints account for the time.
+
+Nothing extra is ingested for it. The page reads the same OTLP spans as the trace waterfall — see [Send traces](/traces/send) — so it stays empty until spans are arriving.
+
+## What the page shows
+
+Pick a service from the picker, or leave it on all services. The selection changes which panels appear.
+
+| Panel | Shown for | Contents |
+| ----- | --------- | -------- |
+| **p95 latency by service** | All services | One p95 series per service, for comparing services against each other. |
+| **Request rate** | Both | Requests per interval, with the range total. |
+| **Error rate** | Both | Requests whose span status is `error`, per interval. |
+| **Request latency** | One service | p50, p95, and average latency per interval. |
+| **Endpoints** | Both | Endpoints ranked by the total time they account for, with request count, p50, and p95. |
+
+All panels share one cursor: hovering any of them moves the readout on all. Dragging across any panel narrows the whole page to that window.
+
+The selected service and time range live in the URL, so the view of an incident is a link you can paste into a ticket.
+
+## What counts as a request
+
+Only **SERVER** spans (`span_kind:2`) are counted — one span per inbound request. Client spans, internal spans, and producer/consumer spans are ignored, so a request crossing three services counts once per service rather than once per hop. A request is an error when its span status is `error`.
+
+## How an endpoint is identified
+
+An endpoint name comes from the first of these that the span carries:
+
+1. `http.route` — the templated route (`/users/:id`), which is what you want
+2. `url.path`
+3. `http.target`
+4. `url.full`
+5. the span name
+
+Rows built from anything other than `http.route` or a path are marked, because a raw URL yields one endpoint per distinct URL: `/users/1` and `/users/2` become two rows instead of one. If the table reads as a long tail of near-duplicates, the fix is in the instrumentation — enable HTTP route recording in the SDK or framework instrumentation that produces those spans.
+
+## Limits
+
+| Limit | Behavior |
+| ----- | -------- |
+| 30 days per range | A wider range is rejected with `400`. |
+| 2,000 buckets | An interval that would produce more buckets for the range is rejected with `400`. The UI picks the interval for you and stays inside this. |
+| 10 services charted | The p95-by-service comparison charts the 10 most active services. |
+| 100 services listed | Past that, the page says it is showing the most active services only. |
+| 30 endpoint rows | The UI requests 30 and filters locally; `endpointLimit` accepts up to `100`. |
+
+## Access and auditing
+
+Reading service health needs `logs:read` — a session cookie or a personal API key. It is not admin-only, and it is not scoped per index: any actor that can read logs can read it.
+
+Each request is recorded in the search audit like any other search, and it counts against the read rate limit. See [Rate limiting](/configuration/environment-variables#rate-limiting).
+
+<Warning>
+	A missing span store is not an error. If `TRACE_INDEX_ID` points at an index that does not exist,
+	the page reports that trace telemetry is unavailable rather than failing — the same silent-typo
+	trap as the trace view. See [Environment variables](/configuration/environment-variables).
+</Warning>
+
+## Next steps
+
+<CardGroup cols={2}>
+	<Card title="Send traces" icon="send" href="/traces/send">
+		Point an OpenTelemetry SDK or Collector at the trace endpoint.
+	</Card>
+	<Card title="Monitoring API" icon="activity" href="/api/overview">
+		`GET /api/monitoring/services`, the endpoint behind the page, for your own dashboards.
+	</Card>
+</CardGroup>
