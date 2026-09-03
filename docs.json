@@ -238,7 +238,7 @@
             "pages": ["POST /v1/traces", "GET /api/traces/{traceId}"]
           },
           {
-            "group": "Monitoring API",
+            "group": "Service health API",
             "openapi": {
               "source": "api/openapi.json",
               "directory": "api/reference"
@@ -398,7 +398,7 @@
             ]
           },
           {
-            "group": "Cluster and health API",
+            "group": "System monitoring API",
             "openapi": {
               "source": "api/openapi.json",
               "directory": "api/reference"
