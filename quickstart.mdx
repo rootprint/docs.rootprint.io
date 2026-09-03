@@ -34,7 +34,7 @@ This guide walks you through deploying Rootprint locally, signing in, and sendin
   </Step>
 
   <Step title="Send sample logs">
-    Set `TOKEN` to the API key you just copied, then use `curl` to post a couple of NDJSON log entries to the bundled `otel-logs-v0_9` index:
+    Set `TOKEN` to the ingest API key you copied, then use `curl` to post a couple of NDJSON log entries to the bundled `otel-logs-v0_9` index:
 
     ```bash
     export TOKEN='<your-ingest-token>'
@@ -56,6 +56,6 @@ This guide walks you through deploying Rootprint locally, signing in, and sendin
 
 ## Next steps
 
-- [Read the Send Logs guide](/send-logs/overview) to understand the OpenTelemetry path and the authenticated HTTP endpoint.
+- [Read the Send logs guide](/send-logs/overview) to understand the OpenTelemetry path and the authenticated HTTP endpoint.
 - [Learn the search query syntax](/search/query-language) to filter your logs precisely.
 - [Set up Google OAuth](/configuration/google-auth) to let your team sign in with their company Google accounts.

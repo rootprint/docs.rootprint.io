@@ -7,7 +7,7 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
 
 ## Prerequisites
 
-- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
 - A host running Caddy that writes its logs to files. Stock Caddy logs to `journald`; this page enables file logging below.
 - A log agent that can read those files — the [OpenTelemetry Collector](/send-logs/log-agents/otel-collector) or [Vector](/send-logs/log-agents/vector).
 - An **ingest API key** scoped to your target index. See [API keys](/api/overview).
@@ -44,7 +44,7 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
         ```
       </Step>
       <Step title="Configure the Collector">
-        Replace `<your-rootprint>` with your Rootprint base URL and `<your-ingest-token>` with the key from above.
+        Replace `<your-rootprint>` with your Rootprint host and `<your-ingest-token>` with the key from above.
 
         <Expandable title="config.yaml">
         ```yaml
@@ -167,7 +167,7 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
 
       <Step title="Write the Vector config">
         Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint
-        base URL and `<your-ingest-token>` with the API key you copied above.
+        host and `<your-ingest-token>` with the API key you copied above.
 
         <Expandable title="vector.yaml">
         ```yaml
@@ -427,7 +427,7 @@ service_name:caddy AND attributes.caddy.logger:http.log.access
 ## Troubleshooting
 
 - **Records arrive but `attributes.http.*` are missing**: the entry came from `error.log` (no `.request` block), by design. Filter access-log entries with `attributes.caddy.logger:http.log.access`.
-- **`body` looks like raw JSON instead of just the message**: the access log is using a non-default `format` directive in the Caddyfile. The parser expects Caddy's default JSON encoder. Either remove the `format` directive or extend the config to handle the alternate shape.
+- **`body` looks like raw JSON instead of the message alone**: the access log is using a non-default `format` directive in the Caddyfile. The parser expects Caddy's default JSON encoder. Either remove the `format` directive or extend the config to handle the alternate shape.
 - **`severity_text` is always `INFO` even for 5xx responses**: by design. Caddy emits every HTTP access at `level: info` regardless of status code; both agents trust the source. Filter on `attributes.http.response.status_code:>=500` to surface server errors.
 - **Ingest transport errors (`401`, `403`, `413`, `415`)**: see [OTLP reference → Response codes](/send-logs/otlp#response-codes).
 

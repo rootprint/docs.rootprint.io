@@ -15,9 +15,9 @@ Rootprint supports GitHub OAuth as an additional sign-in method alongside the de
 
     - **Application name:** any name you like (e.g. `Rootprint`)
     - **Homepage URL:** the public URL of your Rootprint instance
-    - **Authorization callback URL:** `https://your-rootprint-url/api/auth/callback/github`
+    - **Authorization callback URL:** `https://<your-rootprint>/api/auth/callback/github`
 
-    Replace `your-rootprint-url` with the public URL of your Rootprint instance. After creating the app, copy the **Client ID** and generate a new **Client Secret**. You will need them in the next step.
+    Replace `<your-rootprint>` with the host of your Rootprint instance. After creating the app, copy the **Client ID** and generate a new **Client Secret**. You will need them in the next step.
 
   </Step>
 
@@ -54,7 +54,7 @@ Rootprint supports GitHub OAuth as an additional sign-in method alongside the de
 
 ## How organization membership is checked
 
-Rootprint requests the `read:org` and `user:email` scopes when a user signs in with GitHub. At sign-in time it lists the user's **active** organization memberships (`GET /user/memberships/orgs`, paging through up to 10 pages of 100) and grants access only if one of them matches an allowed organization. Matching ignores case, so an allow-list entry does not have to reproduce the organization login's capitalization. If the check fails or errors — GitHub unreachable, a 5-second timeout, rate limiting — the sign-in is denied and the reason is logged.
+Rootprint requests the `read:org` and `user:email` scopes when a user signs in with GitHub. At sign-in time it lists the user's **active** organization memberships (`GET /user/memberships/orgs`, paging through up to 10 pages of 100). Access is granted only if one of those memberships matches an allowed organization. Matching ignores case, so an allow-list entry does not have to reproduce the organization login's capitalization. If the check fails or errors — GitHub unreachable, a 5-second timeout, rate limiting — the sign-in is denied and the reason is logged.
 
 <Warning>
 	If an organization has **OAuth App access restrictions** enabled, your OAuth App must be approved

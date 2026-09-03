@@ -12,7 +12,7 @@ description: 'Tail log files with Vector — on bare metal or in Docker — and 
 
 ## Prerequisites
 
-- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
 - A Linux host. The **Bare Metal** tab uses `systemd`; the **Docker** tab uses Docker Compose.
 - An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
 
@@ -26,8 +26,8 @@ description: 'Tail log files with Vector — on bare metal or in Docker — and 
       </Step>
 
       <Step title="Write the Vector config">
-        Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint base
-        URL, `<your-ingest-token>` with the API key you copied in step 1, `/var/log/myapp/*.log` with
+        Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint
+        host, `<your-ingest-token>` with the API key you copied in step 1, `/var/log/myapp/*.log` with
         the glob that matches your application's log files, and `myapp` with your service name.
 
         <Expandable title="vector.yaml">

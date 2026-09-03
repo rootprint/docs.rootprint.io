@@ -14,7 +14,7 @@ Rootprint owns the entire log experience: who can sign in, which indexes they se
 | **Rootprint**, the platform (single-node) | Web UI, authentication and users, OAuth (Google/GitHub), the ingest gateway, the search and API layer, access rules, **field-role** presentation mapping, log-to-trace correlation, saved views, share links, and the activity/audit trail. |
 | **Quickwit**, the search engine (scales horizontally) | Indexing pipelines, full-text search and aggregations, split storage, the metastore, and pull-based sources (Amazon Kinesis, Apache Kafka, files via S3/SQS). |
 
-The engine carries the indexing and search load, so Rootprint stays lightweight and single-node while Quickwit grows to match your volume. See [Scaling beyond a single node](/install/scaling) for how to grow it.
+Rootprint runs single-node; Quickwit scales horizontally. See [Scaling beyond a single node](/install/scaling). Quickwit has no authentication of its own: serve Rootprint on your public URL and keep Quickwit private.
 
 ## How data flows
 
@@ -75,7 +75,7 @@ flowchart LR
 
 ## What's stored where
 
-Three independent stores hold all durable state. Once you know which is which, you know what to back up and what to scale.
+Three independent stores hold all durable state.
 
 | Store | What lives here | Single-node default | Scaled |
 | ----- | --------------- | ------------------- | ------ |
@@ -85,15 +85,10 @@ Three independent stores hold all durable state. Once you know which is which, y
 
 <Warning>
 	These three stores are separate from each other. Rootprint's Postgres database and Quickwit's
-	metastore must each be their own database, even if they share a Postgres server. Deleting the
-	index-storage volume permanently destroys your logs.
+	metastore must each be their own database, even if they share a Postgres server. Back up all
+	three: each holds state the others cannot reconstruct. Deleting the index-storage volume
+	permanently destroys your logs.
 </Warning>
-
-## What this means for you
-
-- **Scale Quickwit, keep one Rootprint.** Grow capacity by adding Quickwit indexer and searcher nodes; run a single Rootprint instance in front of them. The [scaling guide](/install/scaling) covers the cluster topology.
-- **Back up all three stores.** Rootprint Postgres, the Quickwit metastore, and index storage each hold state the others can't reconstruct.
-- **Rootprint is the only authenticated entry point.** Put it on your public URL and keep Quickwit private.
 
 ## Related
 

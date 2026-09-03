@@ -48,8 +48,7 @@ Rootprint maps OTLP errors to gRPC-style status codes. Upstream `4xx` statuses p
 | `429`  | Upstream Quickwit is rate-limited. `Retry-After` is echoed (default 5). |
 | `503`  | Upstream Quickwit error or network failure. `Retry-After: 5`.           |
 
-
-A `413` usually means a reverse proxy in front of Rootprint rejected an oversized request body, though an upstream `413` from Quickwit now passes through unchanged as well. Lower the agent's batch size (`batch.max_bytes` in Vector, `send_batch_max_size` on the Collector's `batch` processor) or raise the proxy's body limit.
+On a `413`, lower the agent's batch size (`batch.max_bytes` in Vector, `send_batch_max_size` on the Collector's `batch` processor) or raise the proxy's body limit.
 
 ## Environment variables
 

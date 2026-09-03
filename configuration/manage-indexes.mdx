@@ -7,9 +7,8 @@ The **Settings → Indexes** section gives admins a single place to create index
 
 <Note>
 	Structural changes such as deleting an index or creating, editing, toggling, or deleting a
-	source persist to the index storage backend (the embedded Quickwit engine), not just
-	Rootprint's local presentation metadata. The index list, fields, and sources are read live on
-	each load.
+	source apply to the embedded Quickwit engine itself, not to Rootprint's local presentation
+	metadata. The index list, fields, and sources are read live on each load.
 </Note>
 
 ## Indexes list
@@ -111,7 +110,7 @@ All three source types also accept three optional fields:
 
 | Field                  | Notes                                                                                                                                                            |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Input format**       | The document format on the wire. Defaults to JSON. Other choices: `json`, `plain_text`, `otlp_logs_json`, `otlp_logs_protobuf`, `otlp_traces_json`, `otlp_traces_protobuf`. |
+| **Input format**       | The document format on the wire. Defaults to `json`. Other choices: `plain_text`, `otlp_logs_json`, `otlp_logs_protobuf`, `otlp_traces_json`, `otlp_traces_protobuf`. |
 | **Number of pipelines**| Ingestion concurrency for this source. Leave blank to use the default of one.                                                          |
 | **VRL script**         | An optional [Vector Remap Language](https://vector.dev/docs/reference/vrl/) program run on each document before indexing; see below. Leave blank to disable.     |
 

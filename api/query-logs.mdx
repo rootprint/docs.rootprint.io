@@ -33,14 +33,14 @@ Authorization: Bearer rpk_abcdef0123456789...
 The key works on these read-only log explorer endpoints.
 
 ```bash
-curl 'https://your-rootprint-host/api/indexes/{indexId}/logs?q=severity_text:ERROR&limit=50' \
+curl 'https://<your-rootprint>/api/indexes/{indexId}/logs?q=severity_text:ERROR&limit=50' \
   -H 'Authorization: Bearer rpk_abcdef0123456789...'
 ```
 
 To discover the index IDs your key can read, list indexes first:
 
 ```bash
-curl 'https://your-rootprint-host/api/indexes' \
+curl 'https://<your-rootprint>/api/indexes' \
   -H 'Authorization: Bearer rpk_abcdef0123456789...'
 ```
 

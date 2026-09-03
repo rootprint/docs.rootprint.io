@@ -189,7 +189,7 @@
                 ]
               },
               {
-                "group": "Users & access",
+                "group": "Users & Access",
                 "pages": [
                   "configuration/users",
                   "configuration/service-accounts",
@@ -238,12 +238,15 @@
             "pages": ["POST /v1/traces", "GET /api/traces/{traceId}"]
           },
           {
-            "group": "Monitoring API",
+            "group": "Service health API",
             "openapi": {
               "source": "api/openapi.json",
               "directory": "api/reference"
             },
-            "pages": ["GET /api/monitoring/services"]
+            "pages": [
+              "GET /api/monitoring/services",
+              "GET /api/monitoring/errors"
+            ]
           },
           {
             "group": "Saved views",

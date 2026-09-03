@@ -9,10 +9,10 @@ If you are setting up log collection for the first time, start with [Send logs](
 
 ## Base URL
 
-All API requests go to your Rootprint instance. Replace the host below with your deployment URL.
+All API requests go to your Rootprint instance. Replace the host below with your Rootprint host, including the port if it does not serve on the default one.
 
 ```
-https://your-rootprint-host
+https://<your-rootprint>
 ```
 
 ## Authentication
@@ -43,7 +43,7 @@ The generated endpoint reference is arranged around the audience for each endpoi
 | Log ingest API         | NDJSON and OTLP endpoints for log producers                   |
 | Log explorer API       | Search, histograms, field values, and exports. Query API keys work on search, histogram, field-value, and field-discovery endpoints. |
 | Traces API             | OTLP span ingest and single-trace lookup                      |
-| Monitoring API         | Service health panels computed from server spans: request rate, errors, latency, and top endpoints |
+| Service health API     | Service health computed from spans: request rate, errors, latency, top endpoints, downstream calls, and the failing spans themselves |
 | Saved views            | Create, list, update, and delete saved searches scoped to an index |
 | Share links            | Create and resolve public share links for log views           |
 | Index management API   | Index metadata, field discovery, preferences, and stats       |
@@ -55,6 +55,16 @@ The generated endpoint reference is arranged around the audience for each endpoi
 | Authentication API     | Setup, sign-in, sessions, sign-out, and password changes      |
 | Auth settings API      | Google and GitHub OAuth credentials, allowed domains, and allowed organizations |
 | System monitoring API  | Health, cluster overview, activity, and metrics               |
+
+## Timestamps
+
+Every timestamp the API takes is **Unix epoch seconds** — `startTs` and `endTs` on search, histogram, field-value, export, monitoring, and stats requests, and `startTime`/`endTime` in a share or saved-view body. Log documents keep their own nanosecond fields; that is document data, not a request parameter.
+
+<Warning>
+	`GET /api/indexes/{indexId}/stats` ignores `from` and `to` rather than rejecting them. A caller
+	sending those instead of `startTs` and `endTs` gets an unbounded query: the *oldest* snapshots up
+	to `limit` (5,000 by default), not the window it asked for.
+</Warning>
 
 ## Common content types
 
@@ -109,7 +119,7 @@ Most app-level endpoints return JSON errors with a stable `error` object.
 | `413`  | Payload too large                                  |
 | `415`  | Unsupported media type                             |
 | `422`  | Unprocessable entity, such as a share payload over 64KB |
-| `429`  | Rate limit exceeded — Rootprint's own (`TOO_MANY_REQUESTS`) or Quickwit's, passed through (`UPSTREAM_RATE_LIMIT`). Honour `Retry-After`. |
+| `429`  | Rate limit exceeded — Rootprint's own (`TOO_MANY_REQUESTS`) or Quickwit's, passed through (`UPSTREAM_RATE_LIMIT`). Honor `Retry-After`. |
 | `500`  | Internal server error                              |
 | `503`  | Quickwit or another upstream dependency is down    |
 

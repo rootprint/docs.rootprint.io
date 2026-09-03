@@ -7,7 +7,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
 
 ## Prerequisites
 
-- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
 - Node.js 18+ with `npm` (the SDK needs native `fetch` and top-level `await`).
 - An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` for the examples here). See [API keys](/api/overview).
 
@@ -40,11 +40,11 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
   <Step title="Set environment variables">
     ```bash
     export OTEL_SERVICE_NAME=my-node-service
-    export OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=https://<your-rootprint>/v1/logs
-    export OTEL_EXPORTER_OTLP_LOGS_HEADERS=Authorization=Bearer%20<your-ingest-token>
+    export OTEL_EXPORTER_OTLP_LOGS_ENDPOINT='https://<your-rootprint>/v1/logs'
+    export OTEL_EXPORTER_OTLP_LOGS_HEADERS='Authorization=Bearer%20<your-ingest-token>'
     ```
 
-    <Warning>The `%20` after `Bearer` is required. OTEL expects URL-encoded header values.</Warning>
+    <Warning>The `%20` after `Bearer` is required: OpenTelemetry SDKs expect URL-encoded values in `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.</Warning>
 
   </Step>
 

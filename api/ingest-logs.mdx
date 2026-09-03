@@ -5,7 +5,7 @@ description: 'Send newline-delimited JSON log events to the index attached to yo
 
 The ingest endpoint accepts a batch of log events as NDJSON and ingests them into the index attached to your ingest API key. Your log shippers authenticate with a per-index ingest API key, so you manage access centrally and each key writes only to its own index.
 
-If you want the full setup flow, see [Send Logs](/send-logs/overview).
+If you want the full setup flow, see [Send logs](/send-logs/overview).
 
 ## Endpoint
 
@@ -33,7 +33,7 @@ Set `Content-Type: application/x-ndjson` (or `application/json`). The body must 
 ## Example request
 
 ```bash
-curl -X POST 'https://your-rootprint-host/api/ingest/ndjson' \
+curl -X POST 'https://<your-rootprint>/api/ingest/ndjson' \
   -H 'Authorization: Bearer rp_abc123' \
   -H 'Content-Type: application/x-ndjson' \
   --data-binary @- <<'EOF'
@@ -68,7 +68,7 @@ Example success response:
 </Note>
 
 <Tip>
-	The OTLP endpoint behaves differently as of 0.4.0: `POST /v1/logs` reports per-record rejections
+	The OTLP endpoint behaves differently: `POST /v1/logs` reports per-record rejections
 	through `partial_success`. See [OTLP reference](/send-logs/otlp#response-codes).
 </Tip>
 

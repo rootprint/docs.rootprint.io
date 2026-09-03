@@ -13,7 +13,7 @@ description: 'Tail log files with Fluent Bit — on bare metal or in Docker — 
 
 ## Prerequisites
 
-- A running Rootprint instance and its base URL — you'll substitute it for `<your-rootprint>`.
+- A running Rootprint instance, plus the hostname and port it serves on — you'll substitute them for `<your-rootprint-host>` and `<port>`.
 - A Linux host. The **Bare Metal** tab uses `systemd`; the **Docker** tab uses Docker Compose.
 - An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
 
