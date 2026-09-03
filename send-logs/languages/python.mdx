@@ -30,7 +30,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP (`proto-http`). The Python S
     export OTEL_EXPORTER_OTLP_LOGS_HEADERS='Authorization=Bearer%20<your-ingest-token>'
     ```
 
-    <Warning>The `%20` after `Bearer` is required. OTLP expects URL-encoded header values.</Warning>
+    <Warning>The `%20` after `Bearer` is required: OpenTelemetry SDKs expect URL-encoded values in `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.</Warning>
 
   </Step>
 

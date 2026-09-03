@@ -398,7 +398,7 @@
             ]
           },
           {
-            "group": "System monitoring API",
+            "group": "Cluster and health API",
             "openapi": {
               "source": "api/openapi.json",
               "directory": "api/reference"

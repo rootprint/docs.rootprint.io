@@ -51,7 +51,7 @@ the OTEL logs index pinned by your ingest API key (`otel-logs-v0_9` in these exa
     export OTEL_EXPORTER_OTLP_LOGS_HEADERS='Authorization=Bearer%20<your-ingest-token>'
     ```
 
-    <Warning>The `%20` after `Bearer` is required. OTLP expects URL-encoded header values.</Warning>
+    <Warning>The `%20` after `Bearer` is required: OpenTelemetry SDKs expect URL-encoded values in `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.</Warning>
 
   </Step>
 

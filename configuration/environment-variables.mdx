@@ -28,7 +28,7 @@ Rootprint refuses to start if any required variable is missing, empty, or (for U
 | `PORT`               | `8282`           | HTTP listen port. Remap the port with the compose `ports:` block instead of changing this.                                                                                                                                     |
 | `TRACE_INDEX_ID`     | `otel-traces-v0_9` | The **span store**: the one Quickwit index holding OTLP spans. Every trace read and write resolves to it. |
 | `LOG_LEVEL`          | `info`           | API log level. Accepts any Pino level: `trace`, `debug`, `info`, `warn`, `error`, `fatal`.                                                                                                                                       |
-| `SEARCH_AUDIT_RETENTION_DAYS` | `30`    | How many days of search activity audit rows to keep. Rows older than the window are pruned on the same hourly tick that captures index stats. `30` is also the minimum; a lower value fails startup. |
+| `SEARCH_AUDIT_RETENTION_DAYS` | `30`    | How many days of search activity audit rows to keep. Rows older than the window are pruned hourly, alongside index-stats capture. `30` is also the minimum; a lower value fails startup. |
 
 ## Rate limiting
 

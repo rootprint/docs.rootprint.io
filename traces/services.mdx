@@ -3,13 +3,13 @@ title: 'Service health'
 description: 'Read request rate, error rate, latency, downstream calls, and failing spans from the spans you already send.'
 ---
 
-The **Services** page (at `/monitoring`) turns the spans in your span store into the request-level view of a deployment: how much traffic each service takes, how much of it fails, how slow it is, which endpoints account for the time, what each service calls downstream, and which individual spans failed.
+The **Services** page (at `/monitoring`) reads the spans in your span store as request-level metrics: request volume, error rate, and latency per service, the endpoints taking the most time, each service's downstream calls, and the individual spans that failed.
 
 Nothing extra is ingested for it. The page reads the same OTLP spans as the trace waterfall — see [Send traces](/traces/send) — so it stays empty until spans are arriving.
 
 ## The summary strip
 
-Every view opens with the same five figures for the current service and time range:
+The summary strip is the same on every tab, and covers the current service and time range:
 
 | Figure          | Meaning                                                                                    |
 | --------------- | ------------------------------------------------------------------------------------------ |
@@ -17,7 +17,7 @@ Every view opens with the same five figures for the current service and time ran
 | **Requests**    | Inbound server spans in the range.                                                         |
 | **Throughput**  | Those requests per minute.                                                                 |
 | **Error rate**  | Failing requests as a share of requests. Server spans only.                                |
-| **p95 latency** | p95 over the selected service's requests. With no service selected it reads **Slowest p95** — the worst service's p95, named beside the figure. |
+| **p95 latency** | The 95th-percentile latency of the selected service's requests. With no service selected the figure reads **Slowest p95**: the highest p95 of any service, with that service named beside it. |
 
 A service can serve every request successfully while its outbound calls fail, so a non-zero **Error spans** count next to a `0%` **Error rate** is a valid combination.
 
@@ -28,7 +28,7 @@ Below the strip, the rest of the page is tabbed. The tabs you see depend on whet
 | Tab              | Shown for     | Contents                                                                                                  |
 | ---------------- | ------------- | --------------------------------------------------------------------------------------------------------- |
 | **Overview**     | Both          | The charts. All services: p95 latency per service, request rate, error rate. One service: request rate, error rate, and p50/p95/average request latency. |
-| **Services**     | All services  | Every service ranked by request volume, with failure share and p50/p95. Selecting a row scopes the page to it. |
+| **Services**     | All services  | Every service ranked by request volume, with error rate and p50/p95. Selecting a row scopes the page to it. |
 | **Endpoints**    | Both          | Endpoints ranked by the total time they account for, with request count, p50, and p95.                    |
 | **Dependencies** | One service   | Outbound client and producer spans the service emits, ranked by total time. Hidden when it has none.      |
 | **Errors**       | Both          | Individual failing spans, newest first. The tab carries the error-span count and turns red when it is non-zero. |
@@ -37,15 +37,15 @@ All charts share one cursor: hovering any of them moves the readout on all. Drag
 
 ## What counts as a request
 
-Only **SERVER** spans (`span_kind:2`) are counted as requests — one span per inbound request. Client, internal, and producer/consumer spans are ignored there, so a request crossing three services counts once per service rather than once per hop. A request is an error when its span status is `error`.
+Only **SERVER** spans (`span_kind:2`) are counted as requests — one span per inbound request. Client, internal, and producer/consumer spans are ignored there, so a request crossing three services counts once in each of them. A request is an error when its span status is `error`.
 
 The **Errors** tab is the exception: it lists failing spans of every kind.
 
-## How an endpoint is identified
+## How Rootprint identifies an endpoint
 
 An endpoint name comes from the first of these that the span carries:
 
-1. `http.route` — the templated route (`/users/:id`), which is what you want
+1. `http.route` — the templated route (`/users/:id`)
 2. `url.path`
 3. `http.target`
 4. `url.full`
@@ -55,7 +55,7 @@ Rows built from anything other than `http.route` or a path are marked, because a
 
 ## Downstream calls
 
-The **Dependencies** tab groups a service's outbound spans — client (`span_kind:3`) and producer (`span_kind:4`) — by span name, and ranks them by total time, with call count, p50, and p95. Under each call name it lists up to three peers, read from `server.address`, so an HTTP client span shows which hosts it talked to.
+The **Dependencies** tab groups a service's outbound spans — client (`span_kind:3`) and producer (`span_kind:4`) — by span name, and ranks them by total time, with call count, p50, and p95. Under each call name it lists up to three peers, read from `server.address`, so an HTTP client span shows which hosts it called.
 
 Select a service to see it.
 

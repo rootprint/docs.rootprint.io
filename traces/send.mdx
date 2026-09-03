@@ -56,7 +56,8 @@ Set `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` on any runtime that can pick a p
 The endpoint variable takes the **full path**, not a base URL.
 
 <Warning>
-	The `%20` after `Bearer` is required — OTLP expects URL-encoded header values.
+	The `%20` after `Bearer` is required: OpenTelemetry SDKs expect URL-encoded values in
+	`OTEL_EXPORTER_OTLP_TRACES_HEADERS`.
 </Warning>
 
 ## Set up your service
