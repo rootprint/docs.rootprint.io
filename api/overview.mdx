@@ -58,7 +58,7 @@ The generated endpoint reference is arranged around the audience for each endpoi
 
 ## Timestamps
 
-Every timestamp the API takes is **Unix epoch seconds** — `startTs` and `endTs` on search, histogram, field-value, export, monitoring, and stats requests, and `startTime`/`endTime` in a share or saved-view body. Log documents keep their own nanosecond fields; that is document data, not a request parameter.
+Every timestamp the API takes is **Unix epoch seconds** — `startTs` and `endTs` on search, histogram, field-value, field-discovery, export, monitoring, and stats requests, and `startTime`/`endTime` in a share or saved-view body. Log documents keep their own nanosecond fields; that is document data, not a request parameter.
 
 <Warning>
 	`GET /api/indexes/{indexId}/stats` ignores `from` and `to` rather than rejecting them. A caller
