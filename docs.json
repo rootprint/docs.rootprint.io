@@ -154,7 +154,8 @@
                   "send-logs/log-agents/vector"
                 ]
               },
-              "send-logs/http"
+              "send-logs/http",
+              "send-logs/syslog"
             ]
           },
           {

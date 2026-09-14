@@ -1,0 +1,187 @@
+---
+title: 'Send syslog'
+description: 'Forward RFC5424 syslog from rsyslog into a custom Rootprint index, with Vector receiving on the wire and relaying NDJSON.'
+---
+
+Every Linux host speaks syslog. Rootprint has no syslog listener of its own, so you run [Vector](https://vector.dev) as a relay: it receives syslog on a socket, parses it into structured fields, and posts NDJSON to the [HTTP ingest endpoint](/send-logs/http).
+
+```
+rsyslog ──RFC5424/TCP──► Vector ──NDJSON──► Rootprint
+        omfwd            syslog source
+```
+
+Syslog records don't fit the built-in `otel-logs-v0_9` schema, so this guide creates a [custom index](/configuration/custom-indexes) whose fields match syslog's own: facility, severity, hostname, appname, procid, message. Vector's `syslog` source emits those under the same names, so the transform below stays short.
+
+<Note>
+	If your application speaks OpenTelemetry, use the [OTLP endpoint](/send-logs/otlp) instead. This
+	page is for software that speaks syslog and nothing else.
+</Note>
+
+## Prerequisites
+
+- A running Rootprint instance and the host it serves on. You'll substitute it for `<your-rootprint>`.
+- A Linux host running `rsyslog` (the default on Debian, Ubuntu, RHEL and derivatives). If you run `journald` only, see [If you only run journald](#if-you-only-run-journald) below.
+- A host to run Vector on. It can be the same machine that produces the logs, or a central relay that many machines forward to.
+
+## Setup
+
+<Steps>
+  <Step title="Create the syslog index">
+    In **Settings → Indexes → Create index**, set the index ID to `syslog`, mode to `dynamic`, and the timestamp field to `ts`. Add these fields:
+
+    | Field      | Type       | Tokenizer | Notes                                              |
+    | ---------- | ---------- | --------- | -------------------------------------------------- |
+    | `ts`       | `datetime` | —         | The timestamp field. Input formats `rfc3339` and `unix_timestamp`, millisecond precision. |
+    | `hostname` | `text`     | `raw`     | The machine that produced the record.              |
+    | `appname`  | `text`     | `raw`     | The program: `nginx`, `sshd`, `CRON`.             |
+    | `procid`   | `text`     | `raw`     | Text, not a number: RFC5424 permits `-` and non-numeric values. |
+    | `facility` | `text`     | `raw`     | `auth`, `authpriv`, `cron`, `daemon`, `local0`–`local7`. |
+    | `severity` | `text`     | `raw`     | `emerg` `alert` `crit` `err` `warning` `notice` `info` `debug`. |
+    | `message`  | `text`     | `default` | Set **record** to `position` for phrase queries, and tick **default search** so a bare query matches the message body. |
+
+    Under the optional settings, add `appname`, `facility` and `severity` as **tag fields**. They hold few distinct values, so tagging lets the engine skip splits before scanning.
+
+    Use `dynamic` mode so you don't have to declare every field up front. RFC5424 structured data lands in a field named after its SD-ID, and anything else your senders attach stays searchable.
+
+  </Step>
+
+  <Step title="Map the display roles">
+    On the new index's **Configuration** tab, set the [field-role mappings](/configuration/manage-indexes#field-role-mappings) so Search knows how to render a record:
+
+    - **Log level** → `severity`
+    - **Message** → `message`
+
+    The defaults assume the OTEL schema (`severity_text`, `body.message`), so records look blank until you change them.
+  </Step>
+
+  <Step title="Create an ingest key">
+    In **Settings → API keys**, click **Create ingest key**, name it, and pick the `syslog` index. Copy the `rp_…` token. You'll paste it into the Vector config next. See [API keys](/api/overview).
+  </Step>
+
+  <Step title="Configure Vector">
+    Install Vector from the [official installation page](https://vector.dev/docs/setup/installation/), then save this at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` and `<your-ingest-token>`.
+
+    <Expandable title="vector.yaml">
+    ```yaml
+    sources:
+      syslog:
+        type: syslog
+        address: 0.0.0.0:5514
+        mode: tcp
+
+    transforms:
+      shape:
+        type: remap
+        inputs: [syslog]
+        source: |
+          .ts = .timestamp
+
+          # PROCID is NILVALUE on plenty of senders, and numeric PIDs arrive as
+          # integers. to_string() returns "" for a missing field rather than
+          # erroring, so the empty case needs its own check.
+          .procid = to_string(.procid) ?? "-"
+          if .procid == "" { .procid = "-" }
+
+          # Vector's own bookkeeping, not part of the index schema.
+          del(.timestamp)
+          del(.source_type)
+          del(.host)
+          del(.version)
+          del(.msgid)
+
+    sinks:
+      rootprint:
+        type: http
+        inputs: [shape]
+        uri: https://<your-rootprint>/api/ingest/ndjson
+        encoding:
+          codec: json
+        framing:
+          method: newline_delimited
+        auth:
+          strategy: bearer
+          token: <your-ingest-token>
+        batch:
+          max_bytes: 8388608
+          timeout_secs: 1
+    ```
+    </Expandable>
+
+    Then restart it:
+
+    ```bash
+    sudo systemctl restart vector
+    sudo systemctl status vector
+    ```
+
+    `framing.method: newline_delimited` makes the `http` sink emit NDJSON, one object per line, rather than a JSON array.
+
+    Port `5514` rather than `514`: Vector runs as the unprivileged `vector` user and cannot bind a port below 1024. If a sender has `514` hard-coded, grant `CAP_NET_BIND_SERVICE` with a `systemd` override instead of running Vector as root.
+
+    Vector also attaches `source_ip`, the address the record arrived from. It isn't in the schema, but `dynamic` mode keeps it searchable, which helps on a central relay when you need to tell senders apart.
+
+  </Step>
+
+  <Step title="Point rsyslog at Vector">
+    Save this as `/etc/rsyslog.d/90-rootprint.conf`, replacing `<vector-host>` with the machine running Vector (`127.0.0.1` if it's the same one):
+
+    ```
+    *.* action(type="omfwd"
+               target="<vector-host>"
+               port="5514"
+               protocol="tcp"
+               template="RSYSLOG_SyslogProtocol23Format")
+    ```
+
+    ```bash
+    sudo systemctl restart rsyslog
+    ```
+
+    `RSYSLOG_SyslogProtocol23Format` is rsyslog's built-in RFC5424 template. Without it rsyslog sends the older RFC3164 format, which carries no structured data and a lower-resolution timestamp.
+
+    `*.*` forwards everything. To send less, narrow the selector: `auth,authpriv.*` for authentication records, or `local7.*` if you route application logs to a local facility.
+
+  </Step>
+
+  <Step title="Verify in Rootprint">
+    Send a test record:
+
+    ```bash
+    logger -p local7.notice "hello from rsyslog"
+    ```
+
+    Open Search, pick `syslog` from the index selector, and query `hello from rsyslog`. Allow a few seconds for Quickwit to commit. A `200` from the ingest endpoint means Rootprint queued the documents, not that you can search them yet.
+
+  </Step>
+</Steps>
+
+## If you only run journald
+
+Modern distributions run `systemd-journald`, sometimes without `rsyslog`. Rather than reading the journal, have journald hand its records to syslog. In `/etc/systemd/journald.conf`:
+
+```ini
+[Journal]
+ForwardToSyslog=yes
+```
+
+```bash
+sudo systemctl restart systemd-journald
+```
+
+Install `rsyslog` if it isn't present. The configuration above applies unchanged.
+
+## Troubleshooting
+
+- **Nothing arrives**: check that rsyslog can reach Vector. `ss -tnp | grep 5514` on the rsyslog host should show an established connection. On a central relay, suspect a firewall between the two.
+- **`403` from the ingest endpoint**: the token is wrong, revoked, or scoped to another index. If your config uses `${VAR}`, check Vector's version: 0.57 turned environment variable interpolation **off** by default, so Vector sends the variable name verbatim as the bearer token. The `403` gives no hint that the config is at fault. Set `VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION=true` in Vector's environment.
+- **Records arrive but `ts` is wrong or missing**: the sender emitted RFC3164 rather than RFC5424. Confirm the `template="RSYSLOG_SyslogProtocol23Format"` line is present.
+- **Every record shows an `UNKNOWN` log level**: the lines carry no `<13>` priority prefix, so Vector never parsed `facility` or `severity`.
+- **The program name appears in `hostname`, and `appname` holds the real hostname**: an application is writing its own syslog frames to `/dev/log` with a HOSTNAME field, but `imuxsock` expects the local `syslog(3)` format, which has none, so every field shifts by one. nginx does this. Point the application at `127.0.0.1:514` over UDP and load `imudp` in rsyslog, so the network parser handles it. That parser does expect a hostname.
+
+## Related
+
+- [Send logs over HTTP](/send-logs/http): the endpoint this guide posts to
+- [Create a custom index](/configuration/custom-indexes): the full field-editor reference
+- [Manage indexes](/configuration/manage-indexes#field-role-mappings): field-role mapping
+- [Send logs with Vector](/send-logs/log-agents/vector): Vector install, `systemd` and Docker setup
+- [Search query syntax](/search/query-language): querying the fields above
