@@ -82,7 +82,7 @@ Example success response:
 | `404`  | The target index no longer exists                                       |
 | `413`  | A proxy or upstream service rejected the request as too large (Rootprint sets no body-size limit of its own) |
 | `500`  | Rootprint encountered an internal error                                  |
-| `503`  | Rootprint could not reach Quickwit, or Quickwit is unhealthy or unavailable |
+| `503`  | Rootprint could not reach Quickwit, Quickwit is unhealthy or unavailable, or the request ran past `INGEST_PROXY_TIMEOUT_MS` (120 seconds by default) |
 
 App-level error responses include a JSON body with an `error` object:
 

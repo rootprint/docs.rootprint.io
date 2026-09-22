@@ -227,6 +227,10 @@ Field-by-field:
 - **`403` from Rootprint**: the ingest API key is invalid, unknown, or revoked. Mint a fresh one
   in **Settings → API keys**. A key scoped to a different index does not return `403` — it writes
   there silently, so check the key's index if records land somewhere unexpected.
+- **Requests hang and Vector retries the same batch**: Vector's `request.timeout_secs` (60 by
+  default) is shorter than Rootprint's ingest timeout (120 seconds by default), so Vector gives up
+  while Rootprint is still waiting on Quickwit. Set `INGEST_PROXY_TIMEOUT_MS` below Vector's
+  timeout so Vector receives a retryable `503` instead, and send smaller batches.
 - **`413` from a proxy in front of Rootprint**: a single batch was too large on the wire. Rootprint
   itself sets no OTLP body-size limit, but a reverse proxy may. Lower
   `sinks.rootprint.protocol.batch.max_bytes`.
