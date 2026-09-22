@@ -155,7 +155,7 @@ Rootprint forwards the body unchanged. Send NDJSON — one JSON document per lin
 - **400 with per-line parse errors**: the response body names which documents failed. Common causes: a trailing comma, a JSON array instead of one object per line, or a value whose type doesn't match the index schema.
 - **400 empty body**: the request carried no body (or `Content-Length: 0`).
 - **413**: a batch was too large for a reverse proxy in front of Rootprint, or the server's body limit. Split it into smaller POSTs.
-- **503**: Quickwit is unavailable, or the upload ran past the 120-second proxy timeout. Retry; if it persists, check that Quickwit is healthy.
+- **503**: Quickwit is unavailable, or the upload ran past the proxy timeout (120 seconds by default, see `INGEST_PROXY_TIMEOUT_MS`). Retry; if it persists, check that Quickwit is healthy.
 - **Accepted but not visible in Search**: a `200` means Quickwit queued the documents, not that they are committed. Wait a few seconds and search again.
 
 ## Related

@@ -46,7 +46,7 @@ Rootprint supports GitHub OAuth as an additional sign-in method alongside the de
     <Note>
       GitHub auth configuration changes (saving credentials, updating allowed organizations, and
       removing GitHub auth) all apply live. Allowed organizations are evaluated at sign-in time, so
-      editing them takes effect on the next GitHub sign-in attempt.
+      editing them takes effect on the next GitHub sign-in attempt. Open sessions stay open.
     </Note>
 
   </Step>
@@ -69,10 +69,9 @@ To disable GitHub sign-in, open **Settings → Authentication**, click **Configu
 the **GitHub** row, and click **Remove**. The change applies immediately and the GitHub sign-in
 button disappears from the sign-in page. No restart required.
 
-<Warning>
-	Rootprint tracks whether each user has a password set. Users who signed in exclusively via GitHub
-	never had one, so **Reset password** and self-serve password change are disabled for them. To give
-	a GitHub-only user password access after disabling GitHub auth, delete the user from
-	**Settings → Users** and invite them again. The new invite link prompts them to set a
-	password.
-</Warning>
+Removing GitHub auth ends every session of every GitHub-linked user. Those users keep their
+accounts and can sign in with another linked provider, or with a password if
+[password sign-in](/configuration/authentication#password-sign-in) is enabled. An admin can
+[reset the password](/configuration/users#reset-a-password) of anyone who never set one.
+
+[Authentication overview](/configuration/authentication) has the rules shared by every provider.

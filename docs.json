@@ -178,8 +178,10 @@
               {
                 "group": "Authentication",
                 "pages": [
+                  "configuration/authentication",
                   "configuration/google-auth",
-                  "configuration/github-auth"
+                  "configuration/github-auth",
+                  "configuration/oidc-auth"
                 ]
               },
               {
@@ -395,7 +397,11 @@
               "GET /api/settings/auth/github",
               "PUT /api/settings/auth/github/credentials",
               "DELETE /api/settings/auth/github/credentials",
-              "PUT /api/settings/auth/github/allowed-orgs"
+              "PUT /api/settings/auth/github/allowed-orgs",
+              "GET /api/settings/auth/oidc",
+              "PUT /api/settings/auth/oidc/credentials",
+              "DELETE /api/settings/auth/oidc/credentials",
+              "PUT /api/settings/auth/password"
             ]
           },
           {

@@ -23,12 +23,15 @@ Rootprint refuses to start if any required variable is missing, empty, or (for U
 
 | Variable             | Default          | Description                                                                                                                                                                                                                       |
 | -------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET` | Auto-generated   | Secret used to sign session tokens. If unset, Rootprint generates a random 32-byte secret on first boot and persists it in the `app_settings` table; subsequent boots read the row. If set, must be ≥32 characters or startup fails.       |
+| `BETTER_AUTH_SECRET` | Auto-generated   | Secret used to sign session tokens. If unset, Rootprint generates a random 32-byte secret on first boot and persists it in the `app_settings` table; subsequent boots read the row. If set, must be ≥32 characters or startup fails. Also encrypts stored OAuth access and refresh tokens. The generated secret lives in the same database as the tokens, so set it yourself if you want that protection to survive a database compromise. |
 | `FRONTEND_URL`       | Same as `ORIGIN` | Additional allowed CORS origin. Use this only in split deployments where the SPA is hosted on a different origin than the API. Cookie domain, invite link host, and Better Auth `baseURL` always derive from `ORIGIN`, not this.    |
 | `PORT`               | `8282`           | HTTP listen port. Remap the port with the compose `ports:` block instead of changing this.                                                                                                                                     |
 | `TRACE_INDEX_ID`     | `otel-traces-v0_9` | The **span store**: the one Quickwit index holding OTLP spans. Every trace read and write resolves to it. |
 | `LOG_LEVEL`          | `info`           | API log level. Accepts any Pino level: `trace`, `debug`, `info`, `warn`, `error`, `fatal`.                                                                                                                                       |
 | `SEARCH_AUDIT_RETENTION_DAYS` | `30`    | How many days of search activity audit rows to keep. Rows older than the window are pruned hourly, alongside index-stats capture. `30` is also the minimum; a lower value fails startup. |
+| `OIDC_DISCOVERY_TIMEOUT_MS` | `5000` | How long an [OpenID Connect](/configuration/oidc-auth) discovery fetch may take before the issuer is treated as unreachable. |
+| `OIDC_RETRY_MS` | `60000` | How long to wait before retrying OpenID Connect discovery after it fails at boot. The provider stays hidden from the sign-in page until discovery succeeds. |
+| `INGEST_PROXY_TIMEOUT_MS` | `120000` | How long an ingest request (`/ingest`, `/v1/logs`, `/v1/traces`) may wait on Quickwit before Rootprint answers `503`. Set it below your shipper's request timeout so the shipper gets a retryable `503` instead of timing out with the request still in flight. Minimum `1000`. |
 
 ## Rate limiting
 
