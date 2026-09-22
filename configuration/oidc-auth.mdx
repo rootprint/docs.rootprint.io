@@ -1,0 +1,65 @@
+---
+title: 'Enable OpenID Connect'
+description: 'Connect Rootprint to any OpenID Connect issuer such as Keycloak, Okta, Entra ID, Authentik, or Dex so your team can sign in with your identity provider.'
+---
+
+Rootprint supports one OpenID Connect (OIDC) provider alongside password, Google, and GitHub sign-in. Point it at your issuer URL and a client registered there, and a sign-in button for that provider appears on the sign-in page. Anyone the issuer authenticates can sign in. Rootprint keeps no allow-list of its own for OIDC, so restrict access at the identity provider. New users get the `user` role, and Rootprint links same-email accounts. [Authentication overview](/configuration/authentication) has the rules shared by every provider.
+
+## Requirements
+
+When you save, Rootprint fetches `<issuer>/.well-known/openid-configuration` and refuses the issuer, writing nothing, if:
+
+- the issuer URL is not `https://`. Rootprint accepts plain `http://` only on a private network: loopback, RFC 1918 and IPv6 private addresses, single-label hostnames such as `dex`, and names ending in `.local` or `.internal`, which covers `*.svc.cluster.local`;
+- the discovery document is unreachable, not JSON, or missing `authorization_endpoint`, `token_endpoint`, or `jwks_uri`, or any of those points outside `https://` and a private network;
+- the issuer is `https://` but the document names an `http://` endpoint, since that would send the client secret in the clear;
+- the `issuer` field in the document differs from the URL you entered, ignoring a trailing slash;
+- `code_challenge_methods_supported` is present but omits `S256`. Rootprint uses PKCE on every sign-in;
+- `token_endpoint_auth_methods_supported` is present but includes neither `client_secret_basic` nor `client_secret_post`.
+
+Rootprint requests the `openid`, `profile`, and `email` scopes and verifies ID token signatures against the issuer's JWKS.
+
+## Setup
+
+<Steps>
+  <Step title="Register a client at your identity provider">
+    Create a confidential OIDC client (an "application" or "web app" in most providers) with the authorization code flow enabled. Register this redirect URI:
+
+    ```
+    https://<your-rootprint>/api/auth/callback/oidc
+    ```
+
+    Replace `<your-rootprint>` with the host of your Rootprint instance. Copy the **Client ID** and **Client Secret**.
+
+  </Step>
+
+  <Step title="Enter the issuer and credentials in Rootprint">
+    In Rootprint, go to **Settings → Authentication**, then click **Configure** on the **OpenID Connect** row. Enter:
+
+    - **Issuer URL**: the issuer as your provider publishes it, for example `https://auth.example.com/realms/main`. Rootprint appends `/.well-known/openid-configuration` itself.
+    - **Client ID** and **Client Secret**: from the client you registered.
+
+    The page shows the **Callback URL** to register at the provider.
+
+  </Step>
+
+  <Step title="Save the configuration">
+    Click **Save**. Rootprint fetches discovery, validates it, and reloads its auth configuration in place. No restart needed. A `400` with code `OIDC_DISCOVERY_FAILED` means Rootprint rejected the issuer and saved nothing. The message says why.
+
+  </Step>
+</Steps>
+
+## Changing the issuer or client ID
+
+Changing the **Issuer URL** or **Client ID** changes the identity behind every linked account. Rootprint unlinks every OpenID Connect account and signs those users out. They re-link by email on their next sign-in, or an admin can [reset their password](/configuration/users#reset-a-password). Rotating only the client secret unlinks nobody.
+
+## Issuer unreachable at boot
+
+If discovery fails while Rootprint starts, the sign-in page hides the OpenID Connect button and Rootprint retries every `OIDC_RETRY_MS` (default 60 seconds) until discovery succeeds. Each fetch gets `OIDC_DISCOVERY_TIMEOUT_MS` (default 5 seconds). Both variables are listed under [Environment variables](/configuration/environment-variables).
+
+## Removing OpenID Connect
+
+Open **Settings → Authentication**, click **Edit** on the **OpenID Connect** row, and click **Remove**. The button disappears from the sign-in page, every session opened through the provider ends, and Rootprint removes the OpenID Connect link from every account. Users keep their Rootprint accounts and can sign in with a password or another linked provider. An admin can [reset the password](/configuration/users#reset-a-password) of anyone who has none.
+
+## API
+
+The `Auth settings API` group in the [API reference](/api/overview) covers the same operations: read the status, save credentials, and remove the provider. All need an admin session.

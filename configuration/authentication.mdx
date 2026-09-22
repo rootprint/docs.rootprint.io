@@ -1,0 +1,51 @@
+---
+title: 'Authentication overview'
+description: 'How Rootprint sign-in works: password sign-in, Google, GitHub, and OpenID Connect providers, account linking, and the rules shared by every provider.'
+---
+
+Rootprint ships with email and password sign-in. Admins add external providers under **Settings → Authentication**: [Google](/configuration/google-auth), [GitHub](/configuration/github-auth), and one [OpenID Connect](/configuration/oidc-auth) issuer. You configure each provider on its own. Changes apply live, without a restart, and every provider follows the rules below.
+
+## Provider rules
+
+**Rootprint checks admission at sign-in.** It evaluates Google's allowed domains, GitHub's allowed organizations, and the OpenID Connect issuer when a user signs in. Editing an allow-list takes effect at the next sign-in attempt. Open sessions stay open.
+
+**Removing a provider signs its users out.** Deleting Google or GitHub credentials ends every session that was opened through that provider. Deleting the OpenID Connect provider also removes its link from every account. Users keep their Rootprint account and can sign in again with a password or another linked provider.
+
+**New users get the `user` role.** The first sign-in through an allowed provider creates the account. Promote the user under [Settings → Users](/configuration/users) if they need admin access.
+
+**Rootprint links accounts by email.** When a provider reports an email that matches an existing Rootprint account, the sign-in attaches the provider to that account. A user can hold a password and several linked providers at the same time.
+
+**Invited users can onboard through a provider.** Signing in through Google, GitHub, or OpenID Connect with the invited email consumes the invite and activates the account. A password set earlier stays in place.
+
+**Admins can reset any user's password.** [Reset password](/configuration/users#reset-a-password) and **Reissue invite** work for every account, including users who only ever signed in through a provider. The setup link adds a password alongside the provider.
+
+## Password sign-in
+
+**Settings → Authentication** has a **Password sign-in** toggle. Turn it off to require an external provider for every sign-in. While it is off:
+
+- Invites still work, but the invited person must sign in through a provider with the invited email. The setup link cannot sign them in.
+- The UI hides **Reset password**, and `POST /api/users/{userId}/password-resets` returns `400` with code `PASSWORD_SIGN_IN_DISABLED`.
+
+<Warning>
+	Rootprint does not check that a working provider exists before you disable password sign-in.
+	Sign in through a provider yourself first, or you can lock every admin out. To recover without a
+	working session, delete the `password_sign_in_disabled` row from `app_settings` and restart
+	Rootprint:
+
+	```bash
+	psql "$DATABASE_URL" -c "DELETE FROM app_settings WHERE key = 'password_sign_in_disabled';"
+	```
+</Warning>
+
+From the API, `PUT /api/settings/auth/password` with `{ "enabled": false }` disables `POST /api/auth/sign-in/email`. `GET /api/auth/providers` reports the current state as `password.enabled`.
+
+## Token storage
+
+Rootprint encrypts the OAuth access and refresh tokens it stores for linked accounts with `BETTER_AUTH_SECRET`. The generated secret lives in the same database as the tokens. Set the variable yourself if you want that protection to survive a database compromise. See [Environment variables](/configuration/environment-variables).
+
+## Related
+
+- [Enable Google OAuth](/configuration/google-auth)
+- [Enable GitHub OAuth](/configuration/github-auth)
+- [Enable OpenID Connect](/configuration/oidc-auth)
+- [Manage users](/configuration/users)

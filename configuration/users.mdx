@@ -29,7 +29,7 @@ Every account is either an **admin** or a **user**.
 5. Click **Create**. Rootprint generates a one-time **setup link**.
 6. Copy the link and send it to the person.
 
-When they open the link, Rootprint asks them to choose a password and then signs them in. The account stays inactive until they finish this step.
+When they open the link, Rootprint asks them to choose a password and then signs them in. The account stays inactive until they finish this step. With an external provider enabled, the person can sign in through it with the invited email. That consumes the invite without setting a password.
 
 <Note>
 	If a setup link is lost or expires before it is used, open the user from the list and click
@@ -49,11 +49,7 @@ Open a user from the list and switch their role between **admin** and **user**. 
 
 When someone is locked out or you want to rotate their credentials, open the user and click **Reset password**. Rootprint clears the current password, signs the user out of all sessions, and generates a fresh **setup link** for them to choose a new one. Share the link the same way as an invite.
 
-<Warning>
-	Users who only ever signed in with Google or GitHub never set a password, so **Reset password**
-	is unavailable for them. Manage their access from the
-	[Authentication](/configuration/google-auth) provider instead.
-</Warning>
+**Reset password** works for every account, including users who only ever signed in through Google, GitHub, or OpenID Connect. For them the setup link adds a password alongside the linked provider. The action disappears while [password sign-in is disabled](/configuration/authentication#password-sign-in).
 
 ## Delete a user
 
@@ -61,11 +57,11 @@ Open the user and click **Delete**. This permanently removes the account and eve
 
 ## Single sign-on users
 
-When [Google](/configuration/google-auth) or [GitHub](/configuration/github-auth) OAuth is enabled, the first time someone signs in through an allowed domain or organization Rootprint provisions them automatically with the **user** role — no invite needed. If their email matches an existing account, the two are linked. Promote them to **admin** here if they need it.
+When [Google](/configuration/google-auth), [GitHub](/configuration/github-auth), or [OpenID Connect](/configuration/oidc-auth) is enabled, the first time someone signs in through an allowed provider Rootprint provisions them automatically with the **user** role — no invite needed. If their email matches an existing account, Rootprint links the two. A user can hold a password and linked providers at the same time. Promote them to **admin** here if they need it. Removing a provider signs its users out but keeps their accounts. [Authentication overview](/configuration/authentication) has the full rules.
 
 ## Related
 
 - [Service accounts](/configuration/service-accounts) — non-human credentials for integrations.
-- [Enable Google OAuth](/configuration/google-auth) and [Enable GitHub OAuth](/configuration/github-auth) — let teammates sign in with SSO.
+- [Authentication overview](/configuration/authentication), [Google](/configuration/google-auth), [GitHub](/configuration/github-auth), and [OpenID Connect](/configuration/oidc-auth) — let teammates sign in with SSO.
 - [Reset admin password](/configuration/reset-admin-password) — recover a locked-out admin.
 - [User and invite API](/api/overview) — manage users programmatically.
