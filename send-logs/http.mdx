@@ -110,7 +110,7 @@ These examples write to the built-in `otel-logs-v0_9` index, so they run with no
   </Step>
 
   <Step title="Verify in Rootprint">
-    A successful POST returns `{"num_docs_for_processing": <count>}` — the number of documents Quickwit queued, not a guarantee they are searchable yet. Open Search, pick your index from the selector, and look for the records you sent (or that Vector shipped). Allow a few seconds for Quickwit to commit.
+    A successful POST returns `{"num_docs_for_processing": <count>}` — the number of documents Quickwit queued, not a guarantee they are searchable yet. Open **Logs**, pick your index from the selector, and look for the records you sent (or that Vector shipped). Allow a few seconds for Quickwit to commit.
   </Step>
 </Steps>
 
@@ -140,7 +140,7 @@ The example above uses the built-in OTEL schema. Your own logs do not have to ma
   </Step>
 
   <Step title="Map fields to display roles">
-    Search needs to know which field is the severity, which is the message, and which holds a traceback. Set these on the index's [Configuration tab](/configuration/manage-indexes#field-role-mappings). The defaults assume the OTEL schema (`severity_text`, `body.message`), so point them at your fields — for the example above, level → `level` and message → `action`. These are presentation settings only; they never change the stored data.
+    The **Logs** page needs to know which field is the severity, which is the message, and which holds a traceback. Set these on the index's [Configuration tab](/configuration/manage-indexes#field-role-mappings). The defaults assume the OTEL schema (`severity_text`, `body.message`), so point them at your fields — for the example above, level → `level` and message → `action`. These are presentation settings only; they never change the stored data.
   </Step>
 </Steps>
 
@@ -156,7 +156,7 @@ Rootprint forwards the body unchanged. Send NDJSON — one JSON document per lin
 - **400 empty body**: the request carried no body (or `Content-Length: 0`).
 - **413**: a batch was too large for a reverse proxy in front of Rootprint, or the server's body limit. Split it into smaller POSTs.
 - **503**: Quickwit is unavailable, or the upload ran past the proxy timeout (120 seconds by default, see `INGEST_PROXY_TIMEOUT_MS`). Retry; if it persists, check that Quickwit is healthy.
-- **Accepted but not visible in Search**: a `200` means Quickwit queued the documents, not that they are committed. Wait a few seconds and search again.
+- **Accepted but not visible in Logs**: a `200` means Quickwit queued the documents, not that they are committed. Wait a few seconds and search again.
 
 ## Related
 

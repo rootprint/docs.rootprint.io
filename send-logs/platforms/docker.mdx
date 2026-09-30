@@ -1,6 +1,6 @@
 ---
 title: 'Send logs from Docker'
-description: 'Ship every container on a Linux host to Rootprint with Vector (Docker socket, default) or the OpenTelemetry Collector (filelog), emitting OTLP.'
+description: 'Ship every container on a Linux host to Rootprint with Vector (Docker socket, default) or the OpenTelemetry Collector (file_log), emitting OTLP.'
 ---
 
 This page ships container logs from a Linux host to Rootprint over OTLP. **Vector** reads the Docker daemon socket: it auto-discovers containers and attaches `container.name`, `container.image.name`, and friends with no extra wiring.
@@ -51,7 +51,7 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
               if match(lower, r'\berror\b|\bfatal\b|\bpanic\b|\bexception\b') {
                 .severity_number = 17
                 .severity_text   = "ERROR"
-              } else if match(lower, r'\bwarn(ing)?\b|\bdeprecated\b|\bretry\b') {
+              } else if match(lower, r'\bwarn(ing)?\b|\bdeprecated\b') {
                 .severity_number = 13
                 .severity_text   = "WARN"
               } else {
@@ -140,7 +140,7 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
         ```yaml
         services:
           rootprint-vector:
-            image: timberio/vector:0.54.0-alpine
+            image: timberio/vector:0.58.0-alpine
             container_name: rootprint-vector
             restart: unless-stopped
             volumes:
@@ -161,17 +161,20 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
       </Step>
 
       <Step title="Send a test log line">
-        Run a throwaway container that prints one line and exits. Vector picks it up from the daemon
-        and ships it with `service.name` set to the container's name.
+        Run a throwaway container that prints one line and stays up for a few seconds. Vector picks it
+        up from the daemon and ships it with `service.name` set to the container's name.
 
         ```bash
-        docker run --rm --name rootprint-smoke-test alpine echo "hello from rootprint"
+        docker run --rm --name rootprint-smoke-test alpine sh -c 'sleep 2; echo "hello from rootprint"; sleep 2'
         ```
+
+        Vector attaches to running containers, so it can miss one that `--rm` removes the moment it
+        exits. The `sleep` calls give it time to attach.
 
       </Step>
 
       <Step title="Verify in Rootprint">
-        Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+        Open **Logs**, pick `otel-logs-v0_9` from the index selector, and query for
         `hello from rootprint`. The record typically arrives within 5 seconds (one batch interval).
         `service.name` reads `rootprint-smoke-test`; `attributes.container.image.name` reads
         `alpine`.
@@ -187,7 +190,7 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
     The message body is lowercased and matched against two pattern families:
 
     - `error`, `fatal`, `panic`, or `exception` (word-boundary) → `severityText: ERROR` (severity number 17).
-    - `warn` / `warning`, `deprecated`, or `retry` → `severityText: WARN` (13).
+    - `warn` / `warning` or `deprecated` → `severityText: WARN` (13).
     - Everything else → `severityText: INFO` (9).
 
     `DEBUG` is not inferred. Emit debug records through an OpenTelemetry SDK that sets `severityNumber` itself; the OTLP record carries that value through unchanged.
@@ -199,7 +202,7 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
 
   <Tab title="OpenTelemetry Collector">
     <Warning>
-      The Collector reads container logs from `/var/lib/docker/containers` on disk. This requires the **`json-file`** logging driver (Docker's default) and does **not** auto-resolve friendly container names: records carry `container.id` and severity, but `service.name`/`container.name` need extra wiring the socket-based Vector path handles for free. For rich per-container metadata, use the Vector tab.
+      The Collector reads container logs from `/var/lib/docker/containers` on disk. This requires the **`json-file`** logging driver (Docker's default) and does **not** auto-resolve friendly container names: records carry severity and `log.iostream`, but no container ID or name, and `service.name` needs extra wiring the socket-based Vector path handles for free. For rich per-container metadata, use the Vector tab.
     </Warning>
 
     <Steps>
@@ -207,7 +210,7 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
         ```bash
         docker inspect -f '{{.HostConfig.LogConfig.Type}}' <a-running-container>
         ```
-        Must print `json-file`. The `local` and `journald` drivers are not readable by `filelog`.
+        Must print `json-file`. The `local` and `journald` drivers are not readable by `file_log`.
       </Step>
 
       <Step title="Add the Collector sidecar to your compose file">
@@ -230,30 +233,29 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
         <Expandable title="otel-config.yaml">
         ```yaml
         receivers:
-          filelog:
+          file_log:
             include:
               - /var/lib/docker/containers/*/*-json.log
             start_at: end
             operators:
               - type: container
-                add_metadata_from_filepath: true
+                # Its path metadata parses Kubernetes pod paths only; on Docker paths it errors on every record.
+                add_metadata_from_filepath: false
 
         processors:
           transform:
             log_statements:
-              - context: log
-                statements:
-                  - set(severity_number, SEVERITY_NUMBER_ERROR) where IsString(body) and IsMatch(body, "(?i)\\b(error|fatal|panic|exception)\\b")
-                  - set(severity_text, "ERROR") where severity_number == SEVERITY_NUMBER_ERROR
-                  - set(severity_number, SEVERITY_NUMBER_WARN) where severity_number == 0 and IsString(body) and IsMatch(body, "(?i)\\b(warn|warning|deprecated|retry)\\b")
-                  - set(severity_text, "WARN") where severity_number == SEVERITY_NUMBER_WARN
-                  - set(severity_number, SEVERITY_NUMBER_INFO) where severity_number == 0
-                  - set(severity_text, "INFO") where severity_text == ""
-                  - set(attributes["container.runtime"], "docker")
+              - set(log.severity_number, SEVERITY_NUMBER_ERROR) where log.severity_number == SEVERITY_NUMBER_UNSPECIFIED and IsString(log.body) and IsMatch(log.body, "(?i)\\b(error|fatal|panic|exception)\\b")
+              - set(log.severity_number, SEVERITY_NUMBER_WARN) where log.severity_number == SEVERITY_NUMBER_UNSPECIFIED and IsString(log.body) and IsMatch(log.body, "(?i)\\b(warn|warning|deprecated)\\b")
+              - set(log.severity_number, SEVERITY_NUMBER_INFO) where log.severity_number == SEVERITY_NUMBER_UNSPECIFIED
+              - set(log.severity_text, "ERROR") where log.severity_text == "" and log.severity_number == SEVERITY_NUMBER_ERROR
+              - set(log.severity_text, "WARN") where log.severity_text == "" and log.severity_number == SEVERITY_NUMBER_WARN
+              - set(log.severity_text, "INFO") where log.severity_text == "" and log.severity_number == SEVERITY_NUMBER_INFO
+              - set(log.attributes["container.runtime"], "docker")
           batch: {}
 
         exporters:
-          otlphttp:
+          otlp_http:
             logs_endpoint: https://<your-rootprint>/v1/logs
             compression: gzip
             headers:
@@ -262,9 +264,9 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
         service:
           pipelines:
             logs:
-              receivers: [filelog]
+              receivers: [file_log]
               processors: [transform, batch]
-              exporters: [otlphttp]
+              exporters: [otlp_http]
         ```
         </Expandable>
       </Step>
@@ -277,12 +279,15 @@ This page ships container logs from a Linux host to Rootprint over OTLP. **Vecto
 
       <Step title="Send a test log line">
         ```bash
-        docker run --rm --name rootprint-smoke-test alpine echo "hello from rootprint"
+        docker run --rm --name rootprint-smoke-test alpine sh -c 'sleep 2; echo "hello from rootprint"; sleep 2'
         ```
+
+        `--rm` deletes the container's log file when it exits, so the `sleep` calls keep it on disk long
+        enough for the Collector to read.
       </Step>
 
       <Step title="Verify in Rootprint">
-        Query `hello from rootprint` in `otel-logs-v0_9`. The record carries `attributes.container.runtime: docker` and an inferred severity. `container.id` is present; friendly names are not (see the warning above).
+        Query `hello from rootprint` in `otel-logs-v0_9`. The record carries `attributes.container.runtime: docker`, `attributes.log.iostream`, and an inferred severity. Container IDs and names are missing (see the warning above).
       </Step>
     </Steps>
   </Tab>
@@ -296,15 +301,15 @@ Per-event attributes by agent:
 
 | OTLP key               | Vector                                 | OpenTelemetry Collector         |
 | ---------------------- | -------------------------------------- | ------------------------------- |
-| `container.id`         | full 64-char ID                        | full 64-char ID (from filepath) |
+| `container.id`         | full 64-char ID                        | not populated                   |
 | `container.name`       | name without leading `/`               | not populated                   |
 | `container.image.name` | image reference (e.g., `nginx:latest`) | not populated                   |
 | `container.image.id`   | image digest                           | not populated                   |
 | `container.runtime`    | literal `docker`                       | literal `docker`                |
-| `log.iostream`         | `stdout` or `stderr`                   | not populated                   |
+| `log.iostream`         | `stdout` or `stderr`                   | `stdout` or `stderr`            |
 | severity               | inferred from message body             | inferred from message body      |
 
-The Vector path populates all rows. The OTEL Collector path populates `container.id`, `container.runtime`, and severity only; it cannot resolve `container.name` or `container.image.name` from the json-file path without the Docker socket.
+The Vector path populates all rows. The OTEL Collector path populates `container.runtime`, `log.iostream`, and severity only; it cannot resolve container IDs, names, or images from the json-file path without the Docker socket.
 
 Container labels are not promoted by default. To promote a specific label with Vector, add one line to the `to_otlp` remap before the `. = { ... }` assignment:
 

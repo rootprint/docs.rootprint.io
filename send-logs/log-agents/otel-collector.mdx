@@ -3,12 +3,12 @@ title: 'Send logs with the OpenTelemetry Collector'
 description: 'Tail log files with the OpenTelemetry Collector — on bare metal or in Docker — and ship them to Rootprint over OTLP.'
 ---
 
-The [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) reads, processes, and exports telemetry without an SDK in your application. The `filelog` receiver tails files under `/var/log/`, and the `otlphttp` exporter ships each record to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to: `otel-logs-v0_9` in this guide. Run the Collector on bare metal or in Docker — pick the tab below.
+The [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) reads, processes, and exports telemetry without an SDK in your application. The `file_log` receiver tails files under `/var/log/`, and the `otlp_http` exporter ships each record to Rootprint's OTLP endpoint with a Bearer token. Records land in the index your ingest token is scoped to: `otel-logs-v0_9` in this guide. Run the Collector on bare metal or in Docker — pick the tab below.
 
-Use the **Contrib** distribution (`otelcol-contrib`). The `filelog` receiver lives in Contrib, not in the core release.
+Use the **Contrib** distribution (`otelcol-contrib`), v0.149 or newer. The `file_log` receiver lives in Contrib, not in the core release, and v0.149 is the first release that accepts the `file_log` and `otlp_http` names used below.
 
 <Warning>
-	The `filelog` paths below assume a Linux host. The Collector runs on
+	The `file_log` paths below assume a Linux host. The Collector runs on
 	macOS and Windows too, but this page does not cover those platforms.
 </Warning>
 
@@ -22,28 +22,31 @@ Use the **Contrib** distribution (`otelcol-contrib`). The `filelog` receiver liv
   <Tab title="Bare Metal">
     <Steps>
       <Step title="Install the Collector">
-        Install the Contrib distribution (`otelcol-contrib`) for your platform — Debian/Ubuntu apt,
+        Install the Contrib distribution (`otelcol-contrib`), v0.149 or newer, for your platform — Debian/Ubuntu apt,
         RHEL/Fedora rpm, or a standalone binary, all maintained upstream on the
         [Collector installation page](https://opentelemetry.io/docs/collector/installation/).
       </Step>
 
       <Step title="Write /etc/otel/config.yaml">
         Save the following at `/etc/otel/config.yaml`. Replace `<your-rootprint>` with your
-        Rootprint host, `<your-ingest-token>` with the API key you copied in step 1, and
-        `/var/log/myapp/*.log` with the glob that matches your application's log files.
+        Rootprint host, `<your-ingest-token>` with the API key you copied in step 1,
+        `/var/log/myapp/*.log` with the glob that matches your application's log files, and `myapp`
+        with your service name.
 
         ```yaml
         receivers:
-          filelog:
+          file_log:
             include:
               - /var/log/myapp/*.log
             start_at: end
+            resource:
+              service.name: myapp
 
         processors:
           batch: {}
 
         exporters:
-          otlphttp:
+          otlp_http:
             logs_endpoint: https://<your-rootprint>/v1/logs
             compression: gzip
             headers:
@@ -52,9 +55,9 @@ Use the **Contrib** distribution (`otelcol-contrib`). The `filelog` receiver liv
         service:
           pipelines:
             logs:
-              receivers: [filelog]
+              receivers: [file_log]
               processors: [batch]
-              exporters: [otlphttp]
+              exporters: [otlp_http]
         ```
 
         `start_at: end` skips existing content on first start, so pointing the Collector at an existing
@@ -95,7 +98,7 @@ Use the **Contrib** distribution (`otelcol-contrib`). The `filelog` receiver liv
       </Step>
 
       <Step title="Verify in Rootprint">
-        Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+        Open **Logs**, pick `otel-logs-v0_9` from the index selector, and query for
         `hello from the otel collector`. Records typically appear within 5–10 seconds. The OTLP path
         commits on Quickwit's normal cadence; there is no `commit=wait_for` knob.
       </Step>
@@ -110,8 +113,8 @@ Use the **Contrib** distribution (`otelcol-contrib`). The `filelog` receiver liv
     <Steps>
       <Step title="Save otel-config.yaml">
         Save the **same config** shown in the Bare Metal tab as `otel-config.yaml` next to your
-        `docker-compose.yml`. Replace `<your-rootprint>` and `<your-ingest-token>`, and point the
-        `filelog` `include` at the log path you bind-mount in the next step.
+        `docker-compose.yml`. Replace `<your-rootprint>`, `<your-ingest-token>`, and `myapp`, and point
+        the `file_log` `include` at the log path you bind-mount in the next step.
       </Step>
 
       <Step title="Add the Collector to your compose file">
@@ -149,7 +152,7 @@ Use the **Contrib** distribution (`otelcol-contrib`). The `filelog` receiver liv
       </Step>
 
       <Step title="Verify in Rootprint">
-        Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+        Open **Logs**, pick `otel-logs-v0_9` from the index selector, and query for
         `hello from the otel collector`. Records typically appear within 5–10 seconds.
       </Step>
     </Steps>
@@ -158,12 +161,14 @@ Use the **Contrib** distribution (`otelcol-contrib`). The `filelog` receiver liv
 
 ## What the config does
 
-- **`filelog` receiver**: tails the files matched by `include` and emits one OTLP log record per
+- **`file_log` receiver**: tails the files matched by `include` and emits one OTLP log record per
   line. The raw line lands in `body`, and the receiver populates `observedTimeUnixNano` with the
   time it read the line. To split structured fields out of the line, add the receiver's `operators`
   (a `json_parser` or `regex_parser`); without them the whole line is kept verbatim.
+- **`resource`**: sets `service.name` on every record as a resource attribute, which is what fills
+  Rootprint's `service_name` column. Without it, records arrive with no service name.
 - **`logs_endpoint`**: the full logs URL, including `/v1/logs`. Set this rather than `endpoint`,
-  which would append the path itself. The `otlphttp` exporter sends OTLP over HTTP as protobuf,
+  which would append the path itself. The `otlp_http` exporter sends OTLP over HTTP as protobuf,
   which is the only content type Rootprint's OTLP endpoint accepts.
 - **`compression: gzip`**: gzips each request body. Rootprint forwards the `Content-Encoding`
   header to Quickwit unchanged.
@@ -177,13 +182,15 @@ Use the **Contrib** distribution (`otelcol-contrib`). The `filelog` receiver liv
 - **`403` from Rootprint**: the ingest API key is invalid, unknown, or revoked. Mint a fresh one
   in **Settings → API keys**. A key scoped to a different index does not return `403` — it writes
   there silently, so check the key's index if records land somewhere unexpected.
-- **`404 unrecognized receiver "filelog"`** on startup: you are running the core Collector, not
-  Contrib. Install `otelcol-contrib`.
+- **`unknown type: "file_log"`** or **`unknown type: "otlp_http"`** on startup: you are running the
+  core Collector, which lacks `file_log`, or a Contrib release older than v0.149. Install or upgrade
+  `otelcol-contrib`. On an older release you can't upgrade, use the previous names `filelog` and
+  `otlphttp`; v0.149 and later still accept them with a deprecation warning.
 - **`413` from a proxy in front of Rootprint**: a single batch was too large on the wire. Rootprint
   sets no OTLP body-size limit, but a reverse proxy may. Lower the `batch` processor's
   `send_batch_size`.
-- **`415` from Rootprint**: the request is not protobuf. Use the `otlphttp` exporter (not a custom
-  HTTP exporter that sends JSON); `otlphttp` defaults to protobuf.
+- **`415` from Rootprint**: the request is not protobuf. Use the `otlp_http` exporter (not a custom
+  HTTP exporter that sends JSON); `otlp_http` defaults to protobuf.
 - **Collector starts cleanly but no logs appear**: `start_at: end` skipped the existing file
   content. Append a new line to trigger a read, or set `start_at: beginning` for a one-time replay.
 - **`permission denied` reading `/var/log/...`**: the user the Collector runs as can't read the

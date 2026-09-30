@@ -28,7 +28,7 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
         <Expandable title="config.yaml">
         ```yaml
         receivers:
-          filelog:
+          file_log:
             include:
               - /var/log/nginx/access.log
               - /var/log/nginx/error.log
@@ -112,7 +112,7 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
           batch: {}
 
         exporters:
-          otlphttp:
+          otlp_http:
             logs_endpoint: https://<your-rootprint>/v1/logs
             compression: gzip
             headers:
@@ -121,17 +121,26 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
         service:
           pipelines:
             logs:
-              receivers: [filelog]
+              receivers: [file_log]
               processors: [resource, transform, batch]
-              exporters: [otlphttp]
+              exporters: [otlp_http]
         ```
         </Expandable>
       </Step>
       <Step title="Grant read access to /var/log/nginx">
+        The Collector runs as its own user (the Debian/RPM Collector package creates `otelcol-contrib`) and needs read access to `/var/log/nginx/*`. Run the lines for your distro.
+
         ```bash
+        # Debian/Ubuntu: nginx logs belong to the adm group
         sudo usermod -aG adm otelcol-contrib
+
+        # RHEL/Fedora/Amazon Linux: nginx logs are nginx:root 0640, so grant read access with ACLs
+        sudo setfacl -m u:otelcol-contrib:rx /var/log/nginx
+        sudo setfacl -m u:otelcol-contrib:r /var/log/nginx/*.log
+        sudo setfacl -d -m u:otelcol-contrib:r /var/log/nginx
         ```
-        nginx's Debian/Ubuntu package owns `/var/log/nginx/` with the `adm` group as the read-side convention. Add the user the Collector runs as to that `adm` group (the Debian/RPM Collector package creates `otelcol-contrib`).
+
+        The default ACL (`-d`) covers files logrotate creates later.
       </Step>
       <Step title="Start the Collector">
         Start (or restart) the Collector so it loads the config. Startup logs should show no config-parse or exporter errors.
@@ -142,7 +151,7 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
         ```
       </Step>
       <Step title="Verify in Rootprint">
-        Open Search, pick `otel-logs-v0_9`, and query `service_name:nginx`. Records typically appear within 5–10 seconds.
+        Open **Logs**, pick `otel-logs-v0_9`, and query `service_name:nginx`. Records typically appear within 5–10 seconds.
       </Step>
     </Steps>
   </Tab>
@@ -366,11 +375,19 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
       </Step>
 
       <Step title="Grant Vector read access to /var/log/nginx">
-        nginx's Debian/Ubuntu package owns `/var/log/nginx/` as `www-data:adm` with mode `640`, so Vector's `vector` user cannot read it. The `adm` group is the read-side convention for log files on those distros. Add `vector` to it:
+        nginx's Debian/Ubuntu package owns `/var/log/nginx/` as `www-data:adm` with mode `640`, so Vector's `vector` user cannot read it. The `adm` group is the read-side convention for log files on those distros. On RHEL, Fedora, and Amazon Linux the logs are `nginx:root` with mode `640` and there is no `adm` group, so grant access with ACLs instead. Run the lines for your distro:
 
         ```bash
+        # Debian/Ubuntu (the Vector package usually adds this already)
         sudo usermod -aG adm vector
+
+        # RHEL/Fedora/Amazon Linux
+        sudo setfacl -m u:vector:rx /var/log/nginx
+        sudo setfacl -m u:vector:r /var/log/nginx/*.log
+        sudo setfacl -d -m u:vector:r /var/log/nginx
         ```
+
+        The default ACL (`-d`) covers files logrotate creates later.
       </Step>
 
       <Step title="Restart Vector">
@@ -393,7 +410,7 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
       </Step>
 
       <Step title="Verify in Rootprint">
-        Open Search, pick `otel-logs-v0_9` from the index selector, and query `service_name:nginx`. Records typically appear within 5–10 seconds.
+        Open **Logs**, pick `otel-logs-v0_9` from the index selector, and query `service_name:nginx`. Records typically appear within 5–10 seconds.
       </Step>
     </Steps>
 

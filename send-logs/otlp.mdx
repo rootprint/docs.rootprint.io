@@ -64,6 +64,14 @@ On a `413`, lower the agent's batch size (`batch.max_bytes` in Vector, `send_bat
 
 The target index is pinned by the ingest API key, not by the SDK. To write to a different index, create an ingest API key scoped to that index in **Settings → API keys** and use its value in the `Authorization` header. See [Manage indexes](/configuration/manage-indexes).
 
+<Warning>
+	OTLP logs only land in an index with the OpenTelemetry logs schema, such as the bundled
+	`otel-logs-v0_9`. Sent to any other index, they get a `200` from Quickwit and are discarded, so
+	nothing arrives and no error surfaces. Scope OTLP ingest keys to an OpenTelemetry logs index, and
+	send custom-schema data to the [HTTP endpoint](/send-logs/http) instead. For the same reason, the
+	**Send data** guides in the app only offer ingest keys on `otel-` indexes.
+</Warning>
+
 <Note>
 	Rootprint also accepts OTLP **traces** at `POST /v1/traces`, with the same ingest key and the
 	same protobuf-only rule. Spans ignore the index scope described above: they always go to the span

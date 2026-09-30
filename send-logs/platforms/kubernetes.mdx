@@ -66,16 +66,15 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
           exclude:
             - /var/log/pods/rootprint_*/*/*.log
       processors:
+        # Only fills in records with no severity, so OTLP logs keep the level their SDK set.
         transform:
           log_statements:
-            - context: log
-              statements:
-                - set(log.severity_number, SEVERITY_NUMBER_ERROR) where IsString(log.body) and IsMatch(log.body, "(?i)\\b(error|fatal|panic|exception)\\b")
-                - set(log.severity_text, "ERROR") where log.severity_number == SEVERITY_NUMBER_ERROR
-                - set(log.severity_number, SEVERITY_NUMBER_WARN) where log.severity_number == 0 and IsString(log.body) and IsMatch(log.body, "(?i)\\b(warn|warning|deprecated|retry)\\b")
-                - set(log.severity_text, "WARN") where log.severity_number == SEVERITY_NUMBER_WARN
-                - set(log.severity_number, SEVERITY_NUMBER_INFO) where log.severity_number == 0
-                - set(log.severity_text, "INFO") where log.severity_text == ""
+            - set(log.severity_number, SEVERITY_NUMBER_ERROR) where log.severity_number == SEVERITY_NUMBER_UNSPECIFIED and IsString(log.body) and IsMatch(log.body, "(?i)\\b(error|fatal|panic|exception)\\b")
+            - set(log.severity_number, SEVERITY_NUMBER_WARN) where log.severity_number == SEVERITY_NUMBER_UNSPECIFIED and IsString(log.body) and IsMatch(log.body, "(?i)\\b(warn|warning|deprecated)\\b")
+            - set(log.severity_number, SEVERITY_NUMBER_INFO) where log.severity_number == SEVERITY_NUMBER_UNSPECIFIED
+            - set(log.severity_text, "ERROR") where log.severity_text == "" and log.severity_number == SEVERITY_NUMBER_ERROR
+            - set(log.severity_text, "WARN") where log.severity_text == "" and log.severity_number == SEVERITY_NUMBER_WARN
+            - set(log.severity_text, "INFO") where log.severity_text == "" and log.severity_number == SEVERITY_NUMBER_INFO
       exporters:
         otlp_http:
           logs_endpoint: https://<your-rootprint>/v1/logs
@@ -92,7 +91,7 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
 
     - **`processors` and `exclude` are replaced, not merged.** List every entry you want, including the preset-injected `memory_limiter`, `k8s_attributes` and `batch`.
     - **Override the receiver as `filelog`, not `file_log`.** A `file_log` block is ignored; Helm prints a `[DEPRECATION]` notice for it.
-    - **`otlp_http` requires Collector 0.158.0 or newer.** Older images name it `otlphttp`.
+    - **`otlp_http` requires Collector v0.149.0 or newer.** Older images name it `otlphttp`.
   </Step>
 
   <Step title="Install the chart">
@@ -126,7 +125,7 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
   </Step>
 
   <Step title="Verify in Rootprint">
-    Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+    Open **Logs**, pick `otel-logs-v0_9` from the index selector, and query for
     `hello from rootprint`. Allow up to a minute for the batch to flush and Quickwit to commit.
     `resource_attributes.k8s.pod.name` reads `rootprint-smoke-test`.
   </Step>
@@ -151,10 +150,10 @@ The `k8s.*` keys are OTLP **resource** attributes, so query them under `resource
 
 ### Severity inference
 
-The `transform` matches two pattern families against the body:
+The `transform` only touches records that arrive with no severity, which covers plain stdout lines. A record that already carries a log level keeps it. For the rest, it matches two pattern families against the body:
 
 - `error`, `fatal`, `panic`, or `exception` (word-boundary) → `severityText: ERROR` (severity number 17).
-- `warn` / `warning`, `deprecated`, or `retry` → `severityText: WARN` (13).
+- `warn` / `warning` or `deprecated` → `severityText: WARN` (13).
 - Everything else → `severityText: INFO` (9).
 
 `DEBUG` is not inferred. Emit debug records through an OpenTelemetry SDK that sets `severityNumber` itself.

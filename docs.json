@@ -163,6 +163,7 @@
             "pages": [
               "traces/overview",
               "traces/send",
+              "traces/search",
               "traces/explore",
               "traces/services"
             ]
@@ -238,7 +239,12 @@
               "source": "api/openapi.json",
               "directory": "api/reference"
             },
-            "pages": ["POST /v1/traces", "GET /api/traces/{traceId}"]
+            "pages": [
+              "POST /v1/traces",
+              "GET /api/traces/{traceId}",
+              "GET /api/traces/explore/overview",
+              "GET /api/traces/explore/spans"
+            ]
           },
           {
             "group": "Service health API",
@@ -246,10 +252,7 @@
               "source": "api/openapi.json",
               "directory": "api/reference"
             },
-            "pages": [
-              "GET /api/monitoring/services",
-              "GET /api/monitoring/errors"
-            ]
+            "pages": ["GET /api/services", "GET /api/services/errors"]
           },
           {
             "group": "Saved views",

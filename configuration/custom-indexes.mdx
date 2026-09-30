@@ -133,7 +133,7 @@ The rest of the form is optional and most deployments leave it untouched:
 Saving the form lands you on the new index's detail page. To finish wiring it up:
 
 1. On the **Configuration** tab, set the [field-role mappings](/configuration/manage-indexes#field-role-mappings) so the message, level, and traceback render correctly.
-2. Create an [ingest API key](/api/overview) scoped to the index and route writes through the [HTTP endpoint](/send-logs/http) or, for OpenTelemetry-shaped data, the [OTLP endpoint](/send-logs/otlp).
+2. Create an [ingest API key](/api/overview) scoped to the index and route writes through the [HTTP endpoint](/send-logs/http). Don't send OTLP to a custom-schema index: Quickwit answers `200` and discards the logs. See [Index target](/send-logs/otlp#index-target).
 
 ## Related
 

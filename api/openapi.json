@@ -716,6 +716,284 @@
 				],
 				"type": "object"
 			},
+			"ExploreBucket": {
+				"properties": {
+					"errors": {
+						"type": "number"
+					},
+					"keyMs": {
+						"type": "number"
+					},
+					"p50": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p95": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p99": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"requests": {
+						"type": "number"
+					}
+				},
+				"required": [
+					"keyMs",
+					"requests",
+					"errors",
+					"p50",
+					"p95",
+					"p99"
+				],
+				"type": "object"
+			},
+			"ExploreOperation": {
+				"properties": {
+					"errors": {
+						"type": "number"
+					},
+					"operation": {
+						"type": "string"
+					},
+					"p50": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p95": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p99": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"ratePerSec": {
+						"type": "number"
+					},
+					"requests": {
+						"type": "number"
+					},
+					"services": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"spark": {
+						"items": {
+							"type": "number"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"operation",
+					"services",
+					"requests",
+					"ratePerSec",
+					"errors",
+					"p50",
+					"p95",
+					"p99",
+					"spark"
+				],
+				"type": "object"
+			},
+			"ExploreOverviewResponse": {
+				"properties": {
+					"buckets": {
+						"items": {
+							"$ref": "#/components/schemas/ExploreBucket"
+						},
+						"type": "array"
+					},
+					"facets": {
+						"properties": {
+							"services": {
+								"items": {
+									"type": "string"
+								},
+								"type": "array"
+							}
+						},
+						"required": [
+							"services"
+						],
+						"type": "object"
+					},
+					"operations": {
+						"items": {
+							"$ref": "#/components/schemas/ExploreOperation"
+						},
+						"type": "array"
+					},
+					"operationsTruncated": {
+						"type": "boolean"
+					},
+					"summary": {
+						"$ref": "#/components/schemas/ExploreSummary"
+					}
+				},
+				"required": [
+					"buckets",
+					"summary",
+					"operations",
+					"operationsTruncated",
+					"facets"
+				],
+				"type": "object"
+			},
+			"ExploreSpanRow": {
+				"properties": {
+					"durationMicros": {
+						"type": "number"
+					},
+					"httpStatus": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"isError": {
+						"type": "boolean"
+					},
+					"operation": {
+						"type": "string"
+					},
+					"service": {
+						"type": "string"
+					},
+					"spanId": {
+						"type": "string"
+					},
+					"startMs": {
+						"type": "number"
+					},
+					"traceId": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"traceId",
+					"spanId",
+					"service",
+					"operation",
+					"startMs",
+					"durationMicros",
+					"isError",
+					"httpStatus"
+				],
+				"type": "object"
+			},
+			"ExploreSpansResponse": {
+				"properties": {
+					"rows": {
+						"items": {
+							"$ref": "#/components/schemas/ExploreSpanRow"
+						},
+						"type": "array"
+					},
+					"total": {
+						"type": "number"
+					}
+				},
+				"required": [
+					"rows",
+					"total"
+				],
+				"type": "object"
+			},
+			"ExploreSummary": {
+				"properties": {
+					"errors": {
+						"type": "number"
+					},
+					"p50": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p95": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p99": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"requests": {
+						"type": "number"
+					}
+				},
+				"required": [
+					"requests",
+					"errors",
+					"p50",
+					"p95",
+					"p99"
+				],
+				"type": "object"
+			},
 			"FieldValueEntrySchema": {
 				"properties": {
 					"count": {
@@ -1419,338 +1697,6 @@
 				],
 				"type": "object"
 			},
-			"MonitoringBucket": {
-				"properties": {
-					"avg": {
-						"anyOf": [
-							{
-								"type": "number"
-							},
-							{
-								"type": "null"
-							}
-						]
-					},
-					"errors": {
-						"type": "number"
-					},
-					"keyMs": {
-						"type": "number"
-					},
-					"p50": {
-						"anyOf": [
-							{
-								"type": "number"
-							},
-							{
-								"type": "null"
-							}
-						]
-					},
-					"p95": {
-						"anyOf": [
-							{
-								"type": "number"
-							},
-							{
-								"type": "null"
-							}
-						]
-					},
-					"requests": {
-						"type": "number"
-					}
-				},
-				"required": [
-					"keyMs",
-					"requests",
-					"errors",
-					"p50",
-					"p95",
-					"avg"
-				],
-				"type": "object"
-			},
-			"MonitoringDependency": {
-				"properties": {
-					"calls": {
-						"type": "number"
-					},
-					"name": {
-						"type": "string"
-					},
-					"p50": {
-						"anyOf": [
-							{
-								"type": "number"
-							},
-							{
-								"type": "null"
-							}
-						]
-					},
-					"p95": {
-						"anyOf": [
-							{
-								"type": "number"
-							},
-							{
-								"type": "null"
-							}
-						]
-					},
-					"peers": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
-					"totalMillis": {
-						"type": "number"
-					}
-				},
-				"required": [
-					"name",
-					"peers",
-					"calls",
-					"totalMillis",
-					"p50",
-					"p95"
-				],
-				"type": "object"
-			},
-			"MonitoringEndpoint": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"p50": {
-						"anyOf": [
-							{
-								"type": "number"
-							},
-							{
-								"type": "null"
-							}
-						]
-					},
-					"p95": {
-						"anyOf": [
-							{
-								"type": "number"
-							},
-							{
-								"type": "null"
-							}
-						]
-					},
-					"requests": {
-						"type": "number"
-					},
-					"routeAvailable": {
-						"type": "boolean"
-					},
-					"service": {
-						"type": "string"
-					},
-					"totalMillis": {
-						"type": "number"
-					}
-				},
-				"required": [
-					"id",
-					"service",
-					"name",
-					"routeAvailable",
-					"requests",
-					"totalMillis",
-					"p50",
-					"p95"
-				],
-				"type": "object"
-			},
-			"MonitoringErrorRow": {
-				"properties": {
-					"durationMillis": {
-						"type": "number"
-					},
-					"httpStatus": {
-						"anyOf": [
-							{
-								"type": "number"
-							},
-							{
-								"type": "null"
-							}
-						]
-					},
-					"kind": {
-						"enum": [
-							"server",
-							"client",
-							"producer",
-							"consumer",
-							"internal"
-						],
-						"type": "string"
-					},
-					"message": {
-						"type": "string"
-					},
-					"operation": {
-						"type": "string"
-					},
-					"service": {
-						"type": "string"
-					},
-					"spanId": {
-						"type": "string"
-					},
-					"timestampMs": {
-						"type": "number"
-					},
-					"traceId": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"traceId",
-					"spanId",
-					"timestampMs",
-					"service",
-					"operation",
-					"kind",
-					"message",
-					"httpStatus",
-					"durationMillis"
-				],
-				"type": "object"
-			},
-			"MonitoringFailingOperation": {
-				"properties": {
-					"errors": {
-						"type": "number"
-					},
-					"name": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"name",
-					"errors"
-				],
-				"type": "object"
-			},
-			"MonitoringServiceLatency": {
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"p95": {
-						"items": {
-							"anyOf": [
-								{
-									"type": "number"
-								},
-								{
-									"type": "null"
-								}
-							]
-						},
-						"type": "array"
-					}
-				},
-				"required": [
-					"name",
-					"p95"
-				],
-				"type": "object"
-			},
-			"MonitoringServiceRow": {
-				"properties": {
-					"errors": {
-						"type": "number"
-					},
-					"name": {
-						"type": "string"
-					},
-					"p50": {
-						"anyOf": [
-							{
-								"type": "number"
-							},
-							{
-								"type": "null"
-							}
-						]
-					},
-					"p95": {
-						"anyOf": [
-							{
-								"type": "number"
-							},
-							{
-								"type": "null"
-							}
-						]
-					},
-					"requests": {
-						"type": "number"
-					}
-				},
-				"required": [
-					"name",
-					"requests",
-					"errors",
-					"p50",
-					"p95"
-				],
-				"type": "object"
-			},
-			"MonitoringSummary": {
-				"properties": {
-					"errorSpans": {
-						"type": "number"
-					},
-					"errors": {
-						"type": "number"
-					},
-					"p50": {
-						"anyOf": [
-							{
-								"type": "number"
-							},
-							{
-								"type": "null"
-							}
-						]
-					},
-					"p95": {
-						"anyOf": [
-							{
-								"type": "number"
-							},
-							{
-								"type": "null"
-							}
-						]
-					},
-					"requests": {
-						"type": "number"
-					}
-				},
-				"required": [
-					"requests",
-					"errors",
-					"errorSpans",
-					"p50",
-					"p95"
-				],
-				"type": "object"
-			},
 			"OidcAuthSettingsResponse": {
 				"properties": {
 					"configured": {
@@ -2322,6 +2268,63 @@
 				],
 				"type": "object"
 			},
+			"ServiceErrorRow": {
+				"properties": {
+					"durationMillis": {
+						"type": "number"
+					},
+					"httpStatus": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"kind": {
+						"enum": [
+							"server",
+							"client",
+							"producer",
+							"consumer",
+							"internal"
+						],
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					},
+					"operation": {
+						"type": "string"
+					},
+					"service": {
+						"type": "string"
+					},
+					"spanId": {
+						"type": "string"
+					},
+					"timestampMs": {
+						"type": "number"
+					},
+					"traceId": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"traceId",
+					"spanId",
+					"timestampMs",
+					"service",
+					"operation",
+					"kind",
+					"message",
+					"httpStatus",
+					"durationMillis"
+				],
+				"type": "object"
+			},
 			"ServiceErrorsResponse": {
 				"properties": {
 					"hasMore": {
@@ -2329,7 +2332,7 @@
 					},
 					"rows": {
 						"items": {
-							"$ref": "#/components/schemas/MonitoringErrorRow"
+							"$ref": "#/components/schemas/ServiceErrorRow"
 						},
 						"type": "array"
 					}
@@ -2340,29 +2343,209 @@
 				],
 				"type": "object"
 			},
+			"ServiceHealthBucket": {
+				"properties": {
+					"avg": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"errors": {
+						"type": "number"
+					},
+					"keyMs": {
+						"type": "number"
+					},
+					"p50": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p95": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"requests": {
+						"type": "number"
+					}
+				},
+				"required": [
+					"keyMs",
+					"requests",
+					"errors",
+					"p50",
+					"p95",
+					"avg"
+				],
+				"type": "object"
+			},
+			"ServiceHealthDependency": {
+				"properties": {
+					"calls": {
+						"type": "number"
+					},
+					"name": {
+						"type": "string"
+					},
+					"p50": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p95": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"peers": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"totalMillis": {
+						"type": "number"
+					}
+				},
+				"required": [
+					"name",
+					"peers",
+					"calls",
+					"totalMillis",
+					"p50",
+					"p95"
+				],
+				"type": "object"
+			},
+			"ServiceHealthEndpoint": {
+				"properties": {
+					"errors": {
+						"type": "number"
+					},
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"operation": {
+						"type": "string"
+					},
+					"p50": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p95": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"query": {
+						"type": "string"
+					},
+					"requests": {
+						"type": "number"
+					},
+					"routeAvailable": {
+						"type": "boolean"
+					},
+					"service": {
+						"type": "string"
+					},
+					"totalMillis": {
+						"type": "number"
+					}
+				},
+				"required": [
+					"id",
+					"service",
+					"name",
+					"routeAvailable",
+					"operation",
+					"query",
+					"requests",
+					"errors",
+					"totalMillis",
+					"p50",
+					"p95"
+				],
+				"type": "object"
+			},
+			"ServiceHealthFailingOperation": {
+				"properties": {
+					"errors": {
+						"type": "number"
+					},
+					"name": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"name",
+					"errors"
+				],
+				"type": "object"
+			},
 			"ServiceHealthResponse": {
 				"properties": {
 					"buckets": {
 						"items": {
-							"$ref": "#/components/schemas/MonitoringBucket"
+							"$ref": "#/components/schemas/ServiceHealthBucket"
 						},
 						"type": "array"
 					},
 					"dependencies": {
 						"items": {
-							"$ref": "#/components/schemas/MonitoringDependency"
+							"$ref": "#/components/schemas/ServiceHealthDependency"
 						},
 						"type": "array"
 					},
 					"endpoints": {
 						"items": {
-							"$ref": "#/components/schemas/MonitoringEndpoint"
+							"$ref": "#/components/schemas/ServiceHealthEndpoint"
 						},
 						"type": "array"
 					},
 					"failingOperations": {
 						"items": {
-							"$ref": "#/components/schemas/MonitoringFailingOperation"
+							"$ref": "#/components/schemas/ServiceHealthFailingOperation"
 						},
 						"type": "array"
 					},
@@ -2377,7 +2560,7 @@
 					},
 					"serviceLatencies": {
 						"items": {
-							"$ref": "#/components/schemas/MonitoringServiceLatency"
+							"$ref": "#/components/schemas/ServiceLatency"
 						},
 						"type": "array"
 					},
@@ -2389,7 +2572,7 @@
 					},
 					"services": {
 						"items": {
-							"$ref": "#/components/schemas/MonitoringServiceRow"
+							"$ref": "#/components/schemas/ServiceHealthServiceRow"
 						},
 						"type": "array"
 					},
@@ -2397,7 +2580,7 @@
 						"type": "boolean"
 					},
 					"summary": {
-						"$ref": "#/components/schemas/MonitoringSummary"
+						"$ref": "#/components/schemas/ServiceHealthSummary"
 					},
 					"telemetryStatus": {
 						"enum": [
@@ -2420,6 +2603,113 @@
 					"endpoints",
 					"failingOperations",
 					"dependencies"
+				],
+				"type": "object"
+			},
+			"ServiceHealthServiceRow": {
+				"properties": {
+					"errors": {
+						"type": "number"
+					},
+					"name": {
+						"type": "string"
+					},
+					"p50": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p95": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"requests": {
+						"type": "number"
+					}
+				},
+				"required": [
+					"name",
+					"requests",
+					"errors",
+					"p50",
+					"p95"
+				],
+				"type": "object"
+			},
+			"ServiceHealthSummary": {
+				"properties": {
+					"errorSpans": {
+						"type": "number"
+					},
+					"errors": {
+						"type": "number"
+					},
+					"p50": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"p95": {
+						"anyOf": [
+							{
+								"type": "number"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
+					"requests": {
+						"type": "number"
+					}
+				},
+				"required": [
+					"requests",
+					"errors",
+					"errorSpans",
+					"p50",
+					"p95"
+				],
+				"type": "object"
+			},
+			"ServiceLatency": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"p95": {
+						"items": {
+							"anyOf": [
+								{
+									"type": "number"
+								},
+								{
+									"type": "null"
+								}
+							]
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"name",
+					"p95"
 				],
 				"type": "object"
 			},
@@ -14777,249 +15067,6 @@
 				]
 			}
 		},
-		"/api/monitoring/errors": {
-			"get": {
-				"operationId": "getApiMonitoringErrors",
-				"parameters": [
-					{
-						"in": "query",
-						"name": "service",
-						"schema": {
-							"maxLength": 200,
-							"minLength": 1,
-							"type": "string"
-						}
-					},
-					{
-						"description": "Unix timestamp in seconds",
-						"in": "query",
-						"name": "startTs",
-						"required": true,
-						"schema": {
-							"minimum": 0,
-							"pattern": "^\\d+$",
-							"type": "integer"
-						}
-					},
-					{
-						"description": "Unix timestamp in seconds",
-						"in": "query",
-						"name": "endTs",
-						"required": true,
-						"schema": {
-							"minimum": 0,
-							"pattern": "^\\d+$",
-							"type": "integer"
-						}
-					},
-					{
-						"in": "query",
-						"name": "operation",
-						"schema": {
-							"maxLength": 500,
-							"minLength": 1,
-							"type": "string"
-						}
-					},
-					{
-						"in": "query",
-						"name": "kind",
-						"schema": {
-							"enum": [
-								"server",
-								"client",
-								"producer",
-								"consumer",
-								"internal"
-							],
-							"type": "string"
-						}
-					},
-					{
-						"in": "query",
-						"name": "httpStatus",
-						"schema": {
-							"enum": [
-								"4xx",
-								"5xx",
-								"none"
-							],
-							"type": "string"
-						}
-					},
-					{
-						"in": "query",
-						"name": "limit",
-						"schema": {
-							"default": "50",
-							"maximum": 100,
-							"minimum": 1,
-							"pattern": "^\\d+$",
-							"type": "integer"
-						}
-					},
-					{
-						"in": "query",
-						"name": "offset",
-						"schema": {
-							"default": "0",
-							"maximum": 5000,
-							"minimum": 0,
-							"pattern": "^\\d+$",
-							"type": "integer"
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ServiceErrorsResponse"
-								}
-							}
-						},
-						"description": "Successful response"
-					},
-					"400": {
-						"$ref": "#/components/responses/BadRequest"
-					},
-					"401": {
-						"$ref": "#/components/responses/Unauthorized"
-					},
-					"403": {
-						"$ref": "#/components/responses/Forbidden"
-					},
-					"404": {
-						"$ref": "#/components/responses/NotFound"
-					},
-					"429": {
-						"$ref": "#/components/responses/TooManyRequests"
-					},
-					"500": {
-						"$ref": "#/components/responses/InternalError"
-					},
-					"503": {
-						"$ref": "#/components/responses/ServiceUnavailable"
-					}
-				},
-				"security": [
-					{
-						"personalBearer": []
-					},
-					{
-						"cookieAuth": []
-					}
-				],
-				"summary": "List failing spans",
-				"tags": [
-					"Monitoring"
-				]
-			}
-		},
-		"/api/monitoring/services": {
-			"get": {
-				"operationId": "getApiMonitoringServices",
-				"parameters": [
-					{
-						"in": "query",
-						"name": "service",
-						"schema": {
-							"maxLength": 200,
-							"minLength": 1,
-							"type": "string"
-						}
-					},
-					{
-						"description": "Unix timestamp in seconds",
-						"in": "query",
-						"name": "startTs",
-						"required": true,
-						"schema": {
-							"minimum": 0,
-							"pattern": "^\\d+$",
-							"type": "integer"
-						}
-					},
-					{
-						"description": "Unix timestamp in seconds",
-						"in": "query",
-						"name": "endTs",
-						"required": true,
-						"schema": {
-							"minimum": 0,
-							"pattern": "^\\d+$",
-							"type": "integer"
-						}
-					},
-					{
-						"in": "query",
-						"name": "interval",
-						"required": true,
-						"schema": {
-							"pattern": "^[1-9]\\d*[smhd]$",
-							"type": "string"
-						}
-					},
-					{
-						"in": "query",
-						"name": "endpointLimit",
-						"schema": {
-							"default": "10",
-							"maximum": 100,
-							"minimum": 1,
-							"pattern": "^\\d+$",
-							"type": "integer"
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ServiceHealthResponse"
-								}
-							}
-						},
-						"description": "Successful response"
-					},
-					"400": {
-						"$ref": "#/components/responses/BadRequest"
-					},
-					"401": {
-						"$ref": "#/components/responses/Unauthorized"
-					},
-					"403": {
-						"$ref": "#/components/responses/Forbidden"
-					},
-					"404": {
-						"$ref": "#/components/responses/NotFound"
-					},
-					"429": {
-						"$ref": "#/components/responses/TooManyRequests"
-					},
-					"500": {
-						"$ref": "#/components/responses/InternalError"
-					},
-					"503": {
-						"$ref": "#/components/responses/ServiceUnavailable"
-					}
-				},
-				"security": [
-					{
-						"personalBearer": []
-					},
-					{
-						"cookieAuth": []
-					}
-				],
-				"summary": "Get service health panels",
-				"tags": [
-					"Monitoring"
-				]
-			}
-		},
 		"/api/service-accounts": {
 			"get": {
 				"operationId": "getApiServiceAccounts",
@@ -15159,6 +15206,249 @@
 				"summary": "Delete service account",
 				"tags": [
 					"Service accounts"
+				]
+			}
+		},
+		"/api/services": {
+			"get": {
+				"operationId": "getApiServices",
+				"parameters": [
+					{
+						"in": "query",
+						"name": "service",
+						"schema": {
+							"maxLength": 200,
+							"minLength": 1,
+							"type": "string"
+						}
+					},
+					{
+						"description": "Unix timestamp in seconds",
+						"in": "query",
+						"name": "startTs",
+						"required": true,
+						"schema": {
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"description": "Unix timestamp in seconds",
+						"in": "query",
+						"name": "endTs",
+						"required": true,
+						"schema": {
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"in": "query",
+						"name": "interval",
+						"required": true,
+						"schema": {
+							"pattern": "^[1-9]\\d*[smhd]$",
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "endpointLimit",
+						"schema": {
+							"default": "10",
+							"maximum": 100,
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ServiceHealthResponse"
+								}
+							}
+						},
+						"description": "Successful response"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"429": {
+						"$ref": "#/components/responses/TooManyRequests"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"security": [
+					{
+						"personalBearer": []
+					},
+					{
+						"cookieAuth": []
+					}
+				],
+				"summary": "Get service health panels",
+				"tags": [
+					"Services"
+				]
+			}
+		},
+		"/api/services/errors": {
+			"get": {
+				"operationId": "getApiServicesErrors",
+				"parameters": [
+					{
+						"in": "query",
+						"name": "service",
+						"schema": {
+							"maxLength": 200,
+							"minLength": 1,
+							"type": "string"
+						}
+					},
+					{
+						"description": "Unix timestamp in seconds",
+						"in": "query",
+						"name": "startTs",
+						"required": true,
+						"schema": {
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"description": "Unix timestamp in seconds",
+						"in": "query",
+						"name": "endTs",
+						"required": true,
+						"schema": {
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"in": "query",
+						"name": "operation",
+						"schema": {
+							"maxLength": 500,
+							"minLength": 1,
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "kind",
+						"schema": {
+							"enum": [
+								"server",
+								"client",
+								"producer",
+								"consumer",
+								"internal"
+							],
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "httpStatus",
+						"schema": {
+							"enum": [
+								"4xx",
+								"5xx",
+								"none"
+							],
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "limit",
+						"schema": {
+							"default": "50",
+							"maximum": 100,
+							"minimum": 1,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"in": "query",
+						"name": "offset",
+						"schema": {
+							"default": "0",
+							"maximum": 5000,
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ServiceErrorsResponse"
+								}
+							}
+						},
+						"description": "Successful response"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"429": {
+						"$ref": "#/components/responses/TooManyRequests"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"security": [
+					{
+						"personalBearer": []
+					},
+					{
+						"cookieAuth": []
+					}
+				],
+				"summary": "List failing spans",
+				"tags": [
+					"Services"
 				]
 			}
 		},
@@ -15862,6 +16152,327 @@
 				"summary": "Resolve a share link",
 				"tags": [
 					"Shares"
+				]
+			}
+		},
+		"/api/traces/explore/overview": {
+			"get": {
+				"operationId": "getApiTracesExploreOverview",
+				"parameters": [
+					{
+						"description": "Unix timestamp in seconds",
+						"in": "query",
+						"name": "startTs",
+						"required": true,
+						"schema": {
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"description": "Unix timestamp in seconds",
+						"in": "query",
+						"name": "endTs",
+						"required": true,
+						"schema": {
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"in": "query",
+						"name": "service",
+						"schema": {
+							"maxLength": 200,
+							"minLength": 1,
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "operation",
+						"schema": {
+							"maxLength": 500,
+							"minLength": 1,
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "minMs",
+						"schema": {
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"in": "query",
+						"name": "maxMs",
+						"schema": {
+							"minimum": 1,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"in": "query",
+						"name": "status",
+						"schema": {
+							"default": "all",
+							"enum": [
+								"all",
+								"error",
+								"ok"
+							],
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "root",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "q",
+						"schema": {
+							"maxLength": 2000,
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "interval",
+						"required": true,
+						"schema": {
+							"pattern": "^[1-9]\\d*[smhd]$",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ExploreOverviewResponse"
+								}
+							}
+						},
+						"description": "Successful response"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"429": {
+						"$ref": "#/components/responses/TooManyRequests"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"security": [
+					{
+						"personalBearer": []
+					},
+					{
+						"cookieAuth": []
+					}
+				],
+				"summary": "Get span charts, operations and filter choices",
+				"tags": [
+					"Traces"
+				]
+			}
+		},
+		"/api/traces/explore/spans": {
+			"get": {
+				"operationId": "getApiTracesExploreSpans",
+				"parameters": [
+					{
+						"description": "Unix timestamp in seconds",
+						"in": "query",
+						"name": "startTs",
+						"required": true,
+						"schema": {
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"description": "Unix timestamp in seconds",
+						"in": "query",
+						"name": "endTs",
+						"required": true,
+						"schema": {
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"in": "query",
+						"name": "service",
+						"schema": {
+							"maxLength": 200,
+							"minLength": 1,
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "operation",
+						"schema": {
+							"maxLength": 500,
+							"minLength": 1,
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "minMs",
+						"schema": {
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"in": "query",
+						"name": "maxMs",
+						"schema": {
+							"minimum": 1,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"in": "query",
+						"name": "status",
+						"schema": {
+							"default": "all",
+							"enum": [
+								"all",
+								"error",
+								"ok"
+							],
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "root",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "q",
+						"schema": {
+							"maxLength": 2000,
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "sort",
+						"schema": {
+							"default": "-start",
+							"enum": [
+								"-start",
+								"start",
+								"-duration",
+								"duration"
+							],
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "limit",
+						"schema": {
+							"default": "50",
+							"maximum": 100,
+							"minimum": 1,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					},
+					{
+						"in": "query",
+						"name": "offset",
+						"schema": {
+							"default": "0",
+							"maximum": 10000,
+							"minimum": 0,
+							"pattern": "^\\d+$",
+							"type": "integer"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ExploreSpansResponse"
+								}
+							}
+						},
+						"description": "Successful response"
+					},
+					"400": {
+						"$ref": "#/components/responses/BadRequest"
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"$ref": "#/components/responses/Forbidden"
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					},
+					"429": {
+						"$ref": "#/components/responses/TooManyRequests"
+					},
+					"500": {
+						"$ref": "#/components/responses/InternalError"
+					},
+					"503": {
+						"$ref": "#/components/responses/ServiceUnavailable"
+					}
+				},
+				"security": [
+					{
+						"personalBearer": []
+					},
+					{
+						"cookieAuth": []
+					}
+				],
+				"summary": "Search spans",
+				"tags": [
+					"Traces"
 				]
 			}
 		},

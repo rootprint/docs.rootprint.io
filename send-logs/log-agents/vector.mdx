@@ -135,7 +135,7 @@ description: 'Tail log files with Vector — on bare metal or in Docker — and 
       </Step>
 
       <Step title="Verify in Rootprint">
-        Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+        Open **Logs**, pick `otel-logs-v0_9` from the index selector, and query for
         `hello from vector`. Records typically appear within 5–10 seconds. The OTLP path commits on
         Quickwit's normal cadence, there is no `commit=wait_for` knob.
       </Step>
@@ -158,7 +158,7 @@ description: 'Tail log files with Vector — on bare metal or in Docker — and 
         ```yaml
         services:
           rootprint-vector:
-            image: timberio/vector:0.54.0-alpine
+            image: timberio/vector:0.58.0-alpine
             container_name: rootprint-vector
             restart: unless-stopped
             volumes:
@@ -188,7 +188,7 @@ description: 'Tail log files with Vector — on bare metal or in Docker — and 
       </Step>
 
       <Step title="Verify in Rootprint">
-        Open Search, pick `otel-logs-v0_9` from the index selector, and query for
+        Open **Logs**, pick `otel-logs-v0_9` from the index selector, and query for
         `hello from vector`. Records typically appear within 5–10 seconds.
       </Step>
     </Steps>

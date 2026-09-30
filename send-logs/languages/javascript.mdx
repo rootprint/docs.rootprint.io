@@ -8,7 +8,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
 ## Prerequisites
 
 - A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
-- Node.js 18+ with `npm` (the SDK needs native `fetch` and top-level `await`).
+- Node.js 22+ with `npm`. The examples are ES modules with top-level `await`: save them as `.mjs`, or set `"type": "module"` in `package.json`.
 - An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` for the examples here). See [API keys](/api/overview).
 
 ## Setup
@@ -33,7 +33,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
       </Tab>
     </Tabs>
 
-    Node.js 18+ is required (for native `fetch` and top-level `await`).
+    Node.js 22+ is required. The examples are ES modules, so save them as `.mjs` or set `"type": "module"` in `package.json`.
 
   </Step>
 
@@ -64,7 +64,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
 
         const provider = new LoggerProvider({
             resource,
-            processors: [new BatchLogRecordProcessor(new OTLPLogExporter())]
+            processors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })]
         });
 
         logs.setGlobalLoggerProvider(provider);
@@ -107,7 +107,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
 
         const provider = new LoggerProvider({
             resource,
-            processors: [new BatchLogRecordProcessor(new OTLPLogExporter())]
+            processors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })]
         });
 
         logs.setGlobalLoggerProvider(provider);
@@ -129,7 +129,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
   </Step>
 
   <Step title="Verify in Rootprint">
-    Open Search, filter on `service_name:my-node-service`, and your record should appear within ~2 seconds.
+    Open **Logs**, filter on `service_name:my-node-service`, and your record should appear within ~2 seconds.
   </Step>
 </Steps>
 
@@ -168,7 +168,7 @@ const resource = defaultResource().merge(
 
 const provider = new LoggerProvider({
 	resource,
-	processors: [new BatchLogRecordProcessor(new OTLPLogExporter())]
+	processors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })]
 });
 
 logs.setGlobalLoggerProvider(provider);
@@ -200,8 +200,9 @@ app.listen(3000);
 ## Troubleshooting
 
 - **401 / 403**: the Bearer token is missing, malformed, or the `%20` separator is not URL-encoded. Re-check `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.
-- **Nothing in Search**: the batch processor buffers records. For short-lived scripts call `await provider.forceFlush()` (or `await provider.shutdown()`) before exit.
-- **`fetch is not defined`**: upgrade to Node.js 18+ or pass a polyfilled fetch to the exporter.
+- **Nothing in Logs**: the batch processor buffers records. For short-lived scripts call `await provider.forceFlush()` (or `await provider.shutdown()`) before exit.
+- **`fetch is not defined`**: upgrade to Node.js 22 or newer.
+- **Every Winston line stored twice**: the app also runs under the auto-instrumentation `register` hook from [Send traces](/traces/send), which adds its own Winston transport. Set `OTEL_NODE_DISABLED_INSTRUMENTATIONS=winston` for that process.
 - **Pino transport not emitting**: `pino-opentelemetry-transport` reads the `OTEL_*` env vars itself; make sure they are set in the process that spawns the transport worker.
 - **TLS errors against a self-signed endpoint**: set `NODE_EXTRA_CA_CERTS=/path/to/ca.pem`.
 

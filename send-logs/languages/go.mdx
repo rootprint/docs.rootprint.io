@@ -8,7 +8,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Go SDK's `otlploghttp` 
 ## Prerequisites
 
 - A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
-- Go 1.21+ (for `log/slog`).
+- Go 1.25+. The current OpenTelemetry Go log packages require it.
 - An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` for the examples here). See [API keys](/api/overview).
 
 ## Setup
@@ -27,7 +27,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Go SDK's `otlploghttp` 
         go.opentelemetry.io/contrib/bridges/otelslog
     ```
 
-    Go 1.21+ is required (for `log/slog`).
+    Go 1.25+ is required: the current OpenTelemetry Go log packages declare `go 1.25.0`.
 
   </Step>
 
@@ -69,15 +69,18 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Go SDK's `otlploghttp` 
         global.SetLoggerProvider(provider)
 
         logger := otelslog.NewLogger("hello")
-        logger.Info("Hello from Go to Rootprint")
+        // Pass the request's ctx in real code: the record takes its trace_id from it.
+        logger.InfoContext(ctx, "Hello from Go to Rootprint")
     }
     ```
     </Expandable>
 
+    Log with `InfoContext`, `ErrorContext`, and the other `*Context` methods wherever a request context is in scope. A call without the context carries no span, so the log can't open its trace.
+
   </Step>
 
   <Step title="Verify in Rootprint">
-    Open Search, filter on `service_name:my-go-service`, and your record should appear within ~2 seconds.
+    Open **Logs**, filter on `service_name:my-go-service`, and your record should appear within ~2 seconds.
   </Step>
 </Steps>
 
@@ -137,7 +140,7 @@ func main() {
 
     r := gin.New()
     r.Use(func(c *gin.Context) {
-        slog.Info("request", "method", c.Request.Method, "path", c.FullPath())
+        slog.InfoContext(c.Request.Context(), "request", "method", c.Request.Method, "path", c.FullPath())
         c.Next()
     })
     r.GET("/", func(c *gin.Context) { c.JSON(200, gin.H{"ok": true}) })
@@ -149,7 +152,7 @@ func main() {
 ## Troubleshooting
 
 - **401 / 403**: the Bearer token is missing, malformed, or the `%20` separator is not URL-encoded. Re-check `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.
-- **Nothing in Search**: the batch processor buffers records. Short-lived programs must call `provider.Shutdown(ctx)` or `provider.ForceFlush(ctx)` before exit (the example above does so via `defer`).
+- **Nothing in Logs**: the batch processor buffers records. Short-lived programs must call `provider.Shutdown(ctx)` or `provider.ForceFlush(ctx)` before exit (the example above does so via `defer`).
 - **`otlploghttp.New` returns `context deadline exceeded`**: the process cannot reach the endpoint. Check DNS/TLS/firewall; try `curl -X POST $OTEL_EXPORTER_OTLP_LOGS_ENDPOINT -H "Authorization: Bearer <token>"` to isolate.
 - **TLS errors against a self-signed endpoint**: set `OTEL_EXPORTER_OTLP_CERTIFICATE=/path/to/ca.pem`.
 

@@ -46,7 +46,7 @@ Syslog records don't fit the built-in `otel-logs-v0_9` schema, so this guide cre
   </Step>
 
   <Step title="Map the display roles">
-    On the new index's **Configuration** tab, set the [field-role mappings](/configuration/manage-indexes#field-role-mappings) so Search knows how to render a record:
+    On the new index's **Configuration** tab, set the [field-role mappings](/configuration/manage-indexes#field-role-mappings) so the **Logs** page knows how to render a record:
 
     - **Log level** → `severity`
     - **Message** → `message`
@@ -150,7 +150,7 @@ Syslog records don't fit the built-in `otel-logs-v0_9` schema, so this guide cre
     logger -p local7.notice "hello from rsyslog"
     ```
 
-    Open Search, pick `syslog` from the index selector, and query `hello from rsyslog`. Allow a few seconds for Quickwit to commit. A `200` from the ingest endpoint means Rootprint queued the documents, not that you can search them yet.
+    Open **Logs**, pick `syslog` from the index selector, and query `hello from rsyslog`. Allow a few seconds for Quickwit to commit. A `200` from the ingest endpoint means Rootprint queued the documents, not that you can search them yet.
 
   </Step>
 </Steps>

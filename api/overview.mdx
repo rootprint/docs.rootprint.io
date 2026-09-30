@@ -23,7 +23,7 @@ Rootprint uses these authentication modes, depending on the endpoint.
 | ---------------------------------------- | ------------------------------------------------ | ------------------------------------- |
 | Send logs over NDJSON or OTLP            | Ingest API key (bearer, prefix `rp_`)          | **Settings → API keys**               |
 | Send traces over OTLP                    | Ingest API key (bearer, prefix `rp_`)            | **Settings → API keys**               |
-| Read logs from an external tool          | Query API key (bearer, prefix `rpk_`)            | **Settings → Profile** or **Settings → Service accounts** |
+| Read logs from an external tool          | Query API key (bearer, prefix `rpk_`)            | **Profile** (user menu) or **Settings → Service accounts** |
 | Check health                             | None                                             | `GET /api/health` is public           |
 
 Bearer-token endpoints use the standard `Authorization` header.
@@ -42,8 +42,8 @@ The generated endpoint reference is arranged around the audience for each endpoi
 | ---------------------- | ------------------------------------------------------------- |
 | Log ingest API         | NDJSON and OTLP endpoints for log producers                   |
 | Log explorer API       | Search, histograms, field values, and exports. Query API keys work on search, histogram, field-value, and field-discovery endpoints. |
-| Traces API             | OTLP span ingest and single-trace lookup                      |
-| Service health API     | Service health computed from spans: request rate, errors, latency, top endpoints, downstream calls, and the failing spans themselves |
+| Traces API             | OTLP span ingest, single-trace lookup, and span search with charts for the trace explorer |
+| Service health API     | Service health computed from spans: request rate, errors, latency, a service's operations and downstream calls, and the failing spans themselves |
 | Saved views            | Create, list, update, and delete saved searches scoped to an index |
 | Share links            | Create and resolve public share links for log views           |
 | Index management API   | Index metadata, field discovery, preferences, and stats       |
@@ -58,7 +58,9 @@ The generated endpoint reference is arranged around the audience for each endpoi
 
 ## Timestamps
 
-Every timestamp the API takes is **Unix epoch seconds** — `startTs` and `endTs` on search, histogram, field-value, field-discovery, export, monitoring, and stats requests, and `startTime`/`endTime` in a share or saved-view body. Log documents keep their own nanosecond fields; that is document data, not a request parameter.
+Every timestamp the API takes is **Unix epoch seconds** — `startTs` and `endTs` on search, histogram, field-value, field-discovery, export, service health, trace explorer, and stats requests, and `startTime`/`endTime` in a share or saved-view body. Log documents keep their own nanosecond fields; that is document data, not a request parameter.
+
+The log search, histogram, field-discovery, field-value, and export endpoints accept a fractional `endTs` and round it up to the next whole second, so the last partial second is kept.
 
 <Warning>
 	`GET /api/indexes/{indexId}/stats` ignores `from` and `to` rather than rejecting them. A caller
@@ -121,7 +123,7 @@ Most app-level endpoints return JSON errors with a stable `error` object.
 | `422`  | Unprocessable entity, such as a share payload over 64KB |
 | `429`  | Rate limit exceeded — Rootprint's own (`TOO_MANY_REQUESTS`) or Quickwit's, passed through (`UPSTREAM_RATE_LIMIT`). Honor `Retry-After`. |
 | `500`  | Internal server error                              |
-| `503`  | Quickwit or another upstream dependency is down    |
+| `503`  | Quickwit or another upstream dependency is down. Retryable — honor `Retry-After`. |
 
 OTLP endpoints follow OTLP-style error responses instead of the app JSON error shape.
 

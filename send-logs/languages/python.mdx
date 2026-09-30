@@ -8,7 +8,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP (`proto-http`). The Python S
 ## Prerequisites
 
 - A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
-- Python 3.8+ with `pip`.
+- Python 3.10+ with `pip`.
 - An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` for the examples here). See [API keys](/api/overview).
 
 ## Setup
@@ -16,10 +16,10 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP (`proto-http`). The Python S
 <Steps>
   <Step title="Install the OpenTelemetry SDK">
     ```bash
-    pip install opentelemetry-sdk opentelemetry-exporter-otlp-proto-http
+    pip install opentelemetry-sdk opentelemetry-exporter-otlp-proto-http opentelemetry-instrumentation-logging
     ```
 
-    Python 3.8+ is required. For async apps, add `opentelemetry-instrumentation-asyncio`.
+    Python 3.10+ is required. `opentelemetry-instrumentation-logging` provides the `LoggingHandler` that bridges the standard `logging` module. The SDK's own copy is deprecated. For async apps, add `opentelemetry-instrumentation-asyncio`.
 
   </Step>
 
@@ -38,9 +38,10 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP (`proto-http`). The Python S
     ```python
     import logging
     from opentelemetry._logs import set_logger_provider
-    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs import LoggerProvider
     from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
     from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+    from opentelemetry.instrumentation.logging.handler import LoggingHandler
 
     logger_provider = LoggerProvider()
     set_logger_provider(logger_provider)
@@ -59,7 +60,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP (`proto-http`). The Python S
   </Step>
 
   <Step title="Verify in Rootprint">
-    Open Search, filter on `service_name:my-python-service`, and your record should appear within ~2 seconds (one batch interval).
+    Open **Logs**, filter on `service_name:my-python-service`, and your record should appear within ~2 seconds (one batch interval).
   </Step>
 </Steps>
 
@@ -82,9 +83,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import logging
 from opentelemetry._logs import set_logger_provider
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from opentelemetry.instrumentation.logging.handler import LoggingHandler
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -107,9 +109,9 @@ def index():
 ## Troubleshooting
 
 - **401 / 403**: the Bearer token is missing, malformed, or the `%20` separator is not URL-encoded. Re-check `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.
-- **Nothing in Search**: records are batched; wait 2–5 s or call `logger_provider.force_flush()` from your script. Also verify `OTEL_SERVICE_NAME` is set so you can filter on `service_name`.
+- **Nothing in Logs**: records are batched; wait 2–5 s or call `logger_provider.force_flush()` from your script. Also verify `OTEL_SERVICE_NAME` is set so you can filter on `service_name`.
 - **TLS errors against a self-signed endpoint**: set `OTEL_EXPORTER_OTLP_CERTIFICATE=/path/to/ca.pem`.
-- **Records rejected by Quickwit**: the API key is scoped to a specific index. If that index's schema doesn't accept the record, create an API key for a different index. See [Manage indexes](/configuration/manage-indexes).
+- **`200` from Rootprint but no records**: the ingest API key is scoped to an index without the OpenTelemetry logs schema. Quickwit accepts OTLP logs sent there and discards them. Use a key scoped to `otel-logs-v0_9` or another OpenTelemetry logs index. See [Index target](/send-logs/otlp#index-target).
 
 ## Related
 

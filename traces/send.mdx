@@ -92,7 +92,7 @@ opentelemetry-instrument python app.py
 </Tab>
 <Tab title="Node.js">
 
-Install the auto-instrumentation package. The `register` entrypoint starts the SDK and patches every supported library — `http`, `express`, `fastify`, `pg`, `redis` — before your code loads.
+Install the auto-instrumentation package. The `register` entrypoint starts the SDK and patches supported libraries — `http`, `express`, `koa`, `pg`, `redis`, and more — before your code loads. Fastify apps also add [`@fastify/otel`](https://github.com/fastify/otel), which replaces the deprecated bundled Fastify instrumentation.
 
 ```bash
 npm install @opentelemetry/api @opentelemetry/auto-instrumentations-node
@@ -109,10 +109,17 @@ export OTEL_METRICS_EXPORTER=none
 export OTEL_LOGS_EXPORTER=none
 ```
 
-Start your app with the register hook. Use `--import` instead of `--require` if your entrypoint is ESM.
+Start your app with the register hook.
 
 ```bash
 node --require @opentelemetry/auto-instrumentations-node/register app.js
+```
+
+If your entrypoint is ESM, add the loader hook as well. Without it, modules loaded with `import` are not patched.
+
+```bash
+node --experimental-loader=@opentelemetry/instrumentation/hook.mjs \
+  --import @opentelemetry/auto-instrumentations-node/register app.js
 ```
 
 </Tab>
@@ -169,7 +176,7 @@ func main() {
 </Tab>
 <Tab title="OpenTelemetry Collector">
 
-Install the Contrib distribution (`otelcol-contrib`) for your platform. Per-platform packages are maintained [upstream](https://opentelemetry.io/docs/collector/installation/).
+Install the Contrib distribution (`otelcol-contrib`), v0.149 or newer, for your platform. Those releases accept the `otlp_http` name used below. Per-platform packages are maintained [upstream](https://opentelemetry.io/docs/collector/installation/).
 
 Save this at `/etc/otelcol-contrib/config.yaml`. The `otlp` receiver listens on 4317 (gRPC) and 4318 (HTTP) — point your instrumented services at the Collector instead of at Rootprint directly, and it batches and forwards their spans.
 
@@ -186,7 +193,7 @@ processors:
   batch: {}
 
 exporters:
-  otlphttp:
+  otlp_http:
     traces_endpoint: https://<your-rootprint>/v1/traces
     compression: gzip
     headers:
@@ -197,10 +204,10 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlphttp]
+      exporters: [otlp_http]
 ```
 
-If you already configured the Collector for logs, merge this receiver, exporter, and pipeline into that file rather than replacing it. One `otlphttp` exporter carries both signals — keep `logs_endpoint` and `traces_endpoint` side by side and declare both pipelines.
+If you already configured the Collector for logs, merge this receiver, exporter, and pipeline into that file rather than replacing it. One `otlp_http` exporter carries both signals — keep `logs_endpoint` and `traces_endpoint` side by side and declare both pipelines.
 
 Restart the Collector:
 
@@ -223,9 +230,9 @@ curl -sS -X POST http://localhost:4318/v1/traces \
 
 ## Correlate spans with logs
 
-Spans are reached from a log. Ship logs from the same service as well, and Rootprint pairs the two by `trace_id` so any log row opens its trace. See [Send logs](/send-logs/overview) and [Read a trace](/traces/explore).
+Spans show up in the [trace explorer](/traces/search) on their own. Ship logs from the same service as well, and Rootprint pairs the two by `trace_id`, so a log row opens its trace and a span opens its logs. See [Send logs](/send-logs/overview) and [Read a trace](/traces/explore).
 
-For the Collector, pairing works once the application's own log records carry trace context — for example through an OpenTelemetry log appender. It does not work for tailed stdout or file lines, which have no trace context to carry.
+For the Collector, pairing works once log records carry trace context: from an OpenTelemetry log appender in the application, or from a `trace_parser` operator that reads the trace ID out of tailed lines. Plain stdout or file lines with no trace ID in them stay unpaired.
 
 ## Response codes
 
@@ -245,5 +252,6 @@ Errors use the `google.rpc.Status` encoding. `415` is JSON; every other error is
 ## Related
 
 - [Traces](/traces/overview)
+- [Trace explorer](/traces/search)
 - [Read a trace](/traces/explore)
 - [OTLP reference](/send-logs/otlp) for the logs endpoint

@@ -28,7 +28,7 @@ mint validate                                       # strict-mode build validati
 | `install/` | Install guides (Docker Compose, scaling, etc.) |
 | `configuration/` | Env vars, index config, auth, admin operations |
 | `send-logs/` | Language SDKs (`languages/`), log agents (`log-agents/`), web servers (`web-servers/`), platforms (`platforms/`), and protocol guides (HTTP, OTLP) |
-| `traces/` | Trace overview, sending spans over OTLP, and reading a trace |
+| `traces/` | Trace overview, sending spans over OTLP, the trace explorer and reading a trace, and service health |
 | `search/` | Query language reference |
 | `api/` | HTTP API reference |
 | `files/` | Downloadable Compose files (`docker-compose.full.yaml`, `docker-compose.standalone.yaml`) served at `docs.rootprint.io/files/…` and fetched by the curl lines in `quickstart.mdx` and `install/docker-compose.mdx` |
@@ -45,7 +45,7 @@ Use these terms consistently across pages:
 - **span store** — the single Quickwit index holding OTLP spans, named by `TRACE_INDEX_ID`. Not "trace index" in user-facing copy.
 - **trace ID field** — the per-index setting naming the path to a trace ID inside a log document. Not "correlation field".
 - **query API key** — umbrella term for read-only `rpk_` credentials that grant `logs: read` on log query endpoints. Use the specific term when the owner matters.
-- **personal API key** / **personal access token (PAT)** — a query API key created by a signed-in user from **Settings → Profile**. It authenticates as that user.
+- **personal API key** / **personal access token (PAT)** — a query API key created by a signed-in user from **Profile** in the user menu (`/profile`). It authenticates as that user.
 - **service account** — a non-human account created by an admin from **Settings → Service accounts**. Service account API keys are query API keys for shared integrations.
 - **log level** — severity (INFO/WARN/ERROR/DEBUG/UNKNOWN). Not "severity" or "log priority".
 - **OTLP** — OpenTelemetry Protocol. Capitalize.
