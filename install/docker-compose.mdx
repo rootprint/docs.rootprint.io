@@ -37,7 +37,7 @@ services:
       retries: 10
 
   quickwit:
-    image: quickwit/quickwit:v0.9.0
+    image: quickwit/quickwit:v0.9.1
     restart: unless-stopped
     volumes:
       - rootprint-quickwit:/quickwit/qwdata
@@ -89,7 +89,7 @@ By default, index data lives in the `rootprint-quickwit` Docker volume, and remo
 ```yaml
 services:
   quickwit:
-    image: quickwit/quickwit:v0.9.0
+    image: quickwit/quickwit:v0.9.1
     environment:
       QW_DEFAULT_INDEX_ROOT_URI: s3://your-bucket-name/indexes
       QW_METASTORE_URI: s3://your-bucket-name/metastore
@@ -133,7 +133,7 @@ ports:
 ## Connect to an existing Quickwit instance
 
 <Warning>
-	Rootprint requires Quickwit `0.9.0`; earlier releases are not supported. Check your version
+	Rootprint requires Quickwit `0.9.0+`; earlier releases are not supported. Check your version
 	with `curl http://your-quickwit-host:7280/api/v1/version`.
 </Warning>
 
@@ -178,7 +178,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://rootprint:rootprint@db:5432/rootprint
-      QUICKWIT_URL: http://your-quickwit-host:7280   # Quickwit 0.9.0 required
+      QUICKWIT_URL: http://your-quickwit-host:7280   # Quickwit 0.9.0+ required
       ORIGIN: http://localhost:8282   # change to your public URL
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8282/api/health || exit 1"]
