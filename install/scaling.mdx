@@ -31,6 +31,23 @@ services:
 
 The Quickwit database must already exist. Quickwit creates and migrates its own tables on startup. For other storage backends, see [Other storage backends](/install/docker-compose#other-storage-backends). For connection-string options, see [Quickwit metastore configuration](https://quickwit.io/docs/configuration/metastore-config).
 
+<Warning>
+	Changing these settings doesn't move existing logs or index metadata. Quickwit starts with an
+	empty metastore, and earlier logs no longer appear in search. Make this change on a fresh
+	deployment, or re-send historical logs after the switch. Keep the original volume and metastore
+	until you've verified historical searches.
+</Warning>
+
+## Connect the Quickwit nodes
+
+Before you add indexers or searchers, set on every Quickwit node:
+
+- `QW_PEER_SEEDS`: addresses of one or more other nodes, used for cluster discovery. On Kubernetes, point it at a headless service.
+- `QW_ADVERTISE_ADDRESS`: the address other nodes use to reach this one. The Quickwit image listens on `0.0.0.0` and guesses a private IP to advertise. Set this when other nodes can't reach that IP.
+- `QW_LISTEN_ADDRESS`: set it to a reachable interface when you run Quickwit outside its image. The default `127.0.0.1` can't form a cluster.
+
+Nodes talk over gossip on UDP `7280` and gRPC on TCP `7281`. Open both between nodes on a private network only. Rootprint reaches Quickwit over REST on TCP `7280`. See [Quickwit ports configuration](https://quickwit.io/docs/configuration/ports-config).
+
 ## Scale the Quickwit cluster to your load
 
 Choose each node's services with `quickwit run --service ...` or `QW_ENABLED_SERVICES`.

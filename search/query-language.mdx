@@ -110,7 +110,7 @@ These characters are reserved by the query parser and must be backslash-escaped 
 + ^ ` { } " [ ] ( ) ~ ! \ * <space>
 ```
 
-Inside quotes, reserved characters need no escaping. Outside quotes, escape them: `body.message:\(test\)`.
+Outside quotes, escape reserved characters: `body.message:\(test\)`. Inside quotes, escape only the quote character that delimits the value: `attributes.label:"say \"hi\""`. Other reserved characters need no escaping inside quotes.
 
 ## Limits
 

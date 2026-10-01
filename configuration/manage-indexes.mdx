@@ -15,7 +15,12 @@ Click **Create index** to define a new index from a form. See [Create a custom i
 
 ## Edit an index
 
-Click **Edit** on the index detail page to change its mode, dynamic mapping, default search fields, tag fields, partition key, retention, commit timeout, **Store source**, and **Index field presence**. You can also add new fields. Changes apply only to documents indexed after you save.
+Click **Edit** on the index detail page to change its mode, dynamic mapping, default search fields, tag fields, partition key, retention, commit timeout, **Store source**, and **Index field presence**. You can also add new fields. Default search fields take effect on the next query, across all documents. Retention applies to existing splits. Every other change applies only to documents indexed after you save.
+
+<Warning>
+	Enabling retention or shortening its period deletes every existing split older than the new
+	period on the next cleanup run.
+</Warning>
 
 The index ID, index URI, timestamp field, and existing fields can't change. To change them, delete and recreate the index.
 

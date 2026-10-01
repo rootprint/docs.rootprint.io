@@ -45,7 +45,7 @@ Add a row per field with **Add field**, then set its name, type, and options. At
 
 Every field exposes three toggles:
 
-- **Indexed**: the field is added to an inverted index and is searchable. When off, you cannot use the field in search predicates.
+- **Indexed**: the field is added to an inverted index, which term, phrase, and full-text queries need. Range queries read the fast column instead, so a numeric field with **Fast** on still supports `duration_ms:>500` when **Indexed** is off.
 - **Stored**: the field's value is kept and returned in search results.
 - **Fast**: the field is kept in column-oriented storage, enabling efficient range queries, aggregations, and sorting.
 
