@@ -1,13 +1,13 @@
 ---
 title: 'Get started with Rootprint in under five minutes'
-description: 'Deploy Rootprint with Docker Compose, create an ingest API key, and send your first logs, all in under five minutes.'
+description: 'Deploy Rootprint with Docker Compose, create an ingest API key, and send your first logs.'
 ---
 
-This guide walks you through deploying Rootprint locally, signing in, and sending your first logs. The whole process takes about five minutes and requires only Docker.
+Deploy Rootprint locally and send your first logs. You need only Docker.
 
 <Steps>
   <Step title="Install Rootprint">
-    Follow the [Docker Compose installation guide](/install/docker-compose) to start Rootprint. The quickest option is:
+    Download the Compose file and start it. For other options, see [Docker Compose](/install/docker-compose).
 
     ```bash
     curl -o docker-compose.yml https://docs.rootprint.io/files/docker-compose.full.yaml
@@ -16,34 +16,28 @@ This guide walks you through deploying Rootprint locally, signing in, and sendin
 
   </Step>
 
-<Step title="Create the admin account">
-	Open [http://localhost:8282](http://localhost:8282) in your browser. On first boot, Rootprint
-	redirects you to the setup wizard. Enter your desired admin credentials and
-	submit the form.
-</Step>
+  <Step title="Create the admin account">
+    Open [http://localhost:8282](http://localhost:8282). On first boot, Rootprint redirects you to the setup wizard. Enter the admin credentials and submit the form.
+  </Step>
 
   <Step title="Create an ingest API key">
-    Rootprint requires a bearer API key to accept log data. To create one:
-
     1. In the sidebar, open **Settings → API keys**.
     2. Click **Create ingest key**, give it a name, and pick the bundled `otel-logs-v0_9` index.
-    3. The value is shown once on creation. Copy it before clicking **Done**. You can re-reveal it later with the eye icon on the key's row.
-
-    You will use this API key in the next step to authenticate your log shipper.
+    3. Copy the key, then click **Done**. To see it again later, click the eye icon on the key's row.
 
   </Step>
 
   <Step title="Send sample logs">
-    Set `TOKEN` to the ingest API key you copied, then use `curl` to post a couple of NDJSON log entries to the bundled `otel-logs-v0_9` index:
+    Set `TOKEN` to your ingest API key and post two NDJSON log lines:
 
     ```bash
-    export TOKEN='<your-ingest-token>'
+    export TOKEN='<your-ingest-api-key>'
     curl -X POST 'http://localhost:8282/api/ingest/ndjson' \
       -H "Authorization: Bearer $TOKEN" \
       -H 'Content-Type: application/x-ndjson' \
       --data-binary @- <<EOF
-    {"timestamp_nanos":$(date +%s)000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{"user_id":"alice"},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":9,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
-    {"timestamp_nanos":$(date +%s)000000000,"severity_text":"ERROR","body":{"message":"Connection timeout"},"service_name":"api-gateway","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":17,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
+    {"timestamp_nanos":$(date +%s)000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{"user_id":"alice"}}
+    {"timestamp_nanos":$(date +%s)000000000,"severity_text":"ERROR","body":{"message":"Connection timeout"},"service_name":"api-gateway"}
     EOF
     ```
 
@@ -56,6 +50,6 @@ This guide walks you through deploying Rootprint locally, signing in, and sendin
 
 ## Next steps
 
-- [Read the Send logs guide](/send-logs/overview) to understand the OpenTelemetry path and the authenticated HTTP endpoint.
+- [Send logs](/send-logs/overview) from your apps over OTLP or the NDJSON gateway.
 - [Learn the search query syntax](/search/query-language) to filter your logs precisely.
 - [Set up Google OAuth](/configuration/google-auth) to let your team sign in with their company Google accounts.

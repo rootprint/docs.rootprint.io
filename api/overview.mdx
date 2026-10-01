@@ -3,9 +3,7 @@ title: 'API reference'
 description: 'Use the Rootprint HTTP API to ingest logs, query logs from external tools, and automate administration against your own Rootprint deployment.'
 ---
 
-The Rootprint API is the HTTP surface behind your self-hosted instance. Start with the external APIs when you need to send logs from a shipper or query logs from another tool. Use the session-based APIs when you need to automate web-app workflows such as index management, user administration, or monitoring.
-
-If you are setting up log collection for the first time, start with [Send logs](/send-logs/overview). If you already know the endpoint you need, use the generated endpoint reference in the sidebar.
+The Rootprint API is the HTTP surface of your self-hosted instance: send logs and spans, query them from other tools, and automate administration. If you are setting up log collection for the first time, start with [Send logs](/send-logs/overview).
 
 ## Base URL
 
@@ -21,8 +19,7 @@ Rootprint uses these authentication modes, depending on the endpoint.
 
 | Use case                                 | Auth method                                      | Where to get it                       |
 | ---------------------------------------- | ------------------------------------------------ | ------------------------------------- |
-| Send logs over NDJSON or OTLP            | Ingest API key (bearer, prefix `rp_`)          | **Settings → API keys**               |
-| Send traces over OTLP                    | Ingest API key (bearer, prefix `rp_`)            | **Settings → API keys**               |
+| Send logs or traces (NDJSON, OTLP)       | Ingest API key (bearer, prefix `rp_`)            | **Settings → API keys**               |
 | Read logs from an external tool          | Query API key (bearer, prefix `rpk_`)            | **Profile** (user menu) or **Settings → Service accounts** |
 | Check health                             | None                                             | `GET /api/health` is public           |
 
@@ -32,69 +29,35 @@ Bearer-token endpoints use the standard `Authorization` header.
 Authorization: Bearer <token>
 ```
 
-Ingest API keys are scoped to one index; that index is fixed by the key and cannot be changed per request. Spans are the exception: `POST /v1/traces` always writes to the span store named by `TRACE_INDEX_ID`, whatever index the key is scoped to. See [Traces](/traces/overview). Query API keys are read-only and not index-scoped. A personal API key, also called a personal access token (PAT), authenticates as the user who created it. A service account API key authenticates as the service account.
+An ingest API key writes logs to the one index it is scoped to. Spans always go to the span store; see [Traces](/traces/overview#the-span-store). Query API keys are read-only and read every index; see [Query logs with API keys](/api/query-logs).
 
-## Endpoint groups
+## Common tasks
 
-The generated endpoint reference is arranged around the audience for each endpoint.
+| Task                     | Endpoints                                                                  | Credential                    |
+| ------------------------ | -------------------------------------------------------------------------- | ----------------------------- |
+| Check health             | `GET /api/health`                                                          | None                          |
+| Send logs                | `POST /api/ingest/ndjson`, `POST /v1/logs`                                 | Ingest API key                |
+| Send traces              | `POST /v1/traces`                                                          | Ingest API key                |
+| Search logs              | `GET /api/indexes`, `GET /api/indexes/{indexId}/logs`, `…/logs/histogram`, `…/fields/values` | Query API key or session |
+| Read traces              | `GET /api/traces/{traceId}`, `GET /api/traces/explore/spans`, `GET /api/traces/explore/overview` | Query API key or session |
+| Read service health      | `GET /api/services`, `GET /api/services/errors`                            | Query API key or session      |
+| Export logs              | `GET /api/indexes/{indexId}/logs/export`                                   | Session                       |
+| Manage indexes, keys, and users | `/api/indexes`, `/api/api-keys`, `/api/service-accounts`, `/api/users` | Admin session |
+| Configure sign-in        | Google, GitHub, and OpenID Connect credentials and allow-lists under `/api/settings/auth`, and the password sign-in toggle, `PUT /api/settings/auth/password` | Admin session |
 
-| Group                  | What it contains                                               |
-| ---------------------- | ------------------------------------------------------------- |
-| Log ingest API         | NDJSON and OTLP endpoints for log producers                   |
-| Log explorer API       | Search, histograms, field values, and exports. Query API keys work on search, histogram, field-value, and field-discovery endpoints. |
-| Traces API             | OTLP span ingest, single-trace lookup, and span search with charts for the trace explorer |
-| Service health API     | Service health computed from spans: request rate, errors, latency, a service's operations and downstream calls, and the failing spans themselves |
-| Saved views            | Create, list, update, and delete saved searches scoped to an index |
-| Share links            | Create and resolve public share links for log views           |
-| Index management API   | Index metadata, field discovery, preferences, and stats       |
-| Index sources API      | Configure the log sources feeding an index, including enable state and checkpoints |
-| API key administration | Create and delete ingest API keys and service account API keys |
-| Service accounts       | Create and delete non-human accounts for shared integrations |
-| Personal API keys      | Self-service create, list, and revoke for personal query keys |
-| User and invite API    | Users, roles, password resets, invites, and invite acceptance |
-| Authentication API     | Setup, sign-in, sessions, sign-out, and password changes      |
-| Auth settings API      | Google, GitHub, and OpenID Connect credentials, allow-lists   |
-| System monitoring API  | Health, cluster overview, activity, and metrics               |
+[Query logs with API keys](/api/query-logs#endpoints-that-accept-a-query-key) lists every endpoint that accepts a query API key. The sidebar has the full endpoint reference.
 
 ## Timestamps
 
-Every timestamp the API takes is **Unix epoch seconds** — `startTs` and `endTs` on search, histogram, field-value, field-discovery, export, service health, trace explorer, and stats requests, and `startTime`/`endTime` in a share or saved-view body. Log documents keep their own nanosecond fields; that is document data, not a request parameter.
-
-The log search, histogram, field-discovery, field-value, and export endpoints accept a fractional `endTs` and round it up to the next whole second, so the last partial second is kept.
-
-<Warning>
-	`GET /api/indexes/{indexId}/stats` ignores `from` and `to` rather than rejecting them. A caller
-	sending those instead of `startTs` and `endTs` gets an unbounded query: the *oldest* snapshots up
-	to `limit` (5,000 by default), not the window it asked for.
-</Warning>
+Request timestamps are **Unix epoch seconds**: `startTs` and `endTs` in query strings, and `startTime`/`endTime` in share and saved-view bodies.
 
 ## Common content types
 
-Use `application/json` for most app and admin endpoints.
-
-Use `application/x-ndjson` for the HTTP endpoint.
-
-```http
-Content-Type: application/x-ndjson
-```
-
-Use `application/x-protobuf` for OTLP logs and traces.
-
-```http
-Content-Type: application/x-protobuf
-```
-
-## Good first requests
-
-| Goal             | Endpoint                       | Notes                                        |
-| ---------------- | ------------------------------ | -------------------------------------------- |
-| Health check     | `GET /api/health`              | No authentication required                   |
-| Send NDJSON logs | `POST /api/ingest/ndjson`      | Requires an ingest API key                   |
-| Send OTLP logs   | `POST /v1/logs`                | Requires an ingest API key and protobuf body |
-| Send OTLP traces | `POST /v1/traces`              | Requires an ingest API key and protobuf body |
-| Read a trace     | `GET /api/traces/{traceId}`    | Accepts a session cookie or a query API key  |
-| List indexes     | `GET /api/indexes`             | Accepts a session cookie or a query API key |
-| Search logs      | `GET /api/indexes/{indexId}/logs` | Accepts a session cookie or a query API key |
+| Content type             | Use for                                   |
+| ------------------------ | ----------------------------------------- |
+| `application/json`       | Most app and admin endpoints              |
+| `application/x-ndjson`   | The NDJSON gateway (`POST /api/ingest/ndjson`) |
+| `application/x-protobuf` | OTLP logs and traces                      |
 
 ## Error responses
 
@@ -127,9 +90,4 @@ Most app-level endpoints return JSON errors with a stable `error` object.
 
 OTLP endpoints follow OTLP-style error responses instead of the app JSON error shape.
 
-<Note>
-  Rootprint rate-limits unauthenticated auth routes per client IP and read routes (search, histogram,
-  field values, traces, service health, share resolution) per signed-in user. Ingest endpoints are **not** limited by
-  Rootprint — apply rate limiting at your reverse proxy or load balancer if your deployment needs it.
-  See [Rate limiting](/configuration/environment-variables#rate-limiting) for the tunables.
-</Note>
+Rootprint rate-limits auth and read routes; see [Rate limiting](/configuration/environment-variables#rate-limiting). It does not rate-limit ingest endpoints, so apply a limit at your reverse proxy or load balancer if your deployment needs one.

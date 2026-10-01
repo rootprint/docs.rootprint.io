@@ -3,27 +3,22 @@ title: 'Send Nginx logs'
 description: "Tail nginx's access and error logs with the OpenTelemetry Collector or Vector and ship them to Rootprint over OTLP, with access fields mapped to OpenTelemetry HTTP semantic conventions."
 ---
 
-[nginx](https://nginx.org) writes plain-text logs by default: a `combined` access log and a separate error log. This page tails both and ships them to Rootprint over OTLP with either the **OpenTelemetry Collector** or **Vector**. Records land in `otel-logs-v0_9` tagged `service.name: nginx`, with access-log fields mapped to OpenTelemetry HTTP semantic conventions so they arrive as queryable attributes.
+This page tails nginx's access and error logs and ships them to Rootprint over OTLP with the **OpenTelemetry Collector** or **Vector**. Records land in `otel-logs-v0_9` with `service.name: nginx`, and access-log fields arrive as OpenTelemetry HTTP attributes.
 
 ## Prerequisites
 
-- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
-- A host running nginx that writes access and error logs to files. Stock nginx logs to `/var/log/nginx/` on Debian/Ubuntu; the paths below assume those defaults.
-- A log agent that can read those files — the [OpenTelemetry Collector](/send-logs/log-agents/otel-collector) or [Vector](/send-logs/log-agents/vector).
-- An **ingest API key** scoped to your target index. See [API keys](/api/overview).
+- A running Rootprint instance. Substitute its host for `<your-rootprint>`.
+- An **ingest API key** scoped to `otel-logs-v0_9`. Create one in **Settings → API keys** with **Create ingest key**, then substitute it for `<your-ingest-api-key>`. See [API keys](/api/overview).
+- nginx writing its stock `combined` access log to `/var/log/nginx/access.log` and its error log to `/var/log/nginx/error.log`. These are the Debian/Ubuntu defaults, and no `nginx.conf` changes are needed.
+- The [OpenTelemetry Collector](/send-logs/log-agents/otel-collector) or [Vector](/send-logs/log-agents/vector) installed on the nginx host. The agent pages cover installation.
 
-<Tabs>
-  <Tab title="OpenTelemetry Collector">
-    <Note>
-      This config assumes the agent runs where it can read `/var/log/nginx`.
-    </Note>
+<Steps>
+  <Step title="Write the agent config">
+    Replace `<your-rootprint>` and `<your-ingest-api-key>`.
 
-    <Steps>
-      <Step title="Confirm nginx is logging to file">
-        Stock nginx writes `combined`-format access logs to `/var/log/nginx/access.log` and error logs to `/var/log/nginx/error.log`. These defaults are what the config below expects. No `nginx.conf` changes are required.
-      </Step>
-      <Step title="Configure the Collector">
-        Replace `<your-rootprint>` with your Rootprint host and `<your-ingest-token>` with the key from above.
+    <Tabs>
+      <Tab title="OpenTelemetry Collector">
+        Save this as `/etc/otelcol-contrib/config.yaml`.
 
         <Expandable title="config.yaml">
         ```yaml
@@ -60,9 +55,10 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
                   layout: '2006/01/02 15:04:05'
                 severity:
                   parse_from: attributes.level
+                  overwrite_text: true
                   mapping:
                     debug: debug
-                    info: info
+                    info: [info, notice]
                     warn: warn
                     error: error
                     fatal: [crit, alert, emerg]
@@ -83,6 +79,8 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
                 statements:
                   - set(attributes["nginx.format"], "error") where attributes["level"] != nil
                   - set(attributes["nginx.format"], "access") where attributes["level"] == nil
+                  - set(severity_number, SEVERITY_NUMBER_INFO) where attributes["nginx.format"] == "access"
+                  - set(severity_text, "INFO") where attributes["nginx.format"] == "access"
                   - set(attributes["http.request.method"], attributes["http_request_method"]) where attributes["http_request_method"] != nil
                   - set(attributes["url.path"], attributes["url_path"]) where attributes["url_path"] != nil
                   - set(attributes["network.protocol.name"], "http") where attributes["network_protocol_version"] != nil
@@ -95,20 +93,8 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
                   - set(attributes["enduser.id"], attributes["user"]) where attributes["user"] != nil and attributes["user"] != "-"
                   - set(attributes["process.pid"], Int(attributes["pid"])) where attributes["pid"] != nil
                   - set(attributes["thread.id"], Int(attributes["tid"])) where attributes["tid"] != nil
-                  - set(attributes["nginx.connection_id"], Int(attributes["cid"])) where attributes["cid"] != nil
-                  - delete_key(attributes, "time")
-                  - delete_key(attributes, "status")
-                  - delete_key(attributes, "size")
-                  - delete_key(attributes, "agent")
-                  - delete_key(attributes, "referer")
-                  - delete_key(attributes, "user")
-                  - delete_key(attributes, "pid")
-                  - delete_key(attributes, "tid")
-                  - delete_key(attributes, "cid")
-                  - delete_key(attributes, "level")
-                  - delete_key(attributes, "http_request_method")
-                  - delete_key(attributes, "url_path")
-                  - delete_key(attributes, "network_protocol_version")
+                  - set(attributes["nginx.connection_id"], Int(attributes["cid"])) where attributes["cid"] != nil and attributes["cid"] != ""
+                  - delete_matching_keys(attributes, "^(time|level|client|user|http_request_method|url_path|network_protocol_version|status|size|referer|agent|pid|tid|cid)$")
           batch: {}
 
         exporters:
@@ -116,7 +102,7 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
             logs_endpoint: https://<your-rootprint>/v1/logs
             compression: gzip
             headers:
-              Authorization: "Bearer <your-ingest-token>"
+              Authorization: "Bearer <your-ingest-api-key>"
 
         service:
           pipelines:
@@ -126,47 +112,10 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
               exporters: [otlp_http]
         ```
         </Expandable>
-      </Step>
-      <Step title="Grant read access to /var/log/nginx">
-        The Collector runs as its own user (the Debian/RPM Collector package creates `otelcol-contrib`) and needs read access to `/var/log/nginx/*`. Run the lines for your distro.
+      </Tab>
 
-        ```bash
-        # Debian/Ubuntu: nginx logs belong to the adm group
-        sudo usermod -aG adm otelcol-contrib
-
-        # RHEL/Fedora/Amazon Linux: nginx logs are nginx:root 0640, so grant read access with ACLs
-        sudo setfacl -m u:otelcol-contrib:rx /var/log/nginx
-        sudo setfacl -m u:otelcol-contrib:r /var/log/nginx/*.log
-        sudo setfacl -d -m u:otelcol-contrib:r /var/log/nginx
-        ```
-
-        The default ACL (`-d`) covers files logrotate creates later.
-      </Step>
-      <Step title="Start the Collector">
-        Start (or restart) the Collector so it loads the config. Startup logs should show no config-parse or exporter errors.
-      </Step>
-      <Step title="Send a test request">
-        ```bash
-        curl -i http://localhost/
-        ```
-      </Step>
-      <Step title="Verify in Rootprint">
-        Open **Logs**, pick `otel-logs-v0_9`, and query `service_name:nginx`. Records typically appear within 5–10 seconds.
-      </Step>
-    </Steps>
-  </Tab>
-  <Tab title="Vector">
-    <Note>
-      This config assumes the agent runs where it can read `/var/log/nginx`.
-    </Note>
-
-    <Steps>
-      <Step title="Confirm nginx is logging to file">
-        Stock nginx already writes `combined`-format access logs to `/var/log/nginx/access.log` and error logs to `/var/log/nginx/error.log`. This guide assumes those defaults. No `nginx.conf` changes are required.
-      </Step>
-
-      <Step title="Write the Vector config">
-        Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint host and `<your-ingest-token>` with the API key you copied above.
+      <Tab title="Vector">
+        Save this as `/etc/vector/vector.yaml`.
 
         <Expandable title="vector.yaml">
         ```yaml
@@ -183,6 +132,8 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
             type: remap
             inputs: [nginx_logs]
             source: |
+              # The file source's .host is Vector's hostname; drop it so it can't pose as the nginx host.
+              del(.host)
               parsed, err = parse_nginx_log(.message, format: "combined")
               if err != null {
                 parsed, err = parse_nginx_log(.message, format: "error")
@@ -192,40 +143,19 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
                 .nginx_format = if exists(.severity) { "error" } else { "access" }
               }
 
-              if .nginx_format == "error" {
-                sev = downcase(string(.severity) ?? "info")
-                if sev == "debug" {
-                  .severity_number = 5
-                  .severity_text   = "DEBUG"
-                } else if sev == "info" {
-                  .severity_number = 9
-                  .severity_text   = "INFO"
-                } else if sev == "notice" {
-                  .severity_number = 10
-                  .severity_text   = "NOTICE"
-                } else if sev == "warn" {
-                  .severity_number = 13
-                  .severity_text   = "WARN"
-                } else if sev == "error" {
-                  .severity_number = 17
-                  .severity_text   = "ERROR"
-                } else if sev == "crit" {
-                  .severity_number = 19
-                  .severity_text   = "CRIT"
-                } else if sev == "alert" {
-                  .severity_number = 21
-                  .severity_text   = "ALERT"
-                } else if sev == "emerg" {
-                  .severity_number = 23
-                  .severity_text   = "EMERG"
-                } else {
-                  .severity_number = 9
-                  .severity_text   = "INFO"
-                }
-              } else {
-                .severity_number = 9
-                .severity_text   = "INFO"
+              levels = {
+                "debug": [5, "DEBUG"],
+                "info": [9, "INFO"],
+                "notice": [9, "INFO"],
+                "warn": [13, "WARN"],
+                "error": [17, "ERROR"],
+                "crit": [21, "FATAL"],
+                "alert": [21, "FATAL"],
+                "emerg": [21, "FATAL"]
               }
+              level = get(levels, [downcase(string(.severity) ?? "info")]) ?? [9, "INFO"]
+              .severity_number = level[0]
+              .severity_text = level[1]
 
           to_otlp:
             type: remap
@@ -364,67 +294,63 @@ description: "Tail nginx's access and error logs with the OpenTelemetry Collecto
               compression: gzip
               request:
                 headers:
-                  Authorization: "Bearer <your-ingest-token>"
+                  Authorization: "Bearer <your-ingest-api-key>"
               batch:
                 timeout_secs: 1
                 max_bytes: 8388608
         ```
         </Expandable>
+      </Tab>
+    </Tabs>
 
-        `read_from: end` skips existing content on first start, so installing Vector against an existing `access.log` does not replay every historical request. Flip it to `beginning` if you want a one-time backfill of the whole file. For a bounded backfill (capture recent history without replaying months of logs), pair `read_from: beginning` with `ignore_older_secs: 600`, which ignores any line older than 10 minutes on startup.
-      </Step>
+    Both configs skip existing lines on first start (`start_at: end`, `read_from: end`).
+  </Step>
 
-      <Step title="Grant Vector read access to /var/log/nginx">
-        nginx's Debian/Ubuntu package owns `/var/log/nginx/` as `www-data:adm` with mode `640`, so Vector's `vector` user cannot read it. The `adm` group is the read-side convention for log files on those distros. On RHEL, Fedora, and Amazon Linux the logs are `nginx:root` with mode `640` and there is no `adm` group, so grant access with ACLs instead. Run the lines for your distro:
+  <Step title="Grant read access to /var/log/nginx">
+    Set `AGENT_USER` to the user your agent runs as, then run the lines for your distro. On
+    RHEL, Fedora, and Amazon Linux the logs are `nginx:root` with mode `0640`, so grant access
+    with ACLs.
 
-        ```bash
-        # Debian/Ubuntu (the Vector package usually adds this already)
-        sudo usermod -aG adm vector
+    ```bash
+    AGENT_USER=otelcol-contrib   # Vector: AGENT_USER=vector
 
-        # RHEL/Fedora/Amazon Linux
-        sudo setfacl -m u:vector:rx /var/log/nginx
-        sudo setfacl -m u:vector:r /var/log/nginx/*.log
-        sudo setfacl -d -m u:vector:r /var/log/nginx
-        ```
+    # Debian/Ubuntu: nginx logs belong to the adm group
+    sudo usermod -aG adm "$AGENT_USER"
 
-        The default ACL (`-d`) covers files logrotate creates later.
-      </Step>
+    # RHEL/Fedora/Amazon Linux
+    sudo setfacl -m u:"$AGENT_USER":rx /var/log/nginx
+    sudo setfacl -m u:"$AGENT_USER":r /var/log/nginx/*.log
+    sudo setfacl -d -m u:"$AGENT_USER":r /var/log/nginx
+    ```
 
-      <Step title="Restart Vector">
-        ```bash
-        sudo systemctl restart vector
-        sudo systemctl status vector
-        ```
+    The default ACL (`-d`) covers files logrotate creates later.
+  </Step>
 
-        The status output should show `active (running)` and the most recent log lines should not contain config-parse or sink-startup errors.
-      </Step>
+  <Step title="Restart the agent">
+    Run `sudo systemctl restart otelcol-contrib` or `sudo systemctl restart vector`. The agent's
+    log should show no config or exporter errors.
+  </Step>
 
-      <Step title="Send a test request">
-        Hit any site nginx is serving so it writes a fresh access-log line:
+  <Step title="Send a test request">
+    Hit any site nginx serves:
 
-        ```bash
-        curl -i http://localhost/
-        ```
+    ```bash
+    curl -i http://localhost/
+    ```
+  </Step>
 
-        Replace `http://localhost/` with whichever site URL nginx is configured for.
-      </Step>
-
-      <Step title="Verify in Rootprint">
-        Open **Logs**, pick `otel-logs-v0_9` from the index selector, and query `service_name:nginx`. Records typically appear within 5–10 seconds.
-      </Step>
-    </Steps>
-
-  </Tab>
-</Tabs>
+  <Step title="Verify in Rootprint">
+    Open **Logs**, pick `otel-logs-v0_9` from the index selector, and search for
+    `service_name:nginx`. Records typically appear within 5–10 seconds.
+  </Step>
+</Steps>
 
 ## What you get in Rootprint
 
-Both agents parse nginx's stock `combined` access log and error log format. Access-log fields are mapped to OpenTelemetry HTTP semantic conventions; error-log fields go to process and connection attributes. Both agents write to `otel-logs-v0_9` with `service.name: nginx`.
+Access-log entries get the HTTP attributes below, and error-log entries get process and connection attributes. `nginx.format` tells the two apart.
 
-The `nginx.format` discriminator (`"access"` or `"error"`) lets one config handle both files: error-log entries get `process.pid`, `thread.id`, and `nginx.connection_id`; access-log entries get the full HTTP attribute set.
-
-| OTLP key                      | Source field                                               | Format |
-| ----------------------------- | ---------------------------------------------------------- | ------ |
+| OTLP key                      | Source field                                              | Format |
+| ----------------------------- | --------------------------------------------------------- | ------ |
 | `http.request.method`         | first segment of the request line                         | access |
 | `url.path`                    | second segment of the request line                        | access |
 | `network.protocol.name`       | protocol prefix of the request line, lowercased (`http`)  | access |
@@ -438,63 +364,30 @@ The `nginx.format` discriminator (`"access"` or `"error"`) lets one config handl
 | `process.pid`                 | nginx worker PID (integer)                                | error  |
 | `thread.id`                   | nginx worker thread ID (integer)                          | error  |
 | `nginx.connection_id`         | connection ID when present (integer)                      | error  |
-| `nginx.format`                | `"access"` or `"error"` discriminator                    | both   |
+| `nginx.format`                | `"access"` or `"error"`                                   | both   |
 | `log.file.path`               | source file path (Vector only)                            | both   |
 
-`timeUnixNano` is derived from the timestamp in each log line. If parsing fails, the agent's read time is used as a fallback.
-
-With the OpenTelemetry Collector, error-log context fields (`client.address` on error lines, `server.address`, `nginx.server`, and `nginx.upstream`) are not broken out into attributes (they remain in the record `body`); the Vector path extracts them via `parse_nginx_log`.
+- **Log level**: access-log entries are always `INFO`, because the `combined` format has no level. Search on `http.response.status_code` to find server errors. Error-log levels map to `DEBUG`, `INFO` (`info`, `notice`), `WARN`, `ERROR`, and `FATAL` (`crit`, `alert`, `emerg`).
+- **Timestamp**: taken from each log line, with the agent's read time as a fallback.
+- **Error-log context**: Vector also extracts `client.address`, `server.address`, `nginx.server`, and `nginx.upstream` from error lines. The Collector leaves them in `body`.
 
 ## Useful searches
 
-Run these in the Rootprint search box against `otel-logs-v0_9`.
-
-Every 5xx response nginx returned, across all sites:
-
-```text
-service_name:nginx AND attributes.http.response.status_code:>=500
-```
-
-All 4xx responses for one URL prefix, useful for spotting bad clients hammering one endpoint:
-
-```text
-service_name:nginx AND attributes.url.path:/api/* AND attributes.http.response.status_code:>=400
-```
-
-Activity from a single source IP, pivot from a suspect address back to everything it touched:
-
-```text
-attributes.client.address:1.2.3.4
-```
-
-Failed POSTs only:
-
-```text
-service_name:nginx AND attributes.http.request.method:POST AND attributes.http.response.status_code:>=400
-```
-
-Error-log entries only (skip access logs):
-
-```text
-service_name:nginx AND attributes.nginx.format:error
-```
-
-Upstream failures (the things that page someone). `nginx.upstream` is populated by the **Vector** path only (the OTEL Collector keeps error-log context in the record `body`):
-
-```text
-service_name:nginx AND attributes.nginx.format:error AND attributes.nginx.upstream:*
-```
+| Find                             | Query                                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------ |
+| 5xx responses                    | `service_name:nginx AND attributes.http.response.status_code:>=500`                        |
+| 4xx and 5xx under one path       | `service_name:nginx AND attributes.url.path:/api/* AND attributes.http.response.status_code:>=400` |
+| Error-log entries only           | `service_name:nginx AND attributes.nginx.format:error`                                     |
+| Upstream failures (Vector only)  | `service_name:nginx AND attributes.nginx.format:error AND attributes.nginx.upstream:*`     |
 
 ## Troubleshooting
 
-- **Records arrive but `attributes.http.*` are missing**: the entry came from `error.log` (no access fields), by design. Filter access-log entries with `attributes.nginx.format:access`.
-- **`body` looks like a raw nginx line instead of a structured message**: the access log is using a non-default `log_format` directive in `nginx.conf`. The parser expects nginx's stock combined format. Either remove the custom `log_format` or extend the config to handle the alternate shape.
-- **`severity_text` is always `INFO` even for 5xx responses**: by design. nginx's combined access format has no severity field; both agents trust the source. Filter on `attributes.http.response.status_code:>=500` to surface server errors.
-- **Ingest transport errors (`401`, `403`, `413`, `415`)**: see [OTLP reference → Response codes](/send-logs/otlp#response-codes).
+- **`body` is a raw nginx line and access entries have no `http.*` attributes**: `nginx.conf` sets a custom `log_format`. The parsers expect the stock `combined` format. Remove the custom format or extend the parser.
+- **401/403/413/415**: see [Response codes](/send-logs/otlp#response-codes).
 
 ## Related
 
-- [Send logs with Vector](/send-logs/log-agents/vector): generic Vector setup for tailing files on a host.
-- [Send Caddy logs](/send-logs/web-servers/caddy): sibling page for Caddy.
-- [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
-- [Indexes](/indexes): the `otel-logs-v0_9` schema, so you know what you can search.
+- [Send logs with the OpenTelemetry Collector](/send-logs/log-agents/otel-collector) and [Send logs with Vector](/send-logs/log-agents/vector): install and run the agents.
+- [Send Caddy logs](/send-logs/web-servers/caddy): the same setup for Caddy.
+- [OTLP reference](/send-logs/otlp): endpoint, response codes, limits.
+- [Indexes](/indexes): the `otel-logs-v0_9` schema.

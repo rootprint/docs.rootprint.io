@@ -3,20 +3,20 @@ title: 'Send logs from Node.js'
 description: 'Ship Node.js logs to Rootprint using the OpenTelemetry SDK, Pino, or Winston over OTLP HTTP.'
 ---
 
-Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain OTEL SDK, or plug OTLP into [Pino](https://getpino.io/) or [Winston](https://github.com/winstonjs/winston). All three routes ship records through the same endpoint and land in the OTEL logs index pinned by your ingest API key (`otel-logs-v0_9` in these examples).
+Send Node.js logs to Rootprint over OTLP HTTP with the OpenTelemetry SDK, [Pino](https://getpino.io/), or [Winston](https://github.com/winstonjs/winston).
 
 ## Prerequisites
 
-- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
+- A running Rootprint instance. Substitute its host for `<your-rootprint>`.
 - Node.js 22+ with `npm`. The examples are ES modules with top-level `await`: save them as `.mjs`, or set `"type": "module"` in `package.json`.
-- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` for the examples here). See [API keys](/api/overview).
+- An **ingest API key** scoped to an OpenTelemetry logs index such as `otel-logs-v0_9`. In **Settings → API keys**, click **Create ingest key** and pick the index. See [API keys](/api/overview).
 
 ## Setup
 
 <Steps>
   <Step title="Install">
     <Tabs>
-      <Tab title="OTEL SDK">
+      <Tab title="OpenTelemetry SDK">
         ```bash
         npm install @opentelemetry/api-logs @opentelemetry/sdk-logs @opentelemetry/exporter-logs-otlp-proto @opentelemetry/resources
         ```
@@ -33,15 +33,13 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
       </Tab>
     </Tabs>
 
-    Node.js 22+ is required. The examples are ES modules, so save them as `.mjs` or set `"type": "module"` in `package.json`.
-
   </Step>
 
   <Step title="Set environment variables">
     ```bash
     export OTEL_SERVICE_NAME=my-node-service
     export OTEL_EXPORTER_OTLP_LOGS_ENDPOINT='https://<your-rootprint>/v1/logs'
-    export OTEL_EXPORTER_OTLP_LOGS_HEADERS='Authorization=Bearer%20<your-ingest-token>'
+    export OTEL_EXPORTER_OTLP_LOGS_HEADERS='Authorization=Bearer%20<your-ingest-api-key>'
     ```
 
     <Warning>The `%20` after `Bearer` is required: OpenTelemetry SDKs expect URL-encoded values in `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.</Warning>
@@ -50,7 +48,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
 
   <Step title="Minimal working example">
     <Tabs>
-      <Tab title="OTEL SDK">
+      <Tab title="OpenTelemetry SDK">
         ```javascript
         import { logs } from '@opentelemetry/api-logs';
         import { LoggerProvider, BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
@@ -71,8 +69,8 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
 
         logs.getLogger('hello').emit({ severityText: 'INFO', body: 'Hello from Node to Rootprint' });
 
-        await provider.forceFlush();
-        await provider.shutdown(); // optional — flushes and stops the processor cleanly
+        // Flush buffered records before a short-lived script exits.
+        await provider.shutdown();
         ```
       </Tab>
       <Tab title="Pino">
@@ -86,9 +84,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
         const log = pino(transport);
         log.info('Hello from Pino to Rootprint');
 
-        // Short-lived scripts must wait for the worker transport to flush,
-        // otherwise the record never leaves the process.
-        await new Promise((resolve) => transport.on('close', resolve));
+        // Flush buffered records before a short-lived script exits.
         transport.end();
         ```
       </Tab>
@@ -119,8 +115,7 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
 
         logger.info('Hello from Winston to Rootprint');
 
-        // Short-lived scripts should shut down the provider before exit so the
-        // batch processor can flush buffered records.
+        // Flush buffered records before a short-lived script exits.
         await provider.shutdown();
         ```
       </Tab>
@@ -129,13 +124,13 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. Node apps can use the plain
   </Step>
 
   <Step title="Verify in Rootprint">
-    Open **Logs**, filter on `service_name:my-node-service`, and your record should appear within ~2 seconds.
+    Open **Logs**, filter on `service_name:my-node-service`, and your record should appear within a few seconds.
   </Step>
 </Steps>
 
 ## Structured logging
 
-Attributes become log-record attributes on the OTEL side: searchable and filterable in Rootprint.
+Pass attributes with the record. You can search and filter on them in Rootprint.
 
 ```javascript
 logs.getLogger('app').emit({
@@ -153,34 +148,19 @@ log.info({ user_id: 'alice', plan: 'pro' }, 'user signed up');
 
 ## Framework recipe: Express
 
-Initialise the SDK once at process start, then log from anywhere. Keep the setup in a separate module (e.g. `otel.js`) and import it before your Express app.
+Initialize the SDK once at process start. Move the provider setup from the OpenTelemetry SDK example, from the imports through `logs.setGlobalLoggerProvider(provider)`, into `otel.js`, and export a logger from it:
 
 ```javascript
-// otel.js
-import { logs } from '@opentelemetry/api-logs';
-import { LoggerProvider, BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
-import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-proto';
-import { defaultResource, detectResources, envDetector } from '@opentelemetry/resources';
-
-const resource = defaultResource().merge(
-	detectResources({ detectors: [envDetector] })
-);
-
-const provider = new LoggerProvider({
-	resource,
-	processors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })]
-});
-
-logs.setGlobalLoggerProvider(provider);
-
+// otel.js (after the provider setup)
 export const logger = logs.getLogger('express-app');
 ```
 
+Import it before your Express app:
+
 ```javascript
 // server.js
-import './otel.js';
-import express from 'express';
 import { logger } from './otel.js';
+import express from 'express';
 
 const app = express();
 
@@ -199,11 +179,11 @@ app.listen(3000);
 
 ## Troubleshooting
 
-- **401 / 403**: the Bearer token is missing, malformed, or the `%20` separator is not URL-encoded. Re-check `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.
-- **Nothing in Logs**: the batch processor buffers records. For short-lived scripts call `await provider.forceFlush()` (or `await provider.shutdown()`) before exit.
-- **`fetch is not defined`**: upgrade to Node.js 22 or newer.
+- **401 or 403**: the ingest API key is missing or wrong, or the space after `Bearer` isn't written as `%20`. Check `OTEL_EXPORTER_OTLP_LOGS_HEADERS`. See [Response codes](/send-logs/otlp#response-codes).
+- **`200` but no records in Logs**: the ingest API key is scoped to an index without the OpenTelemetry logs schema, so the records are discarded. See [Index target](/send-logs/otlp#index-target).
+- **Nothing in Logs from a short-lived script**: the batch processor buffers records. Shut down the logger provider before exit, as the minimal example does.
 - **Every Winston line stored twice**: the app also runs under the auto-instrumentation `register` hook from [Send traces](/traces/send), which adds its own Winston transport. Set `OTEL_NODE_DISABLED_INSTRUMENTATIONS=winston` for that process.
-- **Pino transport not emitting**: `pino-opentelemetry-transport` reads the `OTEL_*` env vars itself; make sure they are set in the process that spawns the transport worker.
+- **Pino transport not emitting**: `pino-opentelemetry-transport` reads the `OTEL_*` env vars itself. Set them in the process that spawns the transport worker.
 - **TLS errors against a self-signed endpoint**: set `NODE_EXTRA_CA_CERTS=/path/to/ca.pem`.
 
 ## Related

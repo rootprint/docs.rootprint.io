@@ -3,12 +3,11 @@ title: 'Manage users'
 description: 'Invite teammates, assign admin or user roles, reset passwords, and remove accounts from the Rootprint admin UI.'
 ---
 
-**Settings → Users** is where admins control who can sign in to Rootprint and what they can do. It lists every account, and from here admins invite new users, change roles, reset passwords, and delete accounts. Regular users cannot open this screen.
+Admins manage accounts in **Settings → Users**: invite users, change roles, reset passwords, and delete accounts.
 
 <Note>
-	Rootprint issues invites and password resets as **links**, not emails. It never sends mail
-	itself. You copy the generated setup link and share it with the person over your own channel
-	(chat, email, a ticket), and they use it to choose their password.
+	Rootprint never sends email. Invites and password resets produce a **setup link**. Copy it and
+	share it with the person over your own channel (chat, email, a ticket).
 </Note>
 
 ## Roles
@@ -29,7 +28,7 @@ Every account is either an **admin** or a **user**.
 5. Click **Create**. Rootprint generates a one-time **setup link**.
 6. Copy the link and send it to the person.
 
-When they open the link, Rootprint asks them to choose a password and then signs them in. The account stays inactive until they finish this step. With an external provider enabled, the person can sign in through it with the invited email. That consumes the invite without setting a password.
+When they open the link, Rootprint asks them to choose a password and then signs them in. The account stays inactive until they finish this step. With an external provider enabled, the person can sign in through it with the invited email instead. That consumes the invite without setting a password.
 
 <Note>
 	If a setup link is lost or expires before it is used, open the user from the list and click
@@ -38,7 +37,7 @@ When they open the link, Rootprint asks them to choose a password and then signs
 
 ## Change a role
 
-Open a user from the list and switch their role between **admin** and **user**. The change takes effect on their next request. Promote a teammate to **admin** to grant Settings access; demote an admin to **user** to take it away.
+Open a user from the list and switch their role between **admin** and **user**. The change takes effect on their next request.
 
 <Warning>
 	Keep at least one admin account. If you demote or delete the last admin and lose access, you have
@@ -57,11 +56,10 @@ Open the user and click **Delete**. This permanently removes the account and eve
 
 ## Single sign-on users
 
-When [Google](/configuration/google-auth), [GitHub](/configuration/github-auth), or [OpenID Connect](/configuration/oidc-auth) is enabled, the first time someone signs in through an allowed provider Rootprint provisions them automatically with the **user** role — no invite needed. If their email matches an existing account, Rootprint links the two. A user can hold a password and linked providers at the same time. Promote them to **admin** here if they need it. Removing a provider signs its users out but keeps their accounts. [Authentication overview](/configuration/authentication) has the full rules.
+Users who sign in through [Google](/configuration/google-auth), [GitHub](/configuration/github-auth), or [OpenID Connect](/configuration/oidc-auth) get an account with the **user** role on their first sign-in, with no invite needed. See [Authentication overview](/configuration/authentication#provider-rules).
 
 ## Related
 
 - [Service accounts](/configuration/service-accounts) — non-human credentials for integrations.
-- [Authentication overview](/configuration/authentication), [Google](/configuration/google-auth), [GitHub](/configuration/github-auth), and [OpenID Connect](/configuration/oidc-auth) — let teammates sign in with SSO.
 - [Reset admin password](/configuration/reset-admin-password) — recover a locked-out admin.
 - [User and invite API](/api/overview) — manage users programmatically.

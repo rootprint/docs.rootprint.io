@@ -3,19 +3,13 @@ title: 'Send logs from Kubernetes'
 description: 'Ship pod logs to Rootprint with the OpenTelemetry Collector running as a DaemonSet, emitting OTLP with pod/namespace/node metadata attached.'
 ---
 
-This page ships container logs from a Kubernetes cluster to Rootprint over OTLP. The **OpenTelemetry Collector** runs as a **DaemonSet** — one pod per node — tailing every pod's stdout/stderr off the kubelet. The chart's `logsCollection` preset wires up the `filelog` receiver; the `kubernetesAttributes` preset enriches each record with the pod, namespace, node, and container it came from. A small `transform` infers severity from the message body, the same way the [Docker](/send-logs/platforms/docker) path does.
-
-<Note>
-  Use this for workloads that don't instrument themselves. A service using an OpenTelemetry SDK
-  should send records straight to [OTLP](/send-logs/otlp); collecting both paths stores every event
-  twice. See [Choose what to collect](#choose-what-to-collect).
-</Note>
+The OpenTelemetry Collector runs as a DaemonSet, one pod per node, and ships every pod's stdout and stderr to Rootprint over OTLP. Each record carries the pod, namespace, node, and container it came from.
 
 ## Prerequisites
 
-- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
-- A Kubernetes cluster with `kubectl` and `helm` configured against it. The DaemonSet schedules on every node whose pods you want collected.
-- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` here; see [Indexes](/indexes) for its schema). See [API keys](/api/overview).
+- A running Rootprint instance. Substitute its host for `<your-rootprint>`.
+- An **ingest API key** scoped to `otel-logs-v0_9`. Create one in **Settings → API keys** with **Create ingest key**, then substitute it for `<your-ingest-api-key>`. See [API keys](/api/overview).
+- A Kubernetes cluster with `kubectl` and `helm` configured against it.
 
 <Steps>
   <Step title="Add the OpenTelemetry Helm repo">
@@ -26,8 +20,7 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
   </Step>
 
   <Step title="Create values.yaml">
-    Save this as `values.yaml`. Replace `<your-rootprint>` with your Rootprint host and
-    `<your-ingest-token>` with the API key you copied above.
+    Save this as `values.yaml`. Replace `<your-rootprint>` and `<your-ingest-api-key>`.
 
     <Expandable title="values.yaml">
     ```yaml
@@ -61,12 +54,12 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
 
     config:
       receivers:
-        filelog:
+        file_log:
           # Skips the Collector's own logs, and Rootprint's if you self-host here.
           exclude:
             - /var/log/pods/rootprint_*/*/*.log
       processors:
-        # Only fills in records with no severity, so OTLP logs keep the level their SDK set.
+        # Only fills in records with no log level, so OTLP logs keep the level their SDK set.
         transform:
           log_statements:
             - set(log.severity_number, SEVERITY_NUMBER_ERROR) where log.severity_number == SEVERITY_NUMBER_UNSPECIFIED and IsString(log.body) and IsMatch(log.body, "(?i)\\b(error|fatal|panic|exception)\\b")
@@ -80,7 +73,7 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
           logs_endpoint: https://<your-rootprint>/v1/logs
           compression: gzip
           headers:
-            Authorization: "Bearer <your-ingest-token>"
+            Authorization: "Bearer <your-ingest-api-key>"
       service:
         pipelines:
           logs:
@@ -90,8 +83,7 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
     </Expandable>
 
     - **`processors` and `exclude` are replaced, not merged.** List every entry you want, including the preset-injected `memory_limiter`, `k8s_attributes` and `batch`.
-    - **Override the receiver as `filelog`, not `file_log`.** A `file_log` block is ignored; Helm prints a `[DEPRECATION]` notice for it.
-    - **`otlp_http` requires Collector v0.149.0 or newer.** Older images name it `otlphttp`.
+    - **`file_log` and `otlp_http` need Collector v0.149 or newer.**
   </Step>
 
   <Step title="Install the chart">
@@ -101,21 +93,17 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
       -f values.yaml
     ```
 
-    Confirm the DaemonSet is running — one pod per node:
+    Confirm the DaemonSet runs one pod per node:
 
     ```bash
     kubectl get pods -n rootprint -l app.kubernetes.io/name=opentelemetry-collector
     ```
 
-    Self-hosting Rootprint in this cluster? Install the Collector into Rootprint's own namespace so
-    the `exclude` above covers both. Otherwise the DaemonSet tails Rootprint and its Quickwit
-    backend, and their logs feed back into the index.
+    If Rootprint runs in this cluster, install the Collector into Rootprint's namespace so the
+    `exclude` covers both. Otherwise Rootprint's and Quickwit's own logs feed back into the index.
   </Step>
 
   <Step title="Send a test log line">
-    Run a throwaway pod that prints one line and exits. The Collector on that pod's node tails it and
-    ships it with the pod's metadata attached.
-
     ```bash
     kubectl run rootprint-smoke-test --image=alpine --restart=Never \
       -- echo "hello from rootprint"
@@ -125,9 +113,9 @@ This page ships container logs from a Kubernetes cluster to Rootprint over OTLP.
   </Step>
 
   <Step title="Verify in Rootprint">
-    Open **Logs**, pick `otel-logs-v0_9` from the index selector, and query for
-    `hello from rootprint`. Allow up to a minute for the batch to flush and Quickwit to commit.
-    `resource_attributes.k8s.pod.name` reads `rootprint-smoke-test`.
+    Open **Logs**, pick `otel-logs-v0_9` from the index selector, and search for
+    `hello from rootprint`. Allow up to a minute. `resource_attributes.k8s.pod.name` reads
+    `rootprint-smoke-test`.
   </Step>
 </Steps>
 
@@ -146,21 +134,13 @@ The `k8s.*` keys are OTLP **resource** attributes, so query them under `resource
 | `service_name`                            | derived from the workload                       |
 | `attributes.log.file.path`                | the `/var/log/pods/...` file the line came from  |
 | `attributes.log.iostream`                 | `stdout` or `stderr`                            |
-| severity                                  | inferred from the message body                  |
+| `severity_text`                           | log level inferred from the message body        |
 
-### Severity inference
-
-The `transform` only touches records that arrive with no severity, which covers plain stdout lines. A record that already carries a log level keeps it. For the rest, it matches two pattern families against the body:
-
-- `error`, `fatal`, `panic`, or `exception` (word-boundary) → `severityText: ERROR` (severity number 17).
-- `warn` / `warning` or `deprecated` → `severityText: WARN` (13).
-- Everything else → `severityText: INFO` (9).
-
-`DEBUG` is not inferred. Emit debug records through an OpenTelemetry SDK that sets `severityNumber` itself.
+The `transform` sets a log level only on records that arrive without one. It matches `error`, `fatal`, `panic`, or `exception` as `ERROR`, `warn`, `warning`, or `deprecated` as `WARN`, and everything else as `INFO`. `DEBUG` is never inferred.
 
 ## Choose what to collect
 
-`logsCollection` tails every pod on the node. Exclude what you don't want before pointing it at a busy cluster.
+`logsCollection` tails every pod on the node. Exclude what you don't want before you point it at a busy cluster.
 
 ### Workloads that already send OTLP
 
@@ -176,17 +156,17 @@ Exclude the namespaces whose services report over OTLP:
 ```yaml
 config:
   receivers:
-    filelog:
+    file_log:
       exclude:
         - /var/log/pods/rootprint_*/*/*.log
         - /var/log/pods/<instrumented-namespace>_*/*/*.log
 ```
 
-Path excludes never open the file. To filter on something the path doesn't carry, add a `filter` processor after `k8s_attributes` and drop on `resource_attributes`.
+To filter on something the path doesn't carry, add a `filter` processor after `k8s_attributes` and drop on `resource_attributes`.
 
 ### Collect selectively instead
 
-To have workloads opt **in**, use annotation-based discovery and drop the `filelog` block:
+To have workloads opt **in**, use annotation-based discovery and drop the `file_log` block:
 
 ```yaml
 presets:
@@ -205,18 +185,18 @@ metadata:
     io.opentelemetry.discovery.logs/enabled: 'true'
 ```
 
-Per-container variants (`io.opentelemetry.discovery.logs.<container>/enabled`) and per-pod filelog settings via `io.opentelemetry.discovery.logs/config` are documented [upstream](https://opentelemetry.io/blog/2025/otel-collector-k8s-discovery/).
+For per-container and per-pod settings, see the [upstream guide](https://opentelemetry.io/blog/2025/otel-collector-k8s-discovery/).
 
 ## Multi-line logs
 
-The preset's `container` operator rejoins lines split by the **container runtime**, not multi-line output from the application. A stack trace or a pretty-printed object arrives as one record per line.
+The preset's `container` operator rejoins lines split by the **container runtime**, not multi-line output from the application. A stack trace arrives as one record per line.
 
-Add a `recombine` operator, restating the container parser because `operators` is replaced wholesale:
+Add a `recombine` operator. Restate the container parser too, because `operators` is replaced, not merged:
 
 ```yaml
 config:
   receivers:
-    filelog:
+    file_log:
       operators:
         - type: container
           id: container-parser
@@ -225,11 +205,11 @@ config:
           is_first_entry: body matches "^[^\\s]"
 ```
 
-`is_first_entry` marks a record boundary — above, any line not starting with whitespace, which covers indented stack frames. Use a timestamp or level prefix instead if that fits your output better. `source_identifier` defaults to `attributes["log.file.path"]`, so lines from different containers never merge.
+`is_first_entry` marks where a record starts: here, any line that doesn't start with whitespace, which covers indented stack frames. Match a timestamp or level prefix instead if that fits your output better.
 
 ## Cluster events (optional)
 
-The steps above collect **pod logs**. To also capture cluster-level events — scheduling, image pulls, OOMKills — deploy a second Collector as a single-replica `Deployment` (not a DaemonSet, to avoid duplicate events) with the `kubernetesEvents` preset:
+To also collect cluster events such as scheduling, image pulls, and OOMKills, deploy a second Collector with the `kubernetesEvents` preset. Use a single-replica `Deployment`, not a DaemonSet, so each event arrives once:
 
 ```yaml
 mode: deployment
@@ -245,33 +225,26 @@ config:
       logs_endpoint: https://<your-rootprint>/v1/logs
       compression: gzip
       headers:
-        Authorization: "Bearer <your-ingest-token>"
+        Authorization: "Bearer <your-ingest-api-key>"
   service:
     pipelines:
       logs:
         exporters: [otlp_http]
 ```
 
-Install it under a separate release name (e.g. `rootprint-otel-events`) so it doesn't collide with the DaemonSet.
-
-To keep a single workload instead, enable `presets.kubernetesObjects` alongside `kubernetesEvents` on the DaemonSet: it adds a leader election lease so only one pod watches, and also ingests the cluster's object inventory on a schedule.
+Install it under a separate release name, such as `rootprint-otel-events`.
 
 ## Troubleshooting
 
 - **`helm install` fails with `[ERROR] 'image.repository' must be set`**: add the `image.repository` block from the values above.
-- **DaemonSet pod stays `Pending` with `didn't have free ports`**: another Collector holds the default hostPorts. Disable them as shown above.
-- **No pods in the DaemonSet**: nodes may carry taints the Collector doesn't tolerate. Add the matching `tolerations`, or check `kubectl describe daemonset -n rootprint`.
-- **Records arrive as single lines of a larger message**: application-level multi-line output. See [Multi-line logs](#multi-line-logs).
-- **Every event appears twice**: a workload is both exporting OTLP and printing to stdout. Compare `attributes.log.file.path:*` against `NOT attributes.log.file.path:*` to see the split, then exclude that namespace.
-- **`401` from Rootprint**: the `Authorization` header is missing or the token is wrong.
-- **`403` from Rootprint**: the ingest API key is invalid, unknown, or revoked. Create a new one in **Settings → API keys**. A key scoped to a different index does not return `403` — it writes there silently, so check the key's index if records land somewhere unexpected.
-- **`413` from Rootprint**: the batch is too large. Add `send_batch_max_size` to the `batch` processor.
-- **`415` from Rootprint**: the `Content-Type` is not `application/x-protobuf`. The Collector sets this automatically; check for a proxy stripping headers.
-- **Logs arrive without `k8s.*` attributes**: the `kubernetesAttributes` preset needs RBAC to read pod metadata. The chart creates the `ClusterRole` automatically — if you disabled RBAC creation, grant `get`/`list`/`watch` on `pods` and `namespaces`.
+- **A DaemonSet pod stays `Pending` with `didn't have free ports`**: another Collector holds the default hostPorts. Disable them as in the values above.
+- **Every event appears twice**: a workload both exports OTLP and prints to stdout. Compare `attributes.log.file.path:*` with `NOT attributes.log.file.path:*` to see the split, then exclude that namespace.
+- **Logs arrive without `k8s.*` attributes**: the `kubernetesAttributes` preset needs RBAC to read pod metadata. The chart creates the `ClusterRole`. If you disabled RBAC creation, grant `get`, `list`, and `watch` on `pods` and `namespaces`.
+- **401/403/413/415**: see [Response codes](/send-logs/otlp#response-codes).
 
 ## Related
 
 - [Send logs from Docker](/send-logs/platforms/docker): container logs on a single Linux host.
 - [Send logs with the OpenTelemetry Collector](/send-logs/log-agents/otel-collector): the same Collector tailing files on a host.
-- [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
+- [OTLP reference](/send-logs/otlp): endpoint, response codes, limits.
 - [Indexes](/indexes): the `otel-logs-v0_9` schema.

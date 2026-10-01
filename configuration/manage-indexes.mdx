@@ -3,23 +3,15 @@ title: 'Manage indexes'
 description: 'Inspect, configure, and delete indexes from Rootprint: the index list, per-index field-role mapping, fields, sources, and deletion.'
 ---
 
-The **Settings → Indexes** section gives admins a single place to create indexes, inspect every configured index, configure how each is presented in the search UI, manage the data sources that feed it, and delete indexes that are no longer needed.
-
-<Note>
-	Structural changes such as deleting an index or creating, editing, toggling, or deleting a
-	source apply to the embedded Quickwit engine itself, not to Rootprint's local presentation
-	metadata. The index list, fields, and sources are read live on each load.
-</Note>
+Admins manage indexes from **Settings → Indexes**: the index list, how each index appears in the search UI, the sources that feed it, and deletion.
 
 ## Indexes list
 
-Navigate to **Settings → Indexes** to see every configured index. The list is read live on each page load, so an index already present in your attached Quickwit appears here on the next refresh with no restart required. Each row shows the index ID. Use the search box to filter by ID, and click any row to open its detail page.
+**Settings → Indexes** lists every index in Quickwit, read live on each page load. An index created directly in Quickwit appears on the next refresh. Filter by ID with the search box, and click a row to open its detail page.
 
 ## Create an index
 
-Click **Create index** on the **Settings → Indexes** page to define a new index from a form — index ID, schema mode, field mappings, timestamp field, retention, and more — with no YAML required. Rootprint creates the index and opens its detail page when you save. The same form is available over the API as `POST /api/indexes`.
-
-See [Create a custom index](/configuration/custom-indexes) for a walkthrough of every field, the field types and tokenizers the form offers, and the schemas that need direct Quickwit configuration.
+Click **Create index** to define a new index from a form. See [Create a custom index](/configuration/custom-indexes) for every field, type, and tokenizer the form offers.
 
 ## Index detail page
 
@@ -27,51 +19,43 @@ The detail page header shows the index ID and a **Delete** action. Below it are 
 
 ### Configuration tab
 
-The Configuration tab holds the Rootprint-specific presentation settings for the index: a display name and the field-role mappings that tell Rootprint which fields carry the log level, message, stacktrace, trace ID, and search context. These settings control presentation only and never touch the underlying index data.
+The Configuration tab holds Rootprint's presentation settings for the index: a display name and the field-role mappings. These settings control presentation only and never touch the underlying index data.
 
 #### Display name
 
-An optional human-readable label shown in the index selector and throughout the search UI. When left blank, Rootprint uses the index ID. Use a display name to present friendlier names to your users (e.g. "Application Logs" instead of `otel-logs-v0_9`).
+An optional label shown in the index selector and throughout the search UI, such as "Application Logs" instead of `otel-logs-v0_9`. When left blank, Rootprint uses the index ID.
 
 #### Field-role mappings
 
-These settings tell Rootprint which fields in your index carry specific log data. The defaults match the OpenTelemetry log schema.
+These settings tell Rootprint which fields carry the log level, message, stacktrace, trace ID, and search context. The defaults match the OpenTelemetry log schema, so the bundled `otel-logs-v0_9` index works without configuration. For a custom-schema index, override them so the log level, message, and traceback render correctly. Every setting accepts dot-notation paths to nested or JSON-object fields.
 
 | Setting             | Default                            | What it controls                                                                                                                                                               |
 | ------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Level field**     | `severity_text`                    | The field carrying the log severity (e.g. `INFO`, `ERROR`, `WARN`). Drives row color-coding and the severity filter. Required.                                                |
+| **Level field**     | `severity_text`                    | The field carrying the log level (e.g. `INFO`, `ERROR`, `WARN`). Drives row color-coding and the log level filter. Required.                                                  |
 | **Message field**   | `body.message`                     | The primary human-readable message shown per row in the log list. Required.                                                                                                   |
-| **Traceback field** | `attributes.exception.stacktrace`  | Dot-notation path to stacktrace data. When set and a log entry contains it, a **Traceback** tab appears in the log detail drawer. Optional; clear it if your schema has none. |
-| **Trace ID field**  | `trace_id`                         | Dot-notation path to the trace ID inside a log document. Links logs to traces in both directions: a **Trace** tab in the log detail drawer, and log counts on spans. See [Read a trace](/traces/explore#correlate-logs-with-traces). |
-| **Context fields**  | _(none)_                           | Fields used for log-context search. Leave empty to search across all fields. Supports dot-notation; entered as tags (press Enter to add).                                      |
-
-All field settings accept dot-notation paths to reach nested or JSON-object fields. Because the defaults match the OpenTelemetry log schema, the bundled `otel-logs-v0_9` index (and any other index using the same field names) works without configuration. For custom-schema indexes, override the values here so the level, message, and traceback render correctly. If your OTel instrumentation captures exception stacktraces, the default traceback path (`attributes.exception.stacktrace`) enables the Traceback tab with syntax-highlighted stacktrace rendering.
+| **Traceback field** | `attributes.exception.stacktrace`  | Path to stacktrace data. When a log entry contains it, a **Traceback** tab appears in the log detail drawer. Optional; clear it if your schema has none.                       |
+| **Trace ID field**  | `trace_id`                         | Path to the trace ID inside a log document. Links logs to traces in both directions: a **Trace** tab in the log detail drawer, and log counts on spans. See [Read a trace](/traces/explore#correlate-logs-with-traces). |
+| **Context fields**  | _(none)_                           | Fields used for log-context search. Leave empty to search across all fields. Entered as tags (press Enter to add).                                                            |
 
 ### Fields tab
 
-Lists every field in the index schema with its type and a **Fast** indicator (whether the field is stored in column-oriented storage for efficient ranges, aggregations, and sorting). Filter by name to find a specific field. This is a read-only view of the index schema. To change field definitions, recreate the index from the Create-index form.
+Lists every field in the index schema with its type and whether it is [fast](/configuration/custom-indexes#indexed-stored-and-fast). Filter by name to find a specific field. The view is read-only. To change field definitions, recreate the index from the Create index form.
 
 ### Sources tab
 
-Data sources are the pipelines Quickwit uses to receive or pull documents for the index, for example the built-in `_ingest-api-source` that backs the HTTP and OTLP ingest endpoints, or an external source that pulls from Amazon Kinesis, Apache Kafka, or files announced over SQS. Each row shows the source ID, its type, and whether it is enabled. Click a row to open the source detail page, or use **Create source** to add a new one.
+Sources feed documents into the index. Each row shows the source ID, its type, and whether it is enabled. Click a row to open the source detail page, or use **Create source** to add a new one.
 
 #### Built-in sources
 
-Quickwit's own sources (`_ingest-api-source`, `_ingest-cli-source`, and any source whose type is `ingest-api`/`ingest-cli` or whose ID starts with an underscore) are managed by Quickwit. They back the HTTP and OTLP ingest endpoints and can be **viewed** but not edited, disabled, or deleted from Rootprint. Opening one shows a read-only summary of its configuration.
+Quickwit's built-in sources, such as `_ingest-api-source` and `_ingest-cli-source`, back the HTTP and OTLP ingest endpoints. You can view them but not edit, disable, or delete them from Rootprint.
 
 #### Creating a source
 
-Click **Create source** on the Sources tab. Rootprint can create three source types; pick one and Quickwit starts pulling documents into this index as soon as the source is saved.
-
-| Source type                            | Pulls from                                                                                            |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Amazon Kinesis**                     | A Kinesis data stream.                                                                                 |
-| **File (S3 / SQS notifications)**      | Files referenced by messages on an SQS queue, typically S3 event notifications, or raw object URIs.  |
-| **Apache Kafka**                       | A Kafka topic.                                                                                         |
+Click **Create source** on the Sources tab and pick a type: **Amazon Kinesis** (a Kinesis data stream), **File (S3 / SQS notifications)** (files referenced by SQS messages), or **Apache Kafka** (a Kafka topic). Quickwit starts pulling documents into this index as soon as the source is saved.
 
 Every source needs a **Source ID** that starts with a letter and is 3–255 characters of letters, digits, `-`, or `_`. The source ID and type are fixed once the source is created.
 
-The form is split into two tabs: **Connection** (where the data comes from) and **Transform (VRL)** (an optional per-document script). The connection fields depend on the source type:
+The form is split into two tabs: **Connection** (where the data comes from) and **Transform (VRL)** (an optional per-document script). Kinesis and file sources take AWS credentials from the environment of the Quickwit container (standard `AWS_*` environment variables, an instance role, or other ambient credentials), not from the form. The connection fields depend on the source type:
 
 <Tabs>
 <Tab title="Amazon Kinesis">
@@ -81,8 +65,6 @@ The form is split into two tabs: **Connection** (where the data comes from) and 
 | **Stream name**  | Yes      | The Kinesis stream to consume.                                                                                         |
 | **AWS endpoint** | Yes      | Provide either a **Region** (e.g. `us-east-1`) **or** a **Custom endpoint** (e.g. `http://localhost:4566`); not both. |
 
-AWS credentials are **not** entered in the form. Quickwit reads them from the environment of the container it runs in (standard `AWS_*` environment variables, an instance role, or other ambient credentials).
-
 </Tab>
 <Tab title="File (S3 / SQS notifications)">
 
@@ -90,8 +72,6 @@ AWS credentials are **not** entered in the form. Quickwit reads them from the en
 | ----------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **SQS queue URL** | Yes      | The SQS queue that receives the file notifications (e.g. `https://sqs.us-east-1.amazonaws.com/123456789/my-queue`).                                    |
 | **Message type**  | Yes      | How each SQS message references the file: **S3 notification** (an S3 event payload, the default) or **Raw URI** (the message body is the object URI). |
-
-As with Kinesis, AWS credentials come from the environment, not the form.
 
 </Tab>
 <Tab title="Apache Kafka">
@@ -106,21 +86,20 @@ As with Kinesis, AWS credentials come from the environment, not the form.
 </Tab>
 </Tabs>
 
-All three source types also accept three optional fields:
+All three source types also accept two optional fields:
 
 | Field                  | Notes                                                                                                                                                            |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Input format**       | The document format on the wire. Defaults to `json`. Other choices: `plain_text`, `otlp_logs_json`, `otlp_logs_protobuf`, `otlp_traces_json`, `otlp_traces_protobuf`. |
 | **Number of pipelines**| Ingestion concurrency for this source. Leave blank to use the default of one.                                                          |
-| **VRL script**         | An optional [Vector Remap Language](https://vector.dev/docs/reference/vrl/) program run on each document before indexing; see below. Leave blank to disable.     |
 
 #### Editing a source
 
-Open any Rootprint-created source (Kinesis, file, or Kafka) from the list to edit it in place. The same Connection and Transform tabs appear, pre-filled with the current configuration; the source ID and type are read-only. Saving applies the change immediately. Sources created directly in the attached Quickwit and system sources are shown read-only.
+Open a source created in Rootprint to edit it in place. The same tabs appear, pre-filled with the current configuration, and saving applies the change immediately. Sources created directly in Quickwit are read-only.
 
 #### Transforms (VRL)
 
-The **Transform (VRL)** tab holds an optional Vector Remap Language script that runs on every document before it is indexed, useful for normalizing fields, dropping sensitive keys, or reshaping payloads. For example:
+The **Transform (VRL)** tab holds an optional [Vector Remap Language](https://vector.dev/docs/reference/vrl/) script that runs on every document before it is indexed. Use it to normalize fields, drop sensitive keys, or reshape payloads. For example:
 
 ```text
 .message = downcase(string!(.message))
@@ -144,12 +123,10 @@ The source detail page header offers three actions for editable sources:
 
 ## Deleting an index
 
-The **Delete** button in the index header permanently removes the index along with every document and source configured on it.
-
-To prevent accidents, the modal requires you to type the exact index ID before the **Delete**.
+The **Delete** button in the index header permanently removes the index along with every document and source configured on it. To confirm, type the exact index ID and click **Delete**.
 
 ## Related pages
 
 - [Indexes](/indexes): schema details for the built-in OpenTelemetry index and custom index concepts.
-- [Create a custom index](/configuration/custom-indexes): the Create-index form for non-OpenTelemetry schemas.
+- [Create a custom index](/configuration/custom-indexes): the Create index form for non-OpenTelemetry schemas.
 - [HTTP endpoint](/send-logs/http): how ingest API keys and the endpoint interact with these sources.

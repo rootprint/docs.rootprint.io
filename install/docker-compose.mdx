@@ -7,11 +7,9 @@ description: 'Install Rootprint with Docker Compose'
 
 Install [Docker](https://www.docker.com) and [Docker Compose](https://docs.docker.com/compose/) before continuing.
 
-Rootprint requires **Quickwit `0.9.0`**. The bundled Compose files pin `quickwit/quickwit:v0.9.0`. Earlier releases are not supported: some features are missing and others behave incorrectly.
-
 ## Self-contained deployment (recommended)
 
-This option deploys Rootprint together with PostgreSQL and its embedded Quickwit search engine. Best for getting started quickly or running a self-contained setup.
+This option deploys Rootprint together with PostgreSQL and a bundled Quickwit search engine.
 
 Download the Compose file and start the services:
 
@@ -80,15 +78,13 @@ This starts three containers:
 
 - **Rootprint**: the web UI, exposed on port `8282`.
 - **PostgreSQL**: Rootprint application state, stored in the `rootprint-db` Docker volume.
-- **Quickwit**: Rootprint's embedded search engine, reachable only from the Compose network by default.
+- **Quickwit**: the bundled search engine, reachable only from the Compose network by default.
 
 Run `docker compose ps` to confirm all containers are healthy, then open [http://localhost:8282](http://localhost:8282).
 
 ### Use S3 for storage
 
-By default, the self-contained deployment stores index data in the `rootprint-quickwit` Docker volume on local disk. This is fine for testing, but removing the volume permanently deletes all indexed logs. For a persistent, production-ready setup, configure Quickwit to store index data in S3 (or any S3-compatible object storage).
-
-Add the following environment variables to the `quickwit` service in your `docker-compose.yml`:
+By default, index data lives in the `rootprint-quickwit` Docker volume, and removing that volume deletes your logs. To store it in S3 or S3-compatible object storage, add these variables to the `quickwit` service:
 
 ```yaml
 services:
@@ -102,17 +98,13 @@ services:
       AWS_REGION: us-east-1
 ```
 
-Set both variables to paths within the same bucket. The bucket must already exist. See [Quickwit storage configuration](https://quickwit.io/docs/configuration/storage-config) for all options, including S3-compatible providers and custom endpoints.
+Set both variables to paths within the same bucket. The bucket must already exist.
 
-<Note>
-	This keeps Quickwit single-node. An S3 `QW_METASTORE_URI` is a file-backed metastore
-	(single-writer): durable, but not distributed. To run a multi-node Quickwit cluster, move
-	the metastore to PostgreSQL. See [Scaling beyond a single node](/install/scaling).
-</Note>
+This setup stays single-node. For a multi-node Quickwit cluster, move the metastore to PostgreSQL. See [Scaling beyond a single node](/install/scaling).
 
 #### Other storage backends
 
-Quickwit also supports Azure Blob Storage, Google Cloud Storage, and S3-compatible providers (MinIO, Garage, DigitalOcean Spaces). The configuration follows the same shape: a URI scheme on `QW_DEFAULT_INDEX_ROOT_URI` and `QW_METASTORE_URI`, plus credentials.
+Other backends use the same two variables with a different URI scheme and credentials.
 
 | Backend                    | URI scheme                                | Credentials                                                                                   |
 | -------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -121,11 +113,11 @@ Quickwit also supports Azure Blob Storage, Google Cloud Storage, and S3-compatib
 | Google Cloud Storage       | `s3://bucket/path` with `flavor: gcs`     | HMAC keys via `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`                                   |
 | MinIO / Garage / DO Spaces | `s3://bucket/path` with matching `flavor` | Provider-specific keys via `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` and `QW_S3_ENDPOINT` |
 
-S3-compatible providers need a `flavor` set on the storage config so Quickwit picks the right path-style and multipart settings. See the [Quickwit storage reference](https://quickwit.io/docs/configuration/storage-config) for the YAML structure and the full env-var list.
+For Google Cloud Storage and other S3-compatible providers, set `flavor` in the Quickwit storage config. See the [Quickwit storage reference](https://quickwit.io/docs/configuration/storage-config) for the YAML structure and the full env-var list.
 
 ### Exposing Quickwit on internal networks
 
-If other services on your internal network need to ingest data directly into Quickwit, publish Quickwit's ports on the host. In `docker-compose.yml`, add these port bindings to the `quickwit` service:
+If other services on your internal network need to reach Quickwit directly, add these port bindings to the `quickwit` service:
 
 ```yaml
 ports:
@@ -133,21 +125,16 @@ ports:
   - '7281:7281' # gRPC
 ```
 
-Quickwit will then be reachable at `http://<host-ip>:7280` from other machines on the same network.
-
 <Warning>
-	Quickwit has no authentication mechanism. Never expose it on a public or untrusted network.
-	Restrict access at the network or firewall level and only do this within a private, trusted
-	network.
+	Quickwit has no authentication. Never expose it on a public or untrusted network. Restrict
+	access at the network or firewall level.
 </Warning>
 
 ## Connect to an existing Quickwit instance
 
 <Warning>
-	**Prerequisite: Quickwit `0.9.0` required.** Rootprint relies on Quickwit `0.9.0` Ingest V2
-	behavior and the `otel-logs-v0_9` schema. Anything older — `0.8.x` and earlier — is unsupported and may fail or silently lose functionality. Confirm your
-	instance's version with `curl http://your-quickwit-host:7280/api/v1/version` before connecting
-	it.
+	Rootprint requires Quickwit `0.9.0`; earlier releases are not supported. Check your version
+	with `curl http://your-quickwit-host:7280/api/v1/version`.
 </Warning>
 
 If you already have a Quickwit cluster running, deploy Rootprint with PostgreSQL and point it at your Quickwit instance.

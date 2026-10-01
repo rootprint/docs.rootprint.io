@@ -58,6 +58,10 @@ Use these terms consistently across pages:
 - One idea per sentence. Prefer concise sentences over compound ones.
 - Bold for UI elements: "Click **Settings** → **Tokens**".
 - Code formatting for file names, commands, paths, env vars, and code references.
+- State what to do and what happens. Leave out release history, design rationale, and internals the reader can't act on. Keep a "why" only when it prevents a mistake.
+- Give each fact one home page and link to it. Transport errors (401/403/413/415) live in `send-logs/otlp.mdx#response-codes`; span store behavior lives in `traces/overview.mdx`; shared SSO behavior lives in `configuration/authentication.mdx`.
+- Use callouts only for security, data loss, or setup-breaking gotchas — never to restate the text above them.
+- Placeholders: `<your-rootprint>` for the host, `<your-ingest-api-key>` for the ingest API key.
 
 ## Content Boundaries
 

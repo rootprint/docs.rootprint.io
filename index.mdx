@@ -1,12 +1,9 @@
 ---
 title: 'What is Rootprint?'
-description: 'Rootprint is an open-source, self-hosted log management platform that runs search directly on cloud storage.'
+description: 'Rootprint is an open-source, self-hosted platform for logs and traces, with full-text search directly on S3-compatible object storage.'
 ---
 
-Rootprint is a self-hosted log management platform that runs search directly on object storage. It embeds [Quickwit](https://quickwit.io), a cloud-native search engine designed for log and event data, as its search engine, or attaches to a Quickwit instance you already run.
-
-Get started or explore:
-
+Rootprint uses [Quickwit](https://quickwit.io) as its search engine: run the bundled instance, or attach one you already run.
 <CardGroup cols={2}>
   <Card title="Live demo" icon="play" href="https://demo.rootprint.io">
     Read-only logs and traces from a running demo cluster. No signup, nothing to install.
@@ -17,7 +14,7 @@ Get started or explore:
   </Card>
 
   <Card title="Send logs" icon="send" href="/send-logs/overview">
-    Create an ingest API key and stream logs over OTLP HTTP or the authenticated ingest endpoint.
+    Create an ingest API key and send logs over OTLP HTTP or the NDJSON gateway.
   </Card>
 
   <Card title="Traces" icon="git-branch" href="/traces/overview">
@@ -27,14 +24,13 @@ Get started or explore:
 
 ## Key features
 
-- **Log search on object storage**: query your logs with full-text search
-- **Log frequency histogram**: visualize log volume and severity distribution over time
+- **Log search**: full-text search over logs stored in S3-compatible object storage
+- **Log frequency histogram**: visualize log volume and log level distribution over time
 - **Quick filters**: one-click filtering by field values with aggregation counts
 - **Saved views**: bookmark and share frequently used searches with your team
 - **Log export**: download filtered results as NDJSON, CSV, or plain text
-- **Log ingestion**: push logs over OTLP or the NDJSON HTTP endpoint
-- **Trace correlation**: ingest OpenTelemetry spans over OTLP and link them to the logs they produced
-- **Trace explorer**: search spans by service, operation, duration, and status, with rate, error, and latency charts
+- **Log ingestion**: push logs over OTLP or the NDJSON gateway
+- **Traces**: ingest OpenTelemetry spans over OTLP, link them to the logs they produced, and search them by service, operation, duration, and status
 - **Service health**: request rate, error rate, latency, downstream calls, and failing spans per service and operation, derived from your spans
 - **Pull-based sources**: ingest from Amazon Kinesis, Apache Kafka, or SQS
 - **Index management**: create, configure, and delete custom indexes and their sources

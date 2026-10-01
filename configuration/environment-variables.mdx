@@ -3,45 +3,46 @@ title: 'Environment variables reference'
 description: 'Reference for all environment variables that control Rootprint behavior.'
 ---
 
-Rootprint reads its configuration from environment variables at startup. For Docker deployments, set these under the `environment` key of the `rootprint` service in `docker-compose.yml`.
-
-<Note>
-	`QUICKWIT_URL` must point at a Quickwit `0.9.0` instance. Earlier releases are not supported — expect missing or incorrect behavior.
-</Note>
+Rootprint reads its configuration from environment variables at startup. For Docker deployments, set these under the `environment` key of the `rootprint` service. See [Docker Compose](/install/docker-compose) for a full file.
 
 ## Required
 
-| Variable        | Description                                                                                                                                                                                  |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`  | PostgreSQL connection string (e.g. `postgres://rootprint:rootprint@db:5432/rootprint`). No default.                                                                                                    |
-| `ORIGIN`        | Canonical public URL of this Rootprint instance (e.g. `https://logs.example.com`). Used for Better Auth callbacks, invite links, CORS allow-list, and cookies. No default. Must be a valid URL. |
-| `QUICKWIT_URL`  | Quickwit REST endpoint (e.g. `http://quickwit:7280`). No default. Must be a valid URL.                                                                                                       |
+| Variable        | Description |
+| --------------- | ----------- |
+| `DATABASE_URL`  | PostgreSQL connection string, for example `postgres://rootprint:rootprint@db:5432/rootprint`. |
+| `ORIGIN`        | Canonical public URL of this Rootprint instance, for example `https://logs.example.com`. Used for sign-in callbacks, invite links, the CORS allow-list, and cookies. |
+| `QUICKWIT_URL`  | Quickwit REST endpoint, for example `http://quickwit:7280`. Must point at Quickwit `0.9.0`; earlier releases are not supported. |
 
-Rootprint refuses to start if any required variable is missing, empty, or (for URL variables) not parseable as an `http://` or `https://` URL.
+Rootprint refuses to start if any required variable is missing or empty, or if `ORIGIN` or `QUICKWIT_URL` is not an `http://` or `https://` URL.
 
 ## Optional
 
-| Variable             | Default          | Description                                                                                                                                                                                                                       |
-| -------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET` | Auto-generated   | Secret used to sign session tokens. If unset, Rootprint generates a random 32-byte secret on first boot and persists it in the `app_settings` table; subsequent boots read the row. If set, must be ≥32 characters or startup fails. Also encrypts stored OAuth access and refresh tokens. The generated secret lives in the same database as the tokens, so set it yourself if you want that protection to survive a database compromise. |
-| `FRONTEND_URL`       | Same as `ORIGIN` | Additional allowed CORS origin. Use this only in split deployments where the SPA is hosted on a different origin than the API. Cookie domain, invite link host, and Better Auth `baseURL` always derive from `ORIGIN`, not this.    |
-| `PORT`               | `8282`           | HTTP listen port. Remap the port with the compose `ports:` block instead of changing this.                                                                                                                                     |
-| `TRACE_INDEX_ID`     | `otel-traces-v0_9` | The **span store**: the one Quickwit index holding OTLP spans. Every trace read and write resolves to it. |
-| `LOG_LEVEL`          | `info`           | API log level. Accepts any Pino level: `trace`, `debug`, `info`, `warn`, `error`, `fatal`.                                                                                                                                       |
-| `SEARCH_AUDIT_RETENTION_DAYS` | `30`    | How many days of search activity audit rows to keep. Rows older than the window are pruned hourly, alongside index-stats capture. `30` is also the minimum; a lower value fails startup. |
+| Variable             | Default          | Description |
+| -------------------- | ---------------- | ----------- |
+| `BETTER_AUTH_SECRET` | Auto-generated   | Signs session tokens and encrypts stored OAuth access and refresh tokens. If set, it must be at least 32 characters or startup fails. If unset, Rootprint generates one on first boot and stores it in the database, next to the tokens it protects. Set it yourself so a database compromise does not also expose the key. |
+| `FRONTEND_URL`       | Same as `ORIGIN` | Additional allowed CORS origin, for split deployments where the SPA is hosted on a different origin than the API. Sign-in callbacks, invite links, and cookies still use `ORIGIN`. |
+| `PORT`               | `8282`           | HTTP listen port. Remap the port with the compose `ports:` block instead of changing this. |
+| `TRACE_INDEX_ID`     | `otel-traces-v0_9` | The **span store**: the one Quickwit index holding OTLP spans. See the warning below. |
+| `LOG_LEVEL`          | `info`           | API log level: `trace`, `debug`, `info`, `warn`, `error`, or `fatal`. |
+| `SEARCH_AUDIT_RETENTION_DAYS` | `30`    | Days of search activity audit rows to keep. Older rows are pruned hourly. Minimum `30`; a lower value fails startup. |
 | `OIDC_DISCOVERY_TIMEOUT_MS` | `5000` | How long an [OpenID Connect](/configuration/oidc-auth) discovery fetch may take before the issuer is treated as unreachable. |
 | `OIDC_RETRY_MS` | `60000` | How long to wait before retrying OpenID Connect discovery after it fails at boot. The provider stays hidden from the sign-in page until discovery succeeds. |
-| `INGEST_PROXY_TIMEOUT_MS` | `120000` | How long an ingest request (`/ingest`, `/v1/logs`, `/v1/traces`) may wait on Quickwit before Rootprint answers `503`. Set it below your shipper's request timeout so the shipper gets a retryable `503` instead of timing out with the request still in flight. Minimum `1000`. |
+| `INGEST_PROXY_TIMEOUT_MS` | `120000` | How long an ingest request (`/api/ingest/ndjson`, `/v1/logs`, `/v1/traces`) may wait on Quickwit before Rootprint answers `503`. Set it below your shipper's request timeout so the shipper gets a retryable `503` instead of timing out. Minimum `1000`. |
+
+<Warning>
+	A wrong `TRACE_INDEX_ID` fails silently. Rootprint treats a missing span store as an empty
+	trace, so a typo looks like "no spans" rather than a misconfiguration.
+</Warning>
 
 ## Rate limiting
 
-Two in-memory limiters share one window. Both are per process, so a horizontally scaled deployment multiplies the effective limit by the replica count — put the authoritative limit at your reverse proxy if you need a cluster-wide one.
+Both limiters are per process, so a horizontally scaled deployment multiplies the effective limit by the replica count. Put the authoritative limit at your reverse proxy if you need a cluster-wide one.
 
 | Variable                | Default | Description                                                                                                                                            |
 | ----------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `RATE_LIMIT_WINDOW_MS`  | `60000` | Window length in milliseconds, shared by both limiters. Also the `Retry-After` value returned with a `429`.                                             |
 | `PUBLIC_AUTH_RATE_LIMIT`| `30`    | Requests per client IP per window on unauthenticated auth routes (sign-in, password reset, invite acceptance).                                          |
-| `READ_RATE_LIMIT`       | `300`   | Requests per signed-in user per window on search, histogram, field values, trace reads, and share resolution.                                           |
+| `READ_RATE_LIMIT`       | `300`   | Requests per signed-in user per window on search, histogram, field values, trace and service health reads, and share resolution.                                           |
 | `TRUST_PROXY_HOPS`      | `0`     | Number of trusted reverse proxies in front of Rootprint that append to `X-Forwarded-For`. `0` uses the TCP peer address.                                |
 
 <Warning>
@@ -50,23 +51,4 @@ Two in-memory limiters share one window. Both are per process, so a horizontally
 	`X-Forwarded-For` entries and pick which IP the auth limiter counts against, defeating it.
 </Warning>
 
-Ingest endpoints (`/v1/logs`, `/v1/traces`, `/api/ingest`) are **not** rate-limited by Rootprint. A `429` from them is Quickwit's, passed through.
-
-<Warning>
-	A wrong `TRACE_INDEX_ID` fails silently. Rootprint treats a missing span store as an empty
-	trace, so a typo looks like "no spans" rather than a misconfiguration.
-</Warning>
-
-## Docker Compose example
-
-```yaml
-services:
-  rootprint:
-    image: ghcr.io/rootprint/rootprint:latest
-    environment:
-      DATABASE_URL: postgres://rootprint:rootprint@db:5432/rootprint
-      ORIGIN: https://logs.example.com
-      QUICKWIT_URL: http://quickwit:7280
-    ports:
-      - '8282:8282'
-```
+Rootprint does not rate-limit the ingest endpoints (`/api/ingest/ndjson`, `/v1/logs`, `/v1/traces`). A `429` from them comes from Quickwit.

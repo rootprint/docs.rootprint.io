@@ -7,9 +7,9 @@ A **query API key** lets a tool, script, dashboard, or AI agent call Rootprint's
 
 ## How query keys work
 
-- **Prefix `rpk_`.** Personal keys and service account keys use the same prefix. Rootprint shows the full value once, at creation. Store it like a password; Rootprint only keeps a short display fragment afterwards.
-- **Read-only.** A query key grants `logs: read`. Management endpoints for indexes, sources, users, settings, and keys reject it with `401`.
-- **Not index-scoped.** A query key reads every index, and can open any trace by ID. Ingest API keys use a different `rp_` prefix and are scoped to one write target.
+- **Prefix `rpk_`.** Personal keys and service account keys use the same prefix. Rootprint shows the full value once, at creation, so store it like a password.
+- **Read-only.** A query key grants `logs: read`. Management endpoints for indexes, sources, users, settings, and API key administration reject it with `403`.
+- **Not index-scoped.** A query key reads every index, and can open any trace by ID.
 - **No expiry.** Query keys do not expire. Revoke a key to cut off access.
 
 ## Create a personal key
@@ -30,25 +30,25 @@ Authorization: Bearer rpk_abcdef0123456789...
 
 ## Read logs
 
-The key works on these read-only log explorer endpoints.
-
-```bash
-curl 'https://<your-rootprint>/api/indexes/{indexId}/logs?q=severity_text:ERROR&limit=50' \
-  -H 'Authorization: Bearer rpk_abcdef0123456789...'
-```
-
-To discover the index IDs your key can read, list indexes first:
+List indexes to find the index IDs:
 
 ```bash
 curl 'https://<your-rootprint>/api/indexes' \
   -H 'Authorization: Bearer rpk_abcdef0123456789...'
 ```
 
-### Endpoints that accept a query key
+Then search one:
+
+```bash
+curl 'https://<your-rootprint>/api/indexes/{indexId}/logs?q=severity_text:ERROR&limit=50' \
+  -H 'Authorization: Bearer rpk_abcdef0123456789...'
+```
+
+## Endpoints that accept a query key
 
 | Endpoint                                              | Purpose                          |
 | ----------------------------------------------------- | -------------------------------- |
-| `GET /api/indexes`                                    | List indexes the owner can see   |
+| `GET /api/indexes`                                    | List indexes                     |
 | `GET /api/indexes/{indexId}/logs`                     | Search logs                      |
 | `GET /api/indexes/{indexId}/logs/histogram`           | Time-bucketed counts             |
 | `GET /api/indexes/{indexId}/config`                   | Index field configuration        |
@@ -62,8 +62,3 @@ curl 'https://<your-rootprint>/api/indexes' \
 | `GET /api/services/errors`                            | Failing spans                    |
 
 See [Query language](/search/query-language) for the `q` syntax, and the endpoint reference in the sidebar for every query parameter.
-
-<Note>
-	Management routes (creating indexes, editing sources, changing settings) and the key-management
-	endpoints reject query API keys with `401`.
-</Note>

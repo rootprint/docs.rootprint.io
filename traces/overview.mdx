@@ -12,44 +12,32 @@ Rootprint ingests OpenTelemetry spans over OTLP and pairs them with your logs. T
 	/>
 </Frame>
 
-A trace opens as a waterfall. Spans are colored by service, the header carries the root operation and total duration, and selecting a span opens its details beside the waterfall. **Logs for this trace** jumps to the logs those spans produced.
-
 ## The span store
 
 Every span goes into **one** Quickwit index, the span store, named by the `TRACE_INDEX_ID` environment variable. It defaults to `otel-traces-v0_9`.
 
-Spans always land there regardless of which index the ingest key was created against. There is no per-key span destination.
+Spans always land there, whatever index the ingest API key is scoped to. The key's index applies to its log ingestion only.
 
-The span store is not readable as a log index. The log explorer, histogram, field-values, and export endpoints all reject it with `404`.
+The span store is not a log index, so you can't open it in the log explorer.
 
 ## How you reach a trace
 
-- **From the trace explorer.** Open **Traces** in the sidebar, filter spans, and click one. See [Trace explorer](/traces/search).
-- **From a log.** Open a log in the detail drawer and switch to the **Trace** tab.
-- **From service health.** A failing span on a service's **Errors** tab opens its trace.
-- **By trace ID.** Paste a trace ID (32 hexadecimal characters) into the log search box or the explorer's search box.
-- **By URL.** Every trace has a permanent address at `/traces/<traceId>`.
-
-See [Read a trace](/traces/explore#open-a-trace) for the details of each.
+Open a trace from the trace explorer, a log's **Trace** tab, a failing span in service health, a pasted trace ID, or its URL. See [Read a trace](/traces/explore#open-a-trace).
 
 ## Trace retention and time ranges
 
-Opening a trace runs a raw `trace_id` search with **no time bound**, so a trace stays openable for as long as its spans are retained. The search window you had applied to your logs does not limit it.
+A trace opens whatever time range you have applied, for as long as its spans are retained.
 
-The trace explorer and service health are time-bounded: each search covers the range you pick, up to 30 days.
+The trace explorer and service health search only the time range you pick.
 
 ## Limits
 
 | Limit | Behavior |
 | ----- | -------- |
-| 2,000 spans per trace | Past the cap, the response sets `truncated` and the trace view says so. You get the earliest 2,000 spans by start time. |
-| Duplicate spans | OTLP retries produce duplicate span documents. Rootprint collapses them by `span_id`. |
+| 2,000 spans per trace | You get the earliest 2,000 spans by start time, and the trace view says some spans are not shown. |
 | No per-index authorization | Any user or query API key with `logs: read` can read any trace and search every span. |
 
-## Requirements
-
-- Quickwit `0.9.0`. Earlier releases are not supported. See [Environment variables](/configuration/environment-variables).
-- An ingest API key. Any existing key works — you do not create a separate one for spans.
+Trace, span, and service health reads are recorded in the search audit and count against the read rate limit, like log searches. See [Rate limiting](/configuration/environment-variables#rate-limiting).
 
 ## Next steps
 

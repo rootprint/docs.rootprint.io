@@ -754,13 +754,13 @@
 							}
 						]
 					},
-					"requests": {
+					"spans": {
 						"type": "number"
 					}
 				},
 				"required": [
 					"keyMs",
-					"requests",
+					"spans",
 					"errors",
 					"p50",
 					"p95",
@@ -809,14 +809,14 @@
 					"ratePerSec": {
 						"type": "number"
 					},
-					"requests": {
-						"type": "number"
-					},
 					"services": {
 						"items": {
 							"type": "string"
 						},
 						"type": "array"
+					},
+					"spans": {
+						"type": "number"
 					},
 					"spark": {
 						"items": {
@@ -828,7 +828,7 @@
 				"required": [
 					"operation",
 					"services",
-					"requests",
+					"spans",
 					"ratePerSec",
 					"errors",
 					"p50",
@@ -981,12 +981,12 @@
 							}
 						]
 					},
-					"requests": {
+					"spans": {
 						"type": "number"
 					}
 				},
 				"required": [
-					"requests",
+					"spans",
 					"errors",
 					"p50",
 					"p95",
@@ -1694,6 +1694,23 @@
 					"hits",
 					"numHits",
 					"elapsedTimeMicros"
+				],
+				"type": "object"
+			},
+			"NdjsonIngestResponse": {
+				"properties": {
+					"num_docs_for_processing": {
+						"type": "integer"
+					},
+					"num_ingested_docs": {
+						"type": "integer"
+					},
+					"num_rejected_docs": {
+						"type": "integer"
+					}
+				},
+				"required": [
+					"num_docs_for_processing"
 				],
 				"type": "object"
 			},
@@ -3463,7 +3480,7 @@
 	"info": {
 		"description": "HTTP API for the Rootprint log management platform.",
 		"title": "Rootprint API",
-		"version": "0.4.4"
+		"version": "0.4.5"
 	},
 	"openapi": "3.1.0",
 	"paths": {
@@ -15012,20 +15029,14 @@
 		},
 		"/api/ingest/ndjson": {
 			"post": {
-				"description": "Proxies an NDJSON (or JSON array) log payload to Quickwit for the index associated with the ingest API key. Accepts application/x-ndjson or application/json content-type. Success and 4xx responses are passed through from Quickwit (400 bodies carry per-document parse errors); upstream 5xx responses are mapped to the standard 503 error contract.",
+				"description": "Proxies an NDJSON log payload (one JSON object per line) to Quickwit for the index associated with the ingest API key. Accepts application/x-ndjson or application/json content-type. Success and 4xx responses are passed through from Quickwit; lines that fail to parse or match the schema are counted in num_rejected_docs of a 200 response. Upstream 5xx responses are mapped to the standard 503 error contract.",
 				"operationId": "postApiIngestNdjson",
 				"responses": {
 					"200": {
 						"content": {
 							"application/json": {
 								"schema": {
-									"description": "Quickwit ingest acknowledgement",
-									"properties": {
-										"num_docs_for_processing": {
-											"type": "integer"
-										}
-									},
-									"type": "object"
+									"$ref": "#/components/schemas/NdjsonIngestResponse"
 								}
 							}
 						},
