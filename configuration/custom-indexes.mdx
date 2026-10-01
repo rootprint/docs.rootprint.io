@@ -5,12 +5,7 @@ description: 'Define a custom index with your own schema, tokenizers, and retent
 
 The bundled `otel-logs-v0_9` index works for any application that emits OpenTelemetry logs. For everything else (audit trails, third-party log formats, application events with a specialized schema), create an index with the fields and types your data needs.
 
-Create indexes from **Settings → Indexes → Create index**: a form, with no YAML or direct Quickwit calls. Rootprint creates the index in Quickwit and opens its detail page when you save, where you [map its fields](/configuration/manage-indexes#field-role-mappings) into the search UI.
-
-<Note>
-	The same form is available over the API as `POST /api/indexes`. See the [Index management
-	API](/api/overview).
-</Note>
+Open **Settings → Indexes → Create index**. When you save, Rootprint creates the index in Quickwit and opens its detail page, where you [map its fields](/configuration/manage-indexes#field-role-mappings) into the search UI. The same form is available over the API as `POST /api/indexes`; see the [Index management API](/api/overview).
 
 ## Index ID
 
@@ -18,7 +13,7 @@ Create indexes from **Settings → Indexes → Create index**: a form, with no Y
 	<img src="/images/indexes/create-index-top.png" alt="Create index form: Index ID, Mode, and Timestamp field" />
 </Frame>
 
-An index ID starts with a letter and runs 3–255 characters of letters, digits, `-`, or `_`. Ingest requests never name it — the ingest API key you scope to this index is what routes writes here.
+An index ID starts with a letter and runs 3–255 characters of letters, digits, `-`, or `_`. Ingest requests never name it. The ingest API key you scope to this index is what routes writes here.
 
 ## Mode
 
@@ -32,13 +27,7 @@ The schema mode decides what Quickwit does with fields you didn't declare in the
 
 ## Timestamp field
 
-Pick the `datetime` field the index uses as its time axis, chosen from the datetime fields you define below. It is used to:
-
-- Partition splits by time, so time-bounded searches only scan relevant splits.
-- Drive the retention policy.
-- Enforce search bounds: the Rootprint time picker passes `start_timestamp` and `end_timestamp` against this field.
-
-Rootprint always stores the timestamp field as `fast`, so its `fast` toggle is hidden in the field editor. You must define at least one `datetime` field before you can pick one here.
+Pick the `datetime` field the index uses as its time axis. You must define at least one `datetime` field before you can pick one here. Time-range searches and retention both use this field. The timestamp field is always `fast`, so the field editor hides its `fast` toggle.
 
 ## Fields
 
@@ -46,28 +35,21 @@ Rootprint always stores the timestamp field as `fast`, so its `fast` toggle is h
 	<img src="/images/indexes/create-index-fields.png" alt="Create index field editor: a field with its type, tokenizer, and per-type options" />
 </Frame>
 
-Add a row per field with **Add field**, then set its name, type, and options. At least one field is required, and the toggles come preselected to the recommended defaults (`indexed`, `stored`, and `fast` on).
+Add a row per field with **Add field**, then set its name, type, and options. At least one field is required. New fields start with `indexed`, `stored`, and `fast` on.
 
 ### Field types
 
-| Type       | Use for                  |
-| ---------- | ------------------------ |
-| `text`     | Searchable strings       |
-| `i64`      | Signed integers          |
-| `u64`      | Unsigned integers        |
-| `f64`      | Floating point           |
-| `datetime` | Timestamps               |
-| `bool`     | True/false               |
-| `ip`       | IPv4/IPv6 addresses      |
-| `json`     | Free-form key-value blobs |
+`text` (searchable strings), `i64` and `u64` (signed and unsigned integers), `f64` (floating point), `datetime`, `bool`, `ip` (IPv4 or IPv6 addresses), and `json` (free-form key-value objects).
 
 ### Indexed, stored, and fast
 
 Every field exposes three toggles:
 
-- **Indexed**: the field is added to an inverted index and is searchable via text queries. When off, you cannot use the field in search predicates.
+- **Indexed**: the field is added to an inverted index, which term, phrase, and full-text queries need. Range queries read the fast column instead, so a numeric field with **Fast** on still supports `duration_ms:>500` when **Indexed** is off.
 - **Stored**: the field's value is kept and returned in search results.
-- **Fast**: the field is stored in column-oriented storage (like Lucene DocValues), enabling efficient range queries, aggregations, and sorting. The form preselects `fast` on for every field; the timestamp field is always fast.
+- **Fast**: the field is kept in column-oriented storage, enabling efficient range queries, aggregations, and sorting.
+
+A field can be fast without being indexed, and the other way around.
 
 ### Per-type options
 
@@ -75,42 +57,35 @@ Depending on the field type, the editor exposes extra options:
 
 | Type            | Options                                                                                                                              |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `text`          | **tokenizer**, **record**, **fieldnorms** (store field-length norms for scoring)                                                    |
-| `json`          | **tokenizer**, **record**, **expand dots** (treat `a.b` keys as nested `a` → `b`)                                                    |
+| `text`          | **tokenizer**; **record**; **fieldnorms** (store field-length norms for scoring)                                                    |
+| `json`          | **tokenizer**; **record**; **expand dots** (treat `a.b` keys as nested `a` → `b`)                                                    |
 | `i64` / `u64` / `f64` | **coerce** (accept numbers sent as strings)                                                                                   |
-| `datetime`      | **output** format, **precision** of the fast value, and **input formats** (see below)                                               |
+| `datetime`      | **input formats**: how incoming values are parsed. Tick any of `rfc3339`, `iso8601`, `rfc2822`, `unix_timestamp`, and add custom [strptime](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) patterns one per line. **output**: `rfc3339` or `unix_timestamp_secs`/`millis`/`micros`/`nanos`. **precision** of the fast column: `seconds`, `milliseconds`, `microseconds`, or `nanoseconds`. |
 
-`text` and `json` fields also have a **default search** checkbox. Tick it to add the field to the index's default search fields — the fields searched when a query doesn't name one, so `timeout` matches `message:timeout` without the user typing the field.
+**Record** sets how much term data the inverted index keeps: `basic` (which documents contain the term), `freq` (also term frequency), or `position` (also token positions, required for phrase queries).
 
-The **record** option controls how much term data the inverted index keeps: `basic` (which documents contain the term), `freq` (also term frequency), or `position` (also token positions, required for phrase queries).
-
-For `datetime` fields, **input formats** is how Rootprint parses incoming values. Tick any of the presets (`rfc3339`, `iso8601`, `rfc2822`, `unix_timestamp`) and add custom [strptime](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) patterns one per line. **Output** controls how values are returned (`rfc3339` or `unix_timestamp_secs`/`millis`/`micros`/`nanos`), and **precision** sets the granularity of the fast column (`seconds`, `milliseconds`, `microseconds`, `nanoseconds`).
+`text` and `json` fields also have a **default search** checkbox. Tick it to search the field when a query doesn't name one, so `timeout` matches `message:timeout` without the user typing the field.
 
 ### Tokenizers
 
 `text` and `json` fields take a tokenizer, which decides how the value is split for search. Tokenization happens at index time and cannot be changed without recreating the index.
 
-| Tokenizer            | Behavior                                                          | Use for                                       |
-| -------------------- | ----------------------------------------------------------------- | --------------------------------------------- |
-| `raw`                | Whole value as one token. Case-sensitive.                         | IDs, enums, hostnames, severity labels        |
-| `raw_lowercase`      | Whole value as one token, lowercased. Case-insensitive exact match. | Enum-like fields matched regardless of case |
-| `default`            | Splits on whitespace and punctuation, lowercases.                 | Free-text search on message bodies            |
-| `en_stem`            | `default` plus English stemming (`running` → `run`).              | Free-text with morphological matching         |
-| `whitespace`         | Splits on whitespace only; keeps case and punctuation.            | Text where punctuation is significant         |
-| `chinese_compatible` | Per-character CJK splitting plus `default` behavior.              | Mixed CJK and Latin text                      |
-| `lowercase`          | Lowercases the value with minimal tokenization.                   | Case-insensitive enum-like fields             |
+| Tokenizer                    | Behavior                                                          | Use for                                       |
+| ---------------------------- | ----------------------------------------------------------------- | --------------------------------------------- |
+| `raw`                        | Whole value as one token. Case-sensitive.                         | IDs, enums, hostnames, log level labels       |
+| `raw_lowercase`, `lowercase` | Whole value as one token, lowercased. The two behave the same.    | Enum-like fields matched regardless of case   |
+| `default`                    | Splits on whitespace and punctuation, lowercases.                 | Free-text search on message bodies            |
+| `en_stem`                    | `default` plus English stemming (`running` → `run`).              | Free-text with morphological matching         |
+| `whitespace`                 | Splits on whitespace only; keeps case and punctuation.            | Text where punctuation is significant         |
+| `chinese_compatible`         | Per-character CJK splitting plus `default` behavior.              | Mixed CJK and Latin text                      |
 
-The bundled OTel index uses `raw` for `severity_text` and `service_name`, and `default` for `body`. The same choices work well for most application logs.
+For most application logs, follow the bundled index: `raw` for `severity_text` and `service_name`, and `default` for `body`.
 
 ## Retention
 
-Enable retention to drop splits older than a fixed window. **Period** accepts durations like `48 hours`, `90 days`, `12 months`, `2 years`; **schedule** controls how often the cleanup runs (`hourly`, `daily`, `weekly`, `monthly`, `yearly`, or a cron expression), and defaults to daily when left blank.
+Enable retention to drop splits older than a fixed window. **Period** accepts durations like `48 hours`, `90 days`, `12 months`, or `2 years`. **Schedule** sets how often the cleanup runs (`hourly`, `daily`, `weekly`, `monthly`, `yearly`, or a cron expression) and defaults to daily when left blank.
 
-<Warning>
-	Retention drops entire splits, so the actual cutoff floats by the split duration. A document
-	timestamped 30 days ago is not deleted at exactly day 30 — its split survives until every document
-	in it is past the period. Plan for hours of lag, not seconds.
-</Warning>
+Retention deletes whole splits, so a document can outlive the period by hours.
 
 ## Other settings
 
@@ -118,7 +93,7 @@ Enable retention to drop splits older than a fixed window. **Period** accepts du
 	<img src="/images/indexes/create-index-options.png" alt="Create index form: retention, index URI, tag fields, commit timeout, store source, and field presence" />
 </Frame>
 
-The rest of the form is optional and most deployments leave it untouched:
+The rest of the form is optional, and most deployments leave it at the defaults:
 
 | Setting                  | What it does                                                                                                                             |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
@@ -132,8 +107,8 @@ The rest of the form is optional and most deployments leave it untouched:
 
 Saving the form lands you on the new index's detail page. To finish wiring it up:
 
-1. On the **Configuration** tab, set the [field-role mappings](/configuration/manage-indexes#field-role-mappings) so the message, level, and traceback render correctly.
-2. Create an [ingest API key](/api/overview) scoped to the index and route writes through the [HTTP endpoint](/send-logs/http) or, for OpenTelemetry-shaped data, the [OTLP endpoint](/send-logs/otlp).
+1. On the **Configuration** tab, set the [field-role mappings](/configuration/manage-indexes#field-role-mappings) so the message, log level, and traceback render correctly.
+2. Create an [ingest API key](/api/overview) scoped to the index and route writes through the [HTTP endpoint](/send-logs/http). Don't send OTLP to a custom-schema index: Quickwit answers `200` and discards the logs. See [Index target](/send-logs/otlp#index-target).
 
 ## Related
 

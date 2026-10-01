@@ -1,20 +1,16 @@
 ---
 title: 'Architecture'
-description: 'How Rootprint works under the hood: the platform and its embedded Quickwit engine, how logs flow in and out, and what is stored where.'
+description: 'How Rootprint works under the hood: the platform and its Quickwit engine, how logs flow in and out, and what is stored where.'
 ---
-
-Rootprint is a self-hosted log management platform: ingestion, full-text search, histograms, saved views, access control, and an HTTP API over your logs. It runs search directly on object storage by embedding [Quickwit](https://quickwit.io) as its search and indexing engine.
 
 ## The platform and its engine
 
-Rootprint owns the entire log experience: who can sign in, which indexes they see, how each log renders, and the saved views, share links, and audit trail they build on top. For the heavy lifting of indexing and search, it drives an embedded Quickwit engine.
-
 | Layer | Responsibilities |
 | ----- | ---------------- |
-| **Rootprint**, the platform (single-node) | Web UI, authentication and users, OAuth (Google/GitHub), the ingest gateway, the search and API layer, access rules, **field-role** presentation mapping, log-to-trace correlation, saved views, share links, and the activity/audit trail. |
-| **Quickwit**, the search engine (scales horizontally) | Indexing pipelines, full-text search and aggregations, split storage, the metastore, and pull-based sources (Amazon Kinesis, Apache Kafka, files via S3/SQS). |
+| **Rootprint**, the platform (single-node) | Web UI, users and sign-in, the ingest gateway, the search API, field-role mappings, log-to-trace correlation, saved views, share links, and the audit trail. |
+| **Quickwit**, the search engine (scales horizontally) | Indexing, full-text search and aggregations, index storage, the metastore, and pull-based sources (Amazon Kinesis, Apache Kafka, files via S3/SQS). |
 
-Rootprint runs single-node; Quickwit scales horizontally. See [Scaling beyond a single node](/install/scaling). Quickwit has no authentication of its own: serve Rootprint on your public URL and keep Quickwit private.
+To grow capacity, see [Scaling beyond a single node](/install/scaling). Quickwit has no authentication of its own: serve Rootprint on your public URL and keep Quickwit private.
 
 ## How data flows
 
@@ -40,10 +36,9 @@ flowchart LR
     idx -->|publish metadata| meta
 ```
 
-1. **Producers** push telemetry to Rootprint's ingest gateway: OTLP logs at `/v1/logs`, OTLP spans at `/v1/traces`, or NDJSON logs at `/api/ingest/ndjson`. All three require an ingest API key (prefix `rp_`) that is scoped to exactly one index. That scope routes **logs** only — spans always go to the span store named by `TRACE_INDEX_ID`, whatever index the key is scoped to. See [Traces](/traces/overview).
-2. Rootprint authenticates the key and **hands the data to its Quickwit engine's ingest API**. It does not transform the payload. The target index defines the schema.
-3. **Pull-based sources** (Kinesis, Kafka, S3/SQS) are the exception: you configure them through Rootprint, but Quickwit pulls that data **directly from the source, bypassing the gateway**.
-4. Quickwit **indexers** write the indexed data as *splits* to index storage and **publish their metadata to the metastore**.
+- Every push needs an ingest API key (`rp_`), scoped to one index. Logs go to that index. Spans always go to the span store. See [Traces](/traces/overview).
+- Rootprint forwards the payload to Quickwit unchanged, so it must match the target index's schema.
+- Pull-based sources are configured in Rootprint, but Quickwit reads them directly, bypassing the gateway.
 
 See [Send logs](/send-logs/overview) for the full list of ingestion paths.
 
@@ -69,9 +64,7 @@ flowchart LR
     srch -->|read splits| store
 ```
 
-1. A request arrives from the **web UI** (session cookie) or an **external tool** (query API key, prefix `rpk_`).
-2. Rootprint **authorizes** the request, reads its own application state from Postgres (saved views, preferences), and applies **field-role mappings**.
-3. Rootprint **runs the search on its Quickwit engine**, whose **searchers** read the metastore to plan the query, then read the relevant splits from object storage and return results.
+The web UI authenticates with a session cookie. External tools use a [query API key](/api/query-logs) (`rpk_`).
 
 ## What's stored where
 
@@ -80,14 +73,13 @@ Three independent stores hold all durable state.
 | Store | What lives here | Single-node default | Scaled |
 | ----- | --------------- | ------------------- | ------ |
 | **Rootprint Postgres** | Users, API keys, saved views, preferences, field-role config, share links, search audit records. | Bundled `postgres:17` container. | External/managed Postgres. |
-| **Quickwit metastore** | Index configuration, split metadata, source checkpoints, index-creation state. | File on local disk. | PostgreSQL (Quickwit's distributed metastore). |
+| **Quickwit metastore** | Index configuration, split metadata, source checkpoints. | File on local disk. | PostgreSQL (Quickwit's distributed metastore). |
 | **Index storage** | The splits: your indexed logs, and the span store's spans. | Local Docker volume. | S3, Azure Blob, or GCS object storage. |
 
 <Warning>
-	These three stores are separate from each other. Rootprint's Postgres database and Quickwit's
-	metastore must each be their own database, even if they share a Postgres server. Back up all
-	three: each holds state the others cannot reconstruct. Deleting the index-storage volume
-	permanently destroys your logs.
+	Rootprint's Postgres database and Quickwit's metastore must each be their own database, even
+	if they share a Postgres server. Back up all three stores: each holds state the others cannot
+	reconstruct. Deleting the index-storage volume permanently destroys your logs.
 </Warning>
 
 ## Related

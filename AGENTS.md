@@ -28,7 +28,7 @@ mint validate                                       # strict-mode build validati
 | `install/` | Install guides (Docker Compose, scaling, etc.) |
 | `configuration/` | Env vars, index config, auth, admin operations |
 | `send-logs/` | Language SDKs (`languages/`), log agents (`log-agents/`), web servers (`web-servers/`), platforms (`platforms/`), and protocol guides (HTTP, OTLP) |
-| `traces/` | Trace overview, sending spans over OTLP, and reading a trace |
+| `traces/` | Trace overview, sending spans over OTLP, the trace explorer and reading a trace, and service health |
 | `search/` | Query language reference |
 | `api/` | HTTP API reference |
 | `files/` | Downloadable Compose files (`docker-compose.full.yaml`, `docker-compose.standalone.yaml`) served at `docs.rootprint.io/files/…` and fetched by the curl lines in `quickstart.mdx` and `install/docker-compose.mdx` |
@@ -45,7 +45,7 @@ Use these terms consistently across pages:
 - **span store** — the single Quickwit index holding OTLP spans, named by `TRACE_INDEX_ID`. Not "trace index" in user-facing copy.
 - **trace ID field** — the per-index setting naming the path to a trace ID inside a log document. Not "correlation field".
 - **query API key** — umbrella term for read-only `rpk_` credentials that grant `logs: read` on log query endpoints. Use the specific term when the owner matters.
-- **personal API key** / **personal access token (PAT)** — a query API key created by a signed-in user from **Settings → Profile**. It authenticates as that user.
+- **personal API key** / **personal access token (PAT)** — a query API key created by a signed-in user from **Profile** in the user menu (`/profile`). It authenticates as that user.
 - **service account** — a non-human account created by an admin from **Settings → Service accounts**. Service account API keys are query API keys for shared integrations.
 - **log level** — severity (INFO/WARN/ERROR/DEBUG/UNKNOWN). Not "severity" or "log priority".
 - **OTLP** — OpenTelemetry Protocol. Capitalize.
@@ -58,6 +58,10 @@ Use these terms consistently across pages:
 - One idea per sentence. Prefer concise sentences over compound ones.
 - Bold for UI elements: "Click **Settings** → **Tokens**".
 - Code formatting for file names, commands, paths, env vars, and code references.
+- State what to do and what happens. Leave out release history, design rationale, and internals the reader can't act on. Keep a "why" only when it prevents a mistake.
+- Give each fact one home page and link to it. Transport errors (401/403/413/415) live in `send-logs/otlp.mdx#response-codes`; span store behavior lives in `traces/overview.mdx`; shared SSO behavior lives in `configuration/authentication.mdx`.
+- Use callouts only for security, data loss, or setup-breaking gotchas — never to restate the text above them.
+- Placeholders: `<your-rootprint>` for the host, `<your-ingest-api-key>` for the ingest API key.
 
 ## Content Boundaries
 

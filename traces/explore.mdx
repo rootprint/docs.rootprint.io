@@ -1,60 +1,81 @@
 ---
 title: 'Read a trace'
-description: 'Open a trace from a log or by ID, read the waterfall and span details, and configure which log field carries the trace ID.'
+description: 'Open a trace, search and read its waterfall and span details, and jump between spans and their logs.'
 ---
 
-A trace opens as a waterfall of spans with a detail panel for the selected span. You arrive at a specific trace rather than browsing a list — see [Traces](/traces/overview#how-you-reach-a-trace) for the ways in.
+A trace opens as a waterfall of spans with a detail panel for the selected span. To find a trace in the first place, use the [trace explorer](/traces/search).
 
 ## Open a trace
 
-**From a log.** Open any log in the detail drawer. If the log carries a trace ID, a **Trace** tab appears alongside the other tabs, showing the waterfall inline. Click through for the full page.
+**From the trace explorer.** Click a span on the **Spans** tab of **Traces**. The trace opens with that span selected.
 
-**By trace ID.** Paste a trace ID — 32 hexadecimal characters — into the log search box. Rootprint recognizes it and opens that trace directly instead of running a search. Case does not matter here: the search box lowercases what you paste. An all-zeros ID falls through to a normal search, because OTLP writes that value on logs that carry no trace context.
+**From a log.** Open any log in the detail drawer. If the log carries a trace ID, a **Trace** tab appears alongside the other tabs, showing the waterfall inline. Click **Open trace page** for the full page.
 
-**By URL.** A trace has a permanent address at `/traces/<traceId>`. Share it like any other link. The URL and `GET /api/traces/{traceId}` both take the canonical form only — exactly 32 lowercase hex characters, not all zeros — and reject anything else with `400`.
+**From service health.** A row on a service's **Errors** tab opens its trace in a new tab, with that span selected. See [Service health](/traces/services#failing-spans).
+
+**By trace ID.** Paste a trace ID (32 hexadecimal characters, any case) into the log search box or the explorer's **Search spans** box, and press Enter. If the span store has no spans for that ID, it runs as a text search where you pasted it. Wrap the ID in quotes to search for it as text from the start.
+
+**By URL.** A trace has a permanent address at `/traces/<traceId>`. A trace with no spans in the span store opens empty: its spans may not have arrived yet, or may be past retention.
+
+## The header
+
+The header shows the root operation, the total duration, the root span's service and start time, the trace ID (click to copy), and each service's span count. When spans failed, click the error count to select the first failing span.
 
 ## The waterfall
 
-Each span is a bar positioned by its start offset and sized by its duration. Spans are colored by service, so a request crossing four services is four colors. The root span's status is shown in the header, and spans that ended in an error are marked.
+Spans are colored by service, and spans that ended in an error are marked.
 
-Selecting a span opens its detail panel.
+- Click the arrow beside a span to collapse or expand its children.
+- Drag across the timeline strip above the waterfall to zoom into a window. Drag the frame to pan, or its edges to resize it. Double-click the strip to see the whole trace again.
+- Select a span to open its detail panel. The URL gains `span=<spanId>`, so a link can point at one span.
+
+A span is exported when it ends, so a trace still in progress can have spans whose parent hasn't arrived. A banner counts them. Click **Reload** to fetch the trace again.
+
+## Search spans
+
+The search box above the waterfall finds spans within the trace. It matches service names, span names, span IDs, and attributes written as `key=value`, ignoring case. For example, `status_code=503` finds spans whose HTTP status is 503.
+
+Spans that don't match are dimmed. Press Enter and Shift+Enter to step through the matches.
 
 ## Span details
 
-The detail panel has three tabs. A tab with nothing in it is disabled and skipped when you move between spans with the keyboard.
+The detail panel has four tabs. **Database** and **Events** are disabled when the span has none.
 
-| Tab | Contents |
-| --- | -------- |
-| **Overview** | The span's name, service, timing, status, and its attributes. |
-| **Parameters** | Attributes the span carries as call parameters. |
-| **Events** | Timestamped events recorded on the span, each with its own fields. |
+| Tab            | Contents                                                                                                    |
+| -------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Overview**   | Status with the status message or exception, a one-line summary for HTTP, database, RPC, and messaging spans, and timing split into self time and time in child spans. **Top operations** lists the five operations below the span that took the most time; click one to select its slowest span. |
+| **Parameters** | The span ID, parent span ID, start, and duration; the span's attributes; and its resource attributes.      |
+| **Database**   | Database calls made by the span and every span below it. See [Database calls](#database-calls).             |
+| **Events**     | Timestamped events recorded on the span. Exception events show the exception type, message, and stack trace. |
 
-Two attributes are hidden from the panel: `otel.status_code` and `error`. `span.kind` and `otel.status_description` are shown.
+### Database calls
 
-## Jump back to logs
+A span is a database call when it carries `db.system`, `db.system.name`, `db.statement`, or `db.query.text`. The tab counts those calls in the selected span and all of its descendants, with their summed duration. Concurrent calls overlap, so the sum can exceed the span's own duration.
 
-A span links to the logs it produced, with a count. This is the reverse of opening a trace from a log: from a slow or failing span, you go straight to what that span logged.
+Calls are grouped by database (the system plus `server.address` or `net.peer.name`), then by statement (`db.statement` or `db.query.text`, falling back to the span name). Each statement shows its call count, total time, and failures. Expand it to see each call, and click a call to select its span.
 
-When a trace's logs number 1,000 or more, Rootprint stops computing per-span counts and omits them; the trace-wide link back to logs still works.
-
-## Truncated traces
-
-A trace larger than 2,000 spans returns a subset, and the view says so. The underlying query is unsorted, so the spans you get are an arbitrary subset rather than the first 2,000 by time.
+Statements group on their exact text, and instrumentation usually sends them parameterized. A query run once per row in a loop therefore collapses into one statement with a high call count, the usual sign of an N+1 query.
 
 ## Correlate logs with traces
 
-Correlation in both directions depends on one per-index setting: **Trace ID field**.
+Correlation in both directions depends on one per-index setting, **Trace ID field**: the dot-notation path to the trace ID inside a log document. It defaults to `trace_id`, which matches the OpenTelemetry log schema, so the bundled `otel-logs-v0_9` index needs no configuration.
 
-| Setting | Default | What it controls |
-| ------- | ------- | ---------------- |
-| **Trace ID field** | `trace_id` | The dot-notation path to the trace ID inside a log document. |
+For a custom schema, set it to wherever your trace ID lives, for example `attributes.traceId`, on the index's **Configuration** tab under **Settings → Indexes**. See [Manage indexes](/configuration/manage-indexes#field-role-mappings). Until it points at a real field, logs and traces stay unlinked: no **Trace** tab in the log drawer, and no log counts on spans.
 
-The default matches the OpenTelemetry log schema, so the bundled `otel-logs-v0_9` index needs no configuration. For a custom schema, set this to wherever your trace ID lives — for example `attributes.traceId` — on the index's **Configuration** tab under **Settings → Indexes**. See [Manage indexes](/configuration/manage-indexes#field-role-mappings).
+Per-span links and counts read a top-level `span_id` field. That path is not configurable, so on a custom schema without it, only the trace-wide link works.
 
-Until this points at a real field, logs and traces stay unlinked: no **Trace** tab in the log drawer, and no log counts on spans.
+## Jump back to logs
+
+The header's index picker sets which index holds the trace's logs. It defaults to the index you came from, or the last log index you used.
+
+- **Logs for this trace** opens Logs filtered on the trace ID over the trace's time window.
+- Spans with logs carry a count in the waterfall. **Logs for this span**, in the detail panel, also filters on the span ID.
+
+When a trace has 1,000 or more logs, per-span counts are omitted. The links still work.
 
 ## Related
 
 - [Traces](/traces/overview)
+- [Trace explorer](/traces/search)
 - [Send traces](/traces/send)
 - [Manage indexes](/configuration/manage-indexes#field-role-mappings)

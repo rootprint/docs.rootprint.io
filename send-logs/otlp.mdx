@@ -3,7 +3,7 @@ title: 'OTLP reference'
 description: 'Rootprint OTLP HTTP endpoint: URL, authentication, content types, limits, and response codes.'
 ---
 
-Rootprint exposes an OTLP HTTP endpoint that accepts OpenTelemetry logs, authenticates them with an ingest API key, and ingests them into the target index. The target index is fixed by the API key.
+Rootprint accepts OpenTelemetry logs over OTLP HTTP and authenticates them with an ingest API key.
 
 ## Endpoint
 
@@ -14,62 +14,57 @@ POST https://<your-rootprint>/v1/logs
 ## Authentication
 
 ```
-Authorization: Bearer <ingest-token>
+Authorization: Bearer <your-ingest-api-key>
 ```
 
-When used through `OTEL_EXPORTER_OTLP_LOGS_HEADERS`, the value must be URL-encoded:
-
-```
-OTEL_EXPORTER_OTLP_LOGS_HEADERS=Authorization=Bearer%20<your-ingest-token>
-```
+In `OTEL_EXPORTER_OTLP_LOGS_HEADERS`, write the space after `Bearer` as `%20`. See [Environment variables](#environment-variables).
 
 ## Supported content types
 
-Rootprint accepts `application/x-protobuf` only. Any other `Content-Type` returns **415 Unsupported Media Type**.
+Rootprint accepts `application/x-protobuf` only. Any other `Content-Type` returns `415`.
 
-Every major OTEL SDK already defaults to protobuf for HTTP logs, with one exception: the JavaScript package `@opentelemetry/exporter-logs-otlp-http` defaults to JSON. If you are using that package, switch to `@opentelemetry/exporter-logs-otlp-proto` (same `OTLPLogExporter` API).
+In Node.js, use `@opentelemetry/exporter-logs-otlp-proto`. `@opentelemetry/exporter-logs-otlp-http` sends JSON. Both packages export the same `OTLPLogExporter` API.
 
 ## Encoding
 
-`Content-Encoding`: `gzip` / `x-gzip`, `zstd`, `deflate` / `x-deflate`, and `identity` (or no header) for uncompressed. Any other value is rejected. OTEL SDKs send `gzip` or no compression.
+`Content-Encoding`: `gzip` / `x-gzip`, `zstd`, `deflate` / `x-deflate`, and `identity` (or no header) for uncompressed. Any other value is rejected.
 
 ## Response codes
 
-Rootprint maps OTLP errors to gRPC-style status codes. Upstream `4xx` statuses pass through as sent, and any upstream `5xx` or network failure is clamped to a retryable `503`.
+Retry `429` and `503` after the `Retry-After` delay.
 
 | Status | Meaning                                                                 |
 | ------ | ----------------------------------------------------------------------- |
-| `200`  | Accepted. Empty body when every record was accepted, or carrying `partial_success` when Quickwit rejected some. |
-| `400`  | Empty request body, or Quickwit rejected the payload.                   |
-| `401`  | Missing Bearer API key.                                                 |
+| `200`  | Accepted. The body carries `partial_success` when some records were rejected. |
+| `400`  | Empty request body, or the payload was rejected.                        |
+| `401`  | Missing `Authorization: Bearer` header.                                 |
 | `403`  | Invalid or unknown ingest API key.                                      |
-| `413`  | Payload too large. Usually a reverse proxy, but an upstream `413` passes through too.  |
+| `413`  | Payload too large, usually at a reverse proxy. Lower the agent's batch size (`batch.max_bytes` in Vector, `send_batch_max_size` on the Collector's `batch` processor, `batch_size` on Fluent Bit's `opentelemetry` output, default 1000 records) or raise the proxy's body limit. |
 | `415`  | `Content-Type` is not `application/x-protobuf`.                         |
-| `429`  | Upstream Quickwit is rate-limited. `Retry-After` is echoed (default 5). |
-| `503`  | Upstream Quickwit error or network failure, or the request ran past `INGEST_PROXY_TIMEOUT_MS` (120 seconds by default). `Retry-After: 5`. |
-
-On a `413`, lower the agent's batch size (`batch.max_bytes` in Vector, `send_batch_max_size` on the Collector's `batch` processor) or raise the proxy's body limit.
+| `429`  | Quickwit is rate-limiting ingestion. `Retry-After` gives the wait in seconds (default 5). |
+| `503`  | Quickwit is unreachable or returned an error, or the request ran past `INGEST_PROXY_TIMEOUT_MS` (120 seconds by default). Keep that timeout below your agent's request timeout, so the agent gets this retryable `503` instead of timing out. `Retry-After: 5`. |
 
 ## Environment variables
 
 | Variable                           | Value                                        |
 | ---------------------------------- | -------------------------------------------- |
 | `OTEL_SERVICE_NAME`                | Your service name (lands in `service_name`). |
-| `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | `https://<your-rootprint>/v1/logs`              |
-| `OTEL_EXPORTER_OTLP_LOGS_HEADERS`  | `Authorization=Bearer%20<your-ingest-token>` |
-| `OTEL_EXPORTER_OTLP_LOGS_PROTOCOL` | `http/protobuf` (required)                   |
-| `OTEL_LOG_LEVEL`                   | Minimum severity emitted by the SDK itself.  |
+| `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` | `https://<your-rootprint>/v1/logs`           |
+| `OTEL_EXPORTER_OTLP_LOGS_HEADERS`  | `Authorization=Bearer%20<your-ingest-api-key>` |
+| `OTEL_EXPORTER_OTLP_LOGS_PROTOCOL` | `http/protobuf`. Set it if your SDK defaults to gRPC or JSON. The exporters on the language pages already send protobuf. |
 
 ## Index target
 
-The target index is pinned by the ingest API key, not by the SDK. To write to a different index, create an ingest API key scoped to that index in **Settings → API keys** and use its value in the `Authorization` header. See [Manage indexes](/configuration/manage-indexes).
+The ingest API key sets the target index, not the SDK. A key scoped to another index writes there without an error. To write to a different index, create an ingest API key scoped to that index in **Settings → API keys**. See [Manage indexes](/configuration/manage-indexes).
 
-<Note>
-	Rootprint also accepts OTLP **traces** at `POST /v1/traces`, with the same ingest key and the
-	same protobuf-only rule. Spans ignore the index scope described above: they always go to the span
-	store named by `TRACE_INDEX_ID`, whatever index the key is pinned to. See
-	[Send traces](/traces/send).
-</Note>
+<Warning>
+	OTLP logs only land in an index with the OpenTelemetry logs schema, such as the bundled
+	`otel-logs-v0_9`. Sent to any other index, they get a `200` and are discarded, so nothing arrives
+	and no error surfaces. Scope OTLP ingest keys to an OpenTelemetry logs index, and send
+	custom-schema data to the [NDJSON gateway](/send-logs/http) instead.
+</Warning>
+
+Spans go to `POST /v1/traces` with the same key and always land in the span store, not the key's index. See [Traces overview](/traces/overview).
 
 ## Related
 

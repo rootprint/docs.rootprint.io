@@ -1,167 +1,98 @@
 ---
 title: 'Send logs over HTTP'
-description: 'Authenticated NDJSON endpoint for custom-schema indexes: you own the wire format, Rootprint forwards records to the index your ingest key is scoped to.'
+description: 'NDJSON gateway for custom-schema indexes: you own the wire format, Rootprint forwards records to the index your ingest API key is scoped to.'
 ---
 
-Rootprint exposes an authenticated HTTP endpoint at `/api/ingest/ndjson` that forwards your request body straight to the index your API key is scoped to. Rootprint adds nothing to the records and reshapes nothing — whatever you POST is what Quickwit indexes. That makes it the endpoint for **custom-schema indexes**: you define the fields your logs carry, then send records that match. Each ingest API key is scoped to a single index.
+The NDJSON gateway at `/api/ingest/ndjson` forwards your request body unchanged to the index your ingest API key is scoped to. Use it to write to a custom-schema index, or when you already emit JSON and don't want to adopt OpenTelemetry. For OpenTelemetry-instrumented apps, use the [OTLP endpoint](/send-logs/otlp) instead.
 
-<Note>
-	For OpenTelemetry-instrumented apps, prefer the [OTLP endpoint](/send-logs/otlp). It is tied to
-	the OTEL schema (the built-in `otel-logs-v0_9` index) and handles batching, retries, and schema
-	mapping for you. This endpoint relays bytes and does none of that.
-</Note>
-
-## When to use this endpoint
-
-- You run a **custom index** whose schema you defined — audit events, billing records, app logs with your own field names. You control the wire format; the endpoint passes it through unchanged.
-- You already emit JSON and don't want to adopt OpenTelemetry.
-
-This endpoint is a thin proxy: batching, retries, and back-pressure are yours to handle. The curl example below is a one-shot POST; the Vector example hands batching and retries to an agent.
+The gateway does no batching or retries. Use an agent such as Vector, or handle both in your client.
 
 ## Prerequisites
 
-- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
-- A target index to write to: the built-in `otel-logs-v0_9` (see [Indexes](/indexes) for its schema) or a [custom index](/configuration/custom-indexes) you define first.
-- An **ingest API key** scoped to that index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the target index. See [API keys](/api/overview).
-- An HTTP client or log agent to send the request. The examples cover `curl` and [Vector](https://vector.dev).
+- A running Rootprint instance. Substitute its host for `<your-rootprint>`.
+- `curl`, or a log agent such as [Vector](https://vector.dev).
 
 ## Setup
 
-These examples write to the built-in `otel-logs-v0_9` index, so they run with no schema setup. For your own index, keep the same mechanics and swap the record shape for your fields — see [Shipping to a custom index](#shipping-to-a-custom-index).
-
 <Steps>
-  <Step title="Send records to the endpoint">
-    Pick your client. `curl` posts a few lines by hand; Vector tails files and ships them continuously. Both write the same flat `otel-logs-v0_9` records to `/api/ingest/ndjson`.
+  <Step title="Create the index">
+    Create an index with the fields your logs carry and one `datetime` field as the timestamp. See [Create a custom index](/configuration/custom-indexes).
+
+    The index mode decides what happens to fields the schema doesn't declare: `dynamic` stores them, `lenient` ignores them, and `strict` rejects the record.
+  </Step>
+
+  <Step title="Create an ingest API key">
+    In **Settings → API keys**, click **Create ingest key** and pick the index. See [API keys](/api/overview).
+  </Step>
+
+  <Step title="Send records">
+    Send NDJSON: one JSON object per line, with no wrapping array and no trailing commas. Set `Content-Type: application/x-ndjson` (`application/json` also works). The examples write to an audit-log index with the fields `ts`, `level`, `action`, `actor`, and `source_ip`.
 
     <Tabs>
       <Tab title="curl">
-        Replace `<your-rootprint>` and `<your-ingest-token>`. The payload is one JSON document per line: no trailing comma.
+        Replace `<your-rootprint>` and `<your-ingest-api-key>`.
 
         ```bash
         curl -X POST 'https://<your-rootprint>/api/ingest/ndjson' \
-          -H 'Authorization: Bearer <your-ingest-token>' \
+          -H 'Authorization: Bearer <your-ingest-api-key>' \
           -H 'Content-Type: application/x-ndjson' \
           --data-binary @- <<EOF
-        {"timestamp_nanos":$(date +%s)000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":9,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
-        {"timestamp_nanos":$(date +%s)000000000,"severity_text":"ERROR","body":{"message":"Checkout failed"},"service_name":"frontend","attributes":{},"resource_attributes":{},"trace_id":"","span_id":"","trace_flags":0,"observed_timestamp_nanos":$(date +%s)000000000,"severity_number":17,"dropped_attributes_count":0,"resource_dropped_attributes_count":0,"scope_name":"","scope_version":"","scope_attributes":{},"scope_dropped_attributes_count":0}
+        {"ts":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","level":"info","action":"user.login","actor":"alice@acme.io","source_ip":"10.0.0.4"}
+        {"ts":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","level":"warn","action":"index.delete","actor":"bob@acme.io","source_ip":"10.0.0.9"}
         EOF
         ```
       </Tab>
 
       <Tab title="Vector">
-        Vector's `http` sink posts NDJSON straight to this endpoint, so a custom-schema index does not need the OTLP sink. The `remap` transform shapes each tailed line into the same flat `otel-logs-v0_9` record the curl example sends. Replace `<your-rootprint>`, `<your-ingest-token>`, the log glob, and `myapp`.
+        Add an `http` sink. Shape events to your index's fields in a `remap` transform first. [Send syslog](/send-logs/syslog) has a complete example. Replace `<your-transform>`, `<your-rootprint>`, and `<your-ingest-api-key>`.
 
         ```yaml
-        sources:
-          app_logs:
-            type: file
-            include:
-              - /var/log/myapp/*.log
-            read_from: end
-
-        transforms:
-          to_ndjson:
-            type: remap
-            inputs: [app_logs]
-            source: |
-              msg = .message
-              fpath = .file
-              ts = to_unix_timestamp!(now(), unit: "nanoseconds")
-              . = {
-                "timestamp_nanos": ts,
-                "observed_timestamp_nanos": ts,
-                "severity_text": "INFO",
-                "severity_number": 9,
-                "body": { "message": msg },
-                "service_name": "myapp",
-                "attributes": { "log.file.path": fpath },
-                "resource_attributes": {},
-                "trace_id": "",
-                "span_id": "",
-                "trace_flags": 0,
-                "dropped_attributes_count": 0,
-                "resource_dropped_attributes_count": 0,
-                "scope_name": "",
-                "scope_version": "",
-                "scope_attributes": {},
-                "scope_dropped_attributes_count": 0
-              }
-
         sinks:
           rootprint:
             type: http
-            inputs: [to_ndjson]
+            inputs: [<your-transform>]
             uri: https://<your-rootprint>/api/ingest/ndjson
             encoding:
               codec: json
             framing:
-              method: newline_delimited
+              method: newline_delimited # one object per line, not a JSON array
             auth:
               strategy: bearer
-              token: <your-ingest-token>
+              token: <your-ingest-api-key>
             batch:
               max_bytes: 8388608
               timeout_secs: 1
         ```
 
-        `framing.method: newline_delimited` is what makes the `http` sink emit NDJSON (one object per line) instead of a JSON array. Vector sends `Content-Type: application/json`, which this endpoint accepts. Every line is tagged `INFO`; parse a real level out of `.message` in the `remap` transform if you need accurate severity. For install, `systemd`, and file-permission setup, see [Send logs with Vector](/send-logs/log-agents/vector) — that page ships OTLP, but its install and `file` source steps are identical.
+        For install and `systemd` setup, see [Send logs with Vector](/send-logs/log-agents/vector).
       </Tab>
     </Tabs>
   </Step>
 
+  <Step title="Map display roles">
+    On the index's [Configuration tab](/configuration/manage-indexes#field-role-mappings), point **Log level** and **Message** at your fields: `level` and `action` in this example. The defaults assume the OpenTelemetry schema (`severity_text`, `body.message`), so records look blank until you change them.
+  </Step>
+
   <Step title="Verify in Rootprint">
-    A successful POST returns `{"num_docs_for_processing": <count>}` — the number of documents Quickwit queued, not a guarantee they are searchable yet. Open Search, pick your index from the selector, and look for the records you sent (or that Vector shipped). Allow a few seconds for Quickwit to commit.
+    A successful POST returns `200` with `num_ingested_docs` and `num_rejected_docs` counts. Accepted documents become searchable a few seconds later. Open **Logs**, pick your index from the selector, and look for the records you sent.
   </Step>
 </Steps>
 
-## Shipping to a custom index
+To write to the built-in `otel-logs-v0_9` index instead, send records with its field names (see [Indexes](/indexes)):
 
-The example above uses the built-in OTEL schema. Your own logs do not have to match it. The full workflow:
-
-<Steps>
-  <Step title="Define the index">
-    Create an index with the fields your logs carry and one `datetime` field as the timestamp. Field types are `text`, `i64`, `u64`, `f64`, `bool`, `datetime`, `ip`, and `json`. See [Create a custom index](/configuration/custom-indexes) for the form and the field options. Then mint an ingest key scoped to it.
-  </Step>
-
-  <Step title="Send records that match the schema">
-    POST NDJSON where each line is one record using your field names. For an audit-log index with fields `ts`, `level`, `action`, `actor`, and `source_ip`:
-
-    ```bash
-    curl -X POST 'https://<your-rootprint>/api/ingest/ndjson' \
-      -H 'Authorization: Bearer <your-ingest-token>' \
-      -H 'Content-Type: application/x-ndjson' \
-      --data-binary @- <<EOF
-    {"ts":"2026-06-21T10:04:00Z","level":"info","action":"user.login","actor":"alice@acme.io","source_ip":"10.0.0.4"}
-    {"ts":"2026-06-21T10:05:12Z","level":"warn","action":"index.delete","actor":"bob@acme.io","source_ip":"10.0.0.9"}
-    EOF
-    ```
-
-    How unknown fields are treated depends on the index mode — `dynamic` stores them, `lenient` ignores them, `strict` rejects the record. Pick the mode when you [create the index](/configuration/custom-indexes).
-  </Step>
-
-  <Step title="Map fields to display roles">
-    Search needs to know which field is the severity, which is the message, and which holds a traceback. Set these on the index's [Configuration tab](/configuration/manage-indexes#field-role-mappings). The defaults assume the OTEL schema (`severity_text`, `body.message`), so point them at your fields — for the example above, level → `level` and message → `action`. These are presentation settings only; they never change the stored data.
-  </Step>
-</Steps>
-
-## Payload format
-
-Rootprint forwards the body unchanged. Send NDJSON — one JSON document per line — with `Content-Type: application/x-ndjson` (the endpoint also accepts `application/json`, but the body must still be newline-delimited, not a JSON array). Each record must match the target index schema: see [Indexes](/indexes) for the built-in `otel-logs-v0_9` fields, or your index's [Configuration tab](/configuration/manage-indexes#field-role-mappings) for the display mapping over a custom schema.
+```json
+{"timestamp_nanos":1782036240000000000,"severity_text":"INFO","body":{"message":"User logged in"},"service_name":"frontend","attributes":{}}
+```
 
 ## Troubleshooting
 
-- **401**: missing or malformed `Authorization: Bearer` header.
-- **403**: the API key is invalid or revoked. Mint a new ingest key for that index in **Settings → API keys**.
-- **400 with per-line parse errors**: the response body names which documents failed. Common causes: a trailing comma, a JSON array instead of one object per line, or a value whose type doesn't match the index schema.
-- **400 empty body**: the request carried no body (or `Content-Length: 0`).
-- **413**: a batch was too large for a reverse proxy in front of Rootprint, or the server's body limit. Split it into smaller POSTs.
-- **503**: Quickwit is unavailable, or the upload ran past the proxy timeout (120 seconds by default, see `INGEST_PROXY_TIMEOUT_MS`). Retry; if it persists, check that Quickwit is healthy.
-- **Accepted but not visible in Search**: a `200` means Quickwit queued the documents, not that they are committed. Wait a few seconds and search again.
+- **`200` with `num_rejected_docs` above `0`**: some lines were dropped and the rest were accepted. Common causes: a trailing comma, a JSON array instead of one object per line, a value whose type doesn't match the index schema, or an undeclared field in a `strict` index.
+- **401, 403, 413, or 503**: see [Response codes](/send-logs/otlp#response-codes). The NDJSON gateway returns them for the same reasons.
 
 ## Related
 
 - [OTLP reference](/send-logs/otlp): for OpenTelemetry apps
-- [Indexes](/indexes): built-in OTEL schema
+- [Indexes](/indexes): built-in OpenTelemetry schema
 - [Create a custom index](/configuration/custom-indexes): define your own index schema
 - [Manage indexes](/configuration/manage-indexes#field-role-mappings): map log level, message, and traceback
-- [POST /api/ingest/ndjson](/api/ingest-logs): endpoint reference
+- [POST /api/ingest/ndjson](/api/reference/log-ingest/ingest-ndjson-log-documents): endpoint reference

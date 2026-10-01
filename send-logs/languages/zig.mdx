@@ -4,25 +4,22 @@ description: 'Ship Zig logs to Rootprint with the opentelemetry-sdk std.log brid
 ---
 
 <Warning>
-	The `opentelemetry-sdk` for Zig is in **alpha** (v0.1.1, Zig 0.15.2). It is not yet
-	proven in production. Expect breaking changes between releases.
+	The `opentelemetry-sdk` for Zig is in **alpha** (v0.1.1). Expect breaking changes between releases.
 </Warning>
 
-Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Zig SDK's `std.log` bridge routes all
-standard library log calls to OpenTelemetry without changing a single call site. Records land in
-the OTEL logs index pinned by your ingest API key (`otel-logs-v0_9` in these examples).
+Send Zig logs to Rootprint through the OpenTelemetry SDK's `std.log` bridge, which routes existing `std.log` calls over OTLP HTTP.
 
 ## Prerequisites
 
-- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
+- A running Rootprint instance. Substitute its host for `<your-rootprint>`.
 - Zig ≥ 0.15.2.
-- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` for the examples here). See [API keys](/api/overview).
+- An **ingest API key** scoped to an OpenTelemetry logs index such as `otel-logs-v0_9`. In **Settings → API keys**, click **Create ingest key** and pick the index. See [API keys](/api/overview).
 
 ## Setup
 
 <Steps>
   <Step title="Add the SDK to your project">
-    Requires Zig ≥ 0.15.2. Run this in your project root:
+    Run this in your project root:
 
     ```bash
     zig fetch --save "git+https://github.com/zig-o11y/opentelemetry-sdk#v0.1.1"
@@ -38,24 +35,11 @@ the OTEL logs index pinned by your ingest API key (`otel-logs-v0_9` in these exa
     exe.root_module.addImport("opentelemetry-sdk", otel_sdk.module("sdk"));
     ```
 
-    The dependency key `opentelemetry` matches the SDK's package name in its
-    `build.zig.zon`; the import alias `opentelemetry-sdk` is what your code will
-    `@import`.
-
-  </Step>
-
-  <Step title="Set environment variables">
-    ```bash
-    export OTEL_SERVICE_NAME=my-zig-service
-    export OTEL_EXPORTER_OTLP_LOGS_ENDPOINT='https://<your-rootprint>/v1/logs'
-    export OTEL_EXPORTER_OTLP_LOGS_HEADERS='Authorization=Bearer%20<your-ingest-token>'
-    ```
-
-    <Warning>The `%20` after `Bearer` is required: OpenTelemetry SDKs expect URL-encoded values in `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.</Warning>
-
   </Step>
 
   <Step title="Minimal working example">
+    SDK v0.1.1 doesn't read the auth header from the environment, so the example sets the endpoint, header, and service name in code. Replace `<your-rootprint>` and `<your-ingest-api-key>`. Leave the `OTEL_EXPORTER_OTLP_*` endpoint variables unset: they override the endpoint set in code.
+
     <Expandable title="src/main.zig">
     ```zig
     const std = @import("std");
@@ -70,24 +54,27 @@ the OTEL logs index pinned by your ingest API key (`otel-logs-v0_9` in these exa
         defer _ = gpa.deinit();
         const allocator = gpa.allocator();
 
-        // OTLP exporter — reads OTEL_EXPORTER_OTLP_* env vars
         var otlp_config = try sdk.otlp.ConfigOptions.init(allocator);
         defer otlp_config.deinit();
+        otlp_config.endpoint = "<your-rootprint>";
+        otlp_config.scheme = .https;
+        otlp_config.headers = "Authorization=Bearer <your-ingest-api-key>";
 
         var otlp_exporter = try sdk.logs.OTLPExporter.init(allocator, otlp_config);
         defer otlp_exporter.deinit();
         const exporter = otlp_exporter.asLogRecordExporter();
 
-        // Wire the exporter into a processor
         var simple_processor = sdk.logs.SimpleLogRecordProcessor.init(allocator, exporter);
         const processor = simple_processor.asLogRecordProcessor();
 
-        // Logger provider with the processor attached
-        var provider = try sdk.logs.LoggerProvider.init(allocator, null);
+        const service_name: []const u8 = "my-zig-service";
+        const resource = try sdk.attributes.Attributes.from(allocator, .{ "service.name", service_name });
+        defer if (resource) |attrs| allocator.free(attrs);
+
+        var provider = try sdk.logs.LoggerProvider.init(allocator, resource);
         defer provider.deinit();
         try provider.addLogRecordProcessor(processor);
 
-        // Route std.log calls through OpenTelemetry
         try sdk.logs.std_log_bridge.configure(.{
             .provider = provider,
             .also_log_to_stderr = true,
@@ -101,36 +88,43 @@ the OTEL logs index pinned by your ingest API key (`otel-logs-v0_9` in these exa
     ```
     </Expandable>
 
-    Save as `src/main.zig` and run `zig build run`. The bridge reads the endpoint and auth header
-    from the environment variables above.
+    Save as `src/main.zig` and run `zig build run`.
 
   </Step>
 
   <Step title="Verify in Rootprint">
-    Open Search, filter on `service_name:my-zig-service`, and your record should appear within
-    ~2 seconds.
+    Open **Logs**, filter on `service_name:my-zig-service`, and your record should appear within a few seconds.
   </Step>
 </Steps>
 
-## Structured logging
+## Log levels and attributes
 
-The `std.log` bridge maps Zig log levels to OpenTelemetry severity numbers automatically:
+The `std.log` bridge maps Zig log levels to OpenTelemetry log levels:
 
-| Zig level | OTel severity |
-| --------- | ------------- |
-| `debug`   | DEBUG (5)     |
-| `info`    | INFO (9)      |
-| `warn`    | WARN (13)     |
-| `err`     | ERROR (17)    |
+| Zig level | Log level (`severity_number`) |
+| --------- | ----------------------------- |
+| `debug`   | DEBUG (5)                     |
+| `info`    | INFO (9)                      |
+| `warn`    | WARN (13)                     |
+| `err`     | ERROR (17)                    |
 
-Log messages and their format arguments become the log record **body**. Unlike Go's `slog.With`,
-the `std.log` API does not support structured key/value attributes. Format args are interpolated
-into the message string.
+`std.log` has no key/value attributes. Format arguments are interpolated into the message, which becomes the log record body:
 
 ```zig
 std.log.info("user signed up: {s} plan={s}", .{ user_id, plan });
 ```
 
-For structured attributes, use the direct SDK API: see the
+For attributes, use the SDK's logger API directly. See the
 [examples/logs/](https://github.com/zig-o11y/opentelemetry-sdk/tree/main/examples/logs) folder
 in the SDK repository.
+
+## Troubleshooting
+
+- **The program hangs and prints `Deadlock detected`**: an export failed, for example with a `401` from a wrong ingest API key. SDK v0.1.1 deadlocks when it logs the failure through the `std.log` bridge. Check the endpoint and key in `otlp_config`. See [Response codes](/send-logs/otlp#response-codes).
+- **`200` but no records in Logs**: the ingest API key is scoped to an index without the OpenTelemetry logs schema, so the records are discarded. See [Index target](/send-logs/otlp#index-target).
+
+## Related
+
+- [OTLP reference](/send-logs/otlp)
+- [Indexes](/indexes)
+- [Manage indexes](/configuration/manage-indexes#field-role-mappings)

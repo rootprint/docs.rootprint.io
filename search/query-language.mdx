@@ -11,8 +11,8 @@ The Rootprint search box accepts [Lucene query syntax](https://quickwit.io/docs/
 | ----------------- | ------------------------------------------------------------------ | ------------------------------------------------- |
 | Term              | `severity_text:ERROR`                                              | Exact token in the field                          |
 | Term prefix       | `service_name:api*`                                                | Tokens starting with `api`                        |
-| Phrase            | `body.message:"connection timeout"`                                | Exact word sequence (requires `record: position`) |
-| Phrase prefix     | `body.message:"connection tim"*`                                   | Phrase whose last token is a prefix               |
+| Phrase            | `body.message:"connection timeout"`                                | Exact word sequence (see [Limits](#limits))       |
+| Phrase prefix     | `body.message:"connection tim"*`                                   | Phrase whose last token is a prefix (see [Limits](#limits)) |
 | Term set          | `service_name:IN [api worker cron]`                                | Any of the listed tokens                          |
 | Range (inclusive) | `severity_number:[13 TO *]`                                        | `>= 13`                                           |
 | Range (exclusive) | `duration_ms:{100 TO 500}`                                         | `> 100` and `< 500`                               |
@@ -35,9 +35,13 @@ resource_attributes.k8s.namespace:production
 body.error.stacktrace:"TypeError"
 ```
 
-If the field name itself contains a dot and the index has `expand_dots: true` (the default for the bundled OTel index), escape the literal dots with a backslash:
+A key that itself contains a dot, such as `{"k8s.pod.name": "web-7f4"}`, needs no escaping when the field has `expand_dots: true`, as `attributes` and `resource_attributes` do in the bundled OTel index. If `expand_dots` is false, escape the literal dots with a backslash:
 
 ```text
+# expand_dots: true
+attributes.k8s.pod.name:web-7f4
+
+# expand_dots: false
 attributes.k8s\.pod\.name:web-7f4
 ```
 
@@ -46,8 +50,7 @@ attributes.k8s\.pod\.name:web-7f4
 A query without a field name searches the index's `default_search_fields`. The bundled `otel-logs-v0_9` index searches `body.message`:
 
 ```text
-timeout                 → body.message:timeout
-"connection refused"    → body.message:"connection refused"
+timeout    → body.message:timeout
 ```
 
 To search a different field, name it explicitly: `attributes.exception.type:ValueError`.
@@ -61,18 +64,13 @@ A field's index-time tokenizer decides how queries against it match. The two tok
 | `raw`     | `severity_text`, `service_name`, `attributes.*` | The whole value is one token. Case-sensitive, exact match only.     |
 | `default` | `body`                                          | Splits on whitespace and punctuation, lowercases. Free-text search. |
 
-This means `severity_text:error` will **not** match a document with `"severity_text": "ERROR"`. The index stored `ERROR` as a single token. Match the case your shipper sends, or filter via the UI quick-filters which know each field's casing.
+This means `severity_text:error` will **not** match a document with `"severity_text": "ERROR"`. Match the case your shipper sends, or filter via the UI quick-filters which know each field's casing.
 
-<Tip>
-	If you query a custom index and exact-match terms are missing, the field is probably tokenized
-	differently than you expect. Tokenizers are set in the index's Quickwit configuration. See
-	[Create a custom index](/configuration/custom-indexes). The same value indexed with `default` and
-	`raw` produces different match behavior.
-</Tip>
+If exact-match terms are missing on a custom index, check the field's tokenizer. See [Create a custom index](/configuration/custom-indexes#tokenizers).
 
 ## Time ranges
 
-The Rootprint UI exposes a time picker that bounds every query to a time window. You don't write the timestamp clause yourself. If you call the log endpoint directly, pass `startTs` and `endTs` as **seconds** (regardless of the field's precision). The index is part of the URL, and you authenticate with a [query API key](/api/query-logs):
+The UI's time picker bounds every query, so you don't write a timestamp clause. When you call the log endpoint directly, pass `startTs` and `endTs` in **seconds**, whatever the field's precision, and authenticate with a [query API key](/api/query-logs):
 
 ```http
 GET /api/indexes/{indexId}/logs?q=severity_text:ERROR&startTs=1776340000&endTs=1776343600
@@ -84,7 +82,7 @@ GET /api/indexes/{indexId}/logs?q=severity_text:ERROR&startTs=1776340000&endTs=1
 # Errors and worse from a specific service
 severity_number:[17 TO *] AND service_name:api-gateway
 
-# Anything mentioning a request ID, in any attribute path
+# A request ID in log or resource attributes
 attributes.request_id:abc-123 OR resource_attributes.request_id:abc-123
 
 # 5xx responses with slow latency
@@ -101,11 +99,7 @@ trace_id:4bf92f3577b34da6a3ce929d0e0e4736
 ```
 
 <Tip>
-	Pasting a bare trace ID — 32 hexadecimal characters, in any case — into the search box opens that
-	trace directly instead of running a search. An all-zeros ID is exempt and searches as normal,
-	since OTLP writes it on logs with no trace context. Wrap the ID in quotes to search for it as text
-	instead. Use the `trace_id:` field query above when you want the **logs** for a trace rather than
-	its spans. See [Read a trace](/traces/explore).
+	Pasting a bare trace ID into the search box opens the trace. Wrap it in quotes to search it as text. See [Read a trace](/traces/explore#open-a-trace).
 </Tip>
 
 ## Escaping special characters
@@ -116,16 +110,14 @@ These characters are reserved by the query parser and must be backslash-escaped 
 + ^ ` { } " [ ] ( ) ~ ! \ * <space>
 ```
 
-For example, to search for the literal string `(test)` in a phrase, wrap it in quotes. The inside of a phrase doesn't need escaping. To search a single term containing parentheses, escape them: `body.message:\(test\)`.
+Outside quotes, escape reserved characters: `body.message:\(test\)`. Inside quotes, escape only the quote character that delimits the value: `attributes.label:"say \"hi\""`. Other reserved characters need no escaping inside quotes.
 
 ## Limits
 
-- A wildcard cannot be the first character of a term (`*timeout` is not allowed). Use a phrase or full-text query against the body instead.
-- Phrase queries require the field to be indexed with `record: position`. The bundled `body` field meets this; most `raw`-tokenized fields do not.
-- IP fields accept individual addresses. CIDR ranges are not supported. Use a numeric range on a parsed component if you need them.
+- Phrase and phrase-prefix queries need a field indexed with `record: position`. No field in the bundled `otel-logs-v0_9` index sets it, so combine terms instead: `body.message:connection AND body.message:timeout`.
+- IP fields don't accept CIDR notation. Use a range instead: `client_ip:[10.0.0.0 TO 10.0.0.255]`.
 
 ## Related
 
 - [Lucene query syntax reference](https://quickwit.io/docs/reference/query-language): the upstream specification.
-- [Indexes](/indexes): fields, tokenizers, and the bundled OTel schema.
-- [Manage indexes](/configuration/manage-indexes#field-role-mappings): map message, level, and traceback for custom indexes.
+- [Indexes](/indexes): fields and the bundled OTel schema.

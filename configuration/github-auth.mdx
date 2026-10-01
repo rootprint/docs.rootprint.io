@@ -3,58 +3,41 @@ title: 'Enable GitHub OAuth'
 description: 'Set up GitHub OAuth credentials and configure allowed organizations so your team can sign in to Rootprint using their GitHub accounts.'
 ---
 
-Rootprint supports GitHub OAuth as an additional sign-in method alongside the default username and password login. Once configured, a "Sign in with GitHub" button appears on the sign-in page. Users who are active members of one of your allowed organizations are automatically provisioned with the `user` role. If a GitHub account's email matches an existing Rootprint account, the two are linked automatically.
+GitHub sign-in admits active members of your allowed organizations. [Authentication overview](/configuration/authentication) has the rules shared by every provider.
 
 ## Setup
 
 <Steps>
   <Step title="Register an OAuth App on GitHub">
-    Go to GitHub's [Developer settings → OAuth Apps](https://github.com/settings/developers) and click **New OAuth App**. You can register the app under your personal account or, for shared ownership, under one of your organizations (**Organization settings → Developer settings → OAuth Apps**).
+    Go to GitHub's [Developer settings → OAuth Apps](https://github.com/settings/developers) and click **New OAuth App**. For shared ownership, register the app under an organization instead (**Organization settings → Developer settings → OAuth Apps**).
 
     Fill in:
 
-    - **Application name:** any name you like (e.g. `Rootprint`)
+    - **Application name:** any name, such as `Rootprint`
     - **Homepage URL:** the public URL of your Rootprint instance
     - **Authorization callback URL:** `https://<your-rootprint>/api/auth/callback/github`
 
-    Replace `<your-rootprint>` with the host of your Rootprint instance. After creating the app, copy the **Client ID** and generate a new **Client Secret**. You will need them in the next step.
+    Copy the **Client ID**, then generate and copy a **Client Secret**.
 
   </Step>
 
   <Step title="Enter credentials in Rootprint">
     In Rootprint, go to **Settings → Authentication**, then click **Configure** on the **GitHub** row. Enter:
 
-    - **Client ID**: from your GitHub OAuth App
-    - **Client Secret**: from your GitHub OAuth App
-    - **Allowed organizations**: one or more GitHub organization logins whose members are permitted to sign in (e.g. `my-company`)
-
-    <Note>
-      Only active members of an allowed organization can sign in with GitHub. Add the
-      organization's login (the slug from `github.com/<org>`), not its display name. You can add
-      multiple organizations if needed.
-    </Note>
-
-    You can also verify the **Callback URL** shown in this section matches the authorization callback URL you registered on GitHub.
+    - **Client ID** and **Client Secret**: from your GitHub OAuth App.
+    - **Allowed organizations**: the organization logins whose members can sign in. Use the login from `github.com/<org>`, not the display name. Matching ignores case.
 
   </Step>
 
   <Step title="Save the configuration">
-    Click **Save**. The change takes effect immediately. Rootprint reloads its auth
-    configuration in place, so no restart is required. The "Sign in with GitHub" button
-    appears on the sign-in page right away.
-
-    <Note>
-      GitHub auth configuration changes (saving credentials, updating allowed organizations, and
-      removing GitHub auth) all apply live. Allowed organizations are evaluated at sign-in time, so
-      editing them takes effect on the next GitHub sign-in attempt. Open sessions stay open.
-    </Note>
+    Click **Save**. A **Continue with GitHub** button appears on the sign-in page.
 
   </Step>
 </Steps>
 
 ## How organization membership is checked
 
-Rootprint requests the `read:org` and `user:email` scopes when a user signs in with GitHub. At sign-in time it lists the user's **active** organization memberships (`GET /user/memberships/orgs`, paging through up to 10 pages of 100). Access is granted only if one of those memberships matches an allowed organization. Matching ignores case, so an allow-list entry does not have to reproduce the organization login's capitalization. If the check fails or errors — GitHub unreachable, a 5-second timeout, rate limiting — the sign-in is denied and the reason is logged.
+Rootprint requests the `read:org` and `user:email` scopes. At each sign-in, it admits the user only if one of their **active** organization memberships matches an allowed organization. If GitHub doesn't answer, for example because of a timeout or rate limiting, Rootprint denies the sign-in and logs the reason.
 
 <Warning>
 	If an organization has **OAuth App access restrictions** enabled, your OAuth App must be approved
@@ -62,16 +45,3 @@ Rootprint requests the `read:org` and `user:email` scopes when a user signs in w
 	members of that organization will be denied sign-in. You can approve the app from the
 	organization's **Settings → Third-party Access → OAuth App policy**.
 </Warning>
-
-## Removing GitHub auth
-
-To disable GitHub sign-in, open **Settings → Authentication**, click **Configure** (or **Edit**) on
-the **GitHub** row, and click **Remove**. The change applies immediately and the GitHub sign-in
-button disappears from the sign-in page. No restart required.
-
-Removing GitHub auth ends every session of every GitHub-linked user. Those users keep their
-accounts and can sign in with another linked provider, or with a password if
-[password sign-in](/configuration/authentication#password-sign-in) is enabled. An admin can
-[reset the password](/configuration/users#reset-a-password) of anyone who never set one.
-
-[Authentication overview](/configuration/authentication) has the rules shared by every provider.

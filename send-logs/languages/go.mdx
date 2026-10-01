@@ -3,18 +3,18 @@ title: 'Send logs from Go'
 description: 'Ship Go logs to Rootprint with the OpenTelemetry SDK and the slog bridge over OTLP HTTP.'
 ---
 
-Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Go SDK's `otlploghttp` exporter speaks this protocol directly, and the `otelslog` bridge lets Go's standard `slog` API emit through it. Records land in the OTEL logs index pinned by your ingest API key (`otel-logs-v0_9` in these examples).
+Send Go logs to Rootprint through the standard `slog` API, with the `otelslog` bridge and the OpenTelemetry `otlploghttp` exporter sending them over OTLP HTTP.
 
 ## Prerequisites
 
-- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
-- Go 1.21+ (for `log/slog`).
-- An **ingest API key** scoped to your target index. In **Settings → API keys**, click **Create ingest key**, give it a name, and pick the index (`otel-logs-v0_9` for the examples here). See [API keys](/api/overview).
+- A running Rootprint instance. Substitute its host for `<your-rootprint>`.
+- Go 1.25+.
+- An **ingest API key** scoped to an OpenTelemetry logs index such as `otel-logs-v0_9`. In **Settings → API keys**, click **Create ingest key** and pick the index. See [API keys](/api/overview).
 
 ## Setup
 
 <Steps>
-  <Step title="Initialise a module and install the OpenTelemetry packages">
+  <Step title="Create a module and install the OpenTelemetry packages">
     ```bash
     go mod init example.com/rootprint-demo
     ```
@@ -27,15 +27,13 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Go SDK's `otlploghttp` 
         go.opentelemetry.io/contrib/bridges/otelslog
     ```
 
-    Go 1.21+ is required (for `log/slog`).
-
   </Step>
 
   <Step title="Set environment variables">
     ```bash
     export OTEL_SERVICE_NAME=my-go-service
     export OTEL_EXPORTER_OTLP_LOGS_ENDPOINT='https://<your-rootprint>/v1/logs'
-    export OTEL_EXPORTER_OTLP_LOGS_HEADERS='Authorization=Bearer%20<your-ingest-token>'
+    export OTEL_EXPORTER_OTLP_LOGS_HEADERS='Authorization=Bearer%20<your-ingest-api-key>'
     ```
 
     <Warning>The `%20` after `Bearer` is required: OpenTelemetry SDKs expect URL-encoded values in `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.</Warning>
@@ -69,21 +67,23 @@ Rootprint accepts OpenTelemetry logs over OTLP HTTP. The Go SDK's `otlploghttp` 
         global.SetLoggerProvider(provider)
 
         logger := otelslog.NewLogger("hello")
-        logger.Info("Hello from Go to Rootprint")
+        logger.InfoContext(ctx, "Hello from Go to Rootprint")
     }
     ```
     </Expandable>
 
+    Log with `InfoContext`, `ErrorContext`, and the other `*Context` methods wherever a request context is in scope. A call without the context carries no span, so the log can't open its trace.
+
   </Step>
 
   <Step title="Verify in Rootprint">
-    Open Search, filter on `service_name:my-go-service`, and your record should appear within ~2 seconds.
+    Open **Logs**, filter on `service_name:my-go-service`, and your record should appear within a few seconds.
   </Step>
 </Steps>
 
 ## Structured logging
 
-Pass key/value pairs directly through `slog`: the bridge turns them into log-record attributes.
+Pass key/value pairs through `slog`. The bridge turns them into log record attributes.
 
 ```go
 logger.Info("user signed up",
@@ -92,16 +92,9 @@ logger.Info("user signed up",
 )
 ```
 
-Or build a request-scoped logger with `slog.With` so attributes propagate automatically:
-
-```go
-reqLogger := logger.With("request_id", reqID)
-reqLogger.Info("processing")
-```
-
 ## Framework recipe: Gin
 
-Set up the provider once, then write a middleware that enriches the request logger with route metadata.
+Set up the provider once at startup, then log from a middleware with the request's context.
 
 <Expandable title="main.go — Gin">
 ```go
@@ -137,7 +130,7 @@ func main() {
 
     r := gin.New()
     r.Use(func(c *gin.Context) {
-        slog.Info("request", "method", c.Request.Method, "path", c.FullPath())
+        slog.InfoContext(c.Request.Context(), "request", "method", c.Request.Method, "path", c.FullPath())
         c.Next()
     })
     r.GET("/", func(c *gin.Context) { c.JSON(200, gin.H{"ok": true}) })
@@ -148,9 +141,9 @@ func main() {
 
 ## Troubleshooting
 
-- **401 / 403**: the Bearer token is missing, malformed, or the `%20` separator is not URL-encoded. Re-check `OTEL_EXPORTER_OTLP_LOGS_HEADERS`.
-- **Nothing in Search**: the batch processor buffers records. Short-lived programs must call `provider.Shutdown(ctx)` or `provider.ForceFlush(ctx)` before exit (the example above does so via `defer`).
-- **`otlploghttp.New` returns `context deadline exceeded`**: the process cannot reach the endpoint. Check DNS/TLS/firewall; try `curl -X POST $OTEL_EXPORTER_OTLP_LOGS_ENDPOINT -H "Authorization: Bearer <token>"` to isolate.
+- **401 or 403**: the ingest API key is missing or wrong, or the space after `Bearer` isn't written as `%20`. Check `OTEL_EXPORTER_OTLP_LOGS_HEADERS`. See [Response codes](/send-logs/otlp#response-codes).
+- **`200` but no records in Logs**: the ingest API key is scoped to an index without the OpenTelemetry logs schema, so the records are discarded. See [Index target](/send-logs/otlp#index-target).
+- **Nothing in Logs from a short-lived script**: the batch processor buffers records. Shut down the logger provider before exit, as the minimal example does.
 - **TLS errors against a self-signed endpoint**: set `OTEL_EXPORTER_OTLP_CERTIFICATE=/path/to/ca.pem`.
 
 ## Related

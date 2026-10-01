@@ -1,0 +1,90 @@
+---
+title: 'Trace explorer'
+description: 'Filter spans across every trace by service, operation, duration, status, and query, then open the trace behind any span.'
+---
+
+The **Traces** page (at `/traces`) searches the span store directly. Filter spans by service, operation, duration, status, or a query, read latency and error rate for what matches, and open the trace behind any span.
+
+It stays empty until spans are arriving. See [Send traces](/traces/send), and check `TRACE_INDEX_ID` in [Environment variables](/configuration/environment-variables#optional) if spans should be there.
+
+## Filters
+
+The toolbar filters every chart and table on the page.
+
+| Filter           | Matches                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Service**      | One service, by `service_name`.                                                                              |
+| **Search spans** | A query in [Quickwit query syntax](/search/query-language) over span fields. Paste a trace ID to [open that trace](/traces/explore#open-a-trace). |
+| **Duration**     | A preset band from **< 10 ms** to **> 10 s**, or **Custom…** with **Min ms** and **Below ms**.               |
+| **Error** / **OK** | Spans whose status is `error`, or every other span.                                                        |
+| **Root only**    | Each trace's root span, one per trace.                                                                       |
+| Time range       | Up to 30 days.                                                                                               |
+
+**Root only** with **Error** lists traces whose root span failed. Errors deeper in a trace don't match.
+
+Queries run against the fields of the span store, for example:
+
+```text
+# HTTP server errors
+span_attributes.http.response.status_code:[500 TO 599]
+
+# PostgreSQL calls from one namespace
+span_attributes.db.system:postgresql AND resource_attributes.k8s.namespace.name:production
+```
+
+If a query doesn't parse, the error shows under the toolbar and the results on screen stay those of the last good query.
+
+## Charts
+
+Three charts cover every span the filters match:
+
+- **Latency over time**: p50, p95, and p99 span duration.
+- **Error rate**: error spans as a share of matching spans.
+- **Requests**: matching spans per interval.
+
+Every matching span counts, whatever its kind, so one request crossing four services counts four times. Turn on **Root only** to count one span per trace. [Service health](/traces/services#what-counts-as-a-request) counts only entry spans as requests.
+
+Drag across any chart to narrow the time range to that window.
+
+## Operations
+
+The **Operations** tab groups matching spans by span name. Each row shows:
+
+- the services that emit it
+- span count, with a sparkline and the rate per minute
+- error rate and error count
+- p95 duration
+
+Click an operation to filter the page to it and switch to **Spans**. The filter shows as a chip under the toolbar. If only one service emits the operation, the service filter is set too.
+
+Operation names here are raw span names. Service health names operations by route instead. See [How Rootprint names an operation](/traces/services#how-rootprint-names-an-operation).
+
+## Spans
+
+The **Spans** tab lists matching spans, newest first, 50 at a time. Each row shows the start time, service, operation, duration, status (with the HTTP status code when the span has one), and trace ID.
+
+Sort by **Time** or **Duration**. Click a row to open its trace with that span selected. See [Read a trace](/traces/explore).
+
+## Links and URL state
+
+Every filter, the time range, the active tab, and the span sort are part of the URL, so you can bookmark or share a filtered view.
+
+## Limits
+
+| Limit        | Behavior                                                                 |
+| ------------ | ------------------------------------------------------------------------ |
+| 200 operations | The span names with the most spans. Past that, the tab says it is showing the top 200. |
+| 100 services | The service picker lists up to 100 services seen in the range.           |
+| 10,000 spans | **Load more** on the **Spans** tab stops at about 10,000 spans.          |
+| 2,000-character query | A longer **Search spans** query is rejected.                      |
+
+## Next steps
+
+<CardGroup cols={2}>
+	<Card title="Read a trace" icon="git-branch" href="/traces/explore">
+		The waterfall, span search, span details, and links back to logs.
+	</Card>
+	<Card title="Service health" icon="activity" href="/traces/services">
+		Request rate, error rate, and latency per service, from the same spans.
+	</Card>
+</CardGroup>

@@ -3,53 +3,59 @@ title: 'Send Caddy logs'
 description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP with the OpenTelemetry Collector or Vector, with access fields mapped to OpenTelemetry HTTP semantic conventions."
 ---
 
-[Caddy](https://caddyserver.com) writes structured JSON logs by default. This page ships them to Rootprint's OTLP endpoint with either the **OpenTelemetry Collector** or **Vector**. Both land records in the `otel-logs-v0_9` index with `service.name: caddy` and OpenTelemetry HTTP attributes (`http.request.method`, `url.path`, `http.response.status_code`, `client.address`, `user_agent.original`, …) pre-populated.
+This page ships Caddy's JSON logs to Rootprint over OTLP with the **OpenTelemetry Collector** or **Vector**. Records land in `otel-logs-v0_9` with `service.name: caddy`, and access-log fields arrive as OpenTelemetry HTTP attributes.
 
 ## Prerequisites
 
-- A running Rootprint instance and the host it serves on — you'll substitute it for `<your-rootprint>`.
-- A host running Caddy that writes its logs to files. Stock Caddy logs to `journald`; this page enables file logging below.
-- A log agent that can read those files — the [OpenTelemetry Collector](/send-logs/log-agents/otel-collector) or [Vector](/send-logs/log-agents/vector).
-- An **ingest API key** scoped to your target index. See [API keys](/api/overview).
+- A running Rootprint instance. Substitute its host for `<your-rootprint>`.
+- An **ingest API key** scoped to `otel-logs-v0_9`. Create one in **Settings → API keys** with **Create ingest key**, then substitute it for `<your-ingest-api-key>`. See [API keys](/api/overview).
+- A host running Caddy.
+- The [OpenTelemetry Collector](/send-logs/log-agents/otel-collector) or [Vector](/send-logs/log-agents/vector) installed on the Caddy host. The agent pages cover installation.
 
-<Tabs>
-  <Tab title="OpenTelemetry Collector">
-    <Note>
-      This config assumes the agent runs where it can read `/var/log/caddy`.
-    </Note>
+<Steps>
+  <Step title="Enable Caddy file logging">
+    Caddy's `systemd` service logs to `journald` by default. Add these blocks to
+    `/etc/caddy/Caddyfile` so Caddy writes JSON to files. Add a `log` block to every site whose
+    access log you want to ship. Keep Caddy's default JSON encoder: don't add a `format` directive.
+    `mode 0640` lets the `caddy` group read the log files. It needs Caddy 2.9 or later.
 
-    <Steps>
-      <Step title="Enable Caddy file logging">
-        Stock Caddy logs to `journald`. Add a `log` block per site so Caddy writes JSON to file, then `sudo systemctl reload caddy`. Keep Caddy's default JSON encoder; do not add a `format` directive.
-
-        ```caddyfile
-        # Global block — Caddy runtime errors
-        {
-            log default {
-                output file /var/log/caddy/error.log
+    ```caddyfile
+    # Global block — Caddy runtime errors
+    {
+        log default {
+            output file /var/log/caddy/error.log {
+                mode 0640
             }
         }
+    }
 
-        # Per-site — JSON access log
-        example.com {
-            log {
-                output file /var/log/caddy/access.log
+    # Per-site — JSON access log
+    example.com {
+        log {
+            output file /var/log/caddy/access.log {
+                mode 0640
             }
-            # ... rest of the site config
         }
-        ```
+        # ... rest of the site config
+    }
+    ```
 
-        ```bash
-        sudo systemctl reload caddy
-        ```
-      </Step>
-      <Step title="Configure the Collector">
-        Replace `<your-rootprint>` with your Rootprint host and `<your-ingest-token>` with the key from above.
+    ```bash
+    sudo systemctl reload caddy
+    ```
+  </Step>
+
+  <Step title="Write the agent config">
+    Replace `<your-rootprint>` and `<your-ingest-api-key>`.
+
+    <Tabs>
+      <Tab title="OpenTelemetry Collector">
+        Save this as `/etc/otelcol-contrib/config.yaml`.
 
         <Expandable title="config.yaml">
         ```yaml
         receivers:
-          filelog:
+          file_log:
             include:
               - /var/log/caddy/access.log
               - /var/log/caddy/error.log
@@ -60,9 +66,10 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
                 timestamp:
                   parse_from: body.ts
                   layout_type: epoch
-                  layout: s
+                  layout: s.us
                 severity:
                   parse_from: body.level
+                  overwrite_text: true
                   mapping:
                     debug: debug
                     info: info
@@ -97,77 +104,24 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
           batch: {}
 
         exporters:
-          otlphttp:
+          otlp_http:
             logs_endpoint: https://<your-rootprint>/v1/logs
             compression: gzip
             headers:
-              Authorization: "Bearer <your-ingest-token>"
+              Authorization: "Bearer <your-ingest-api-key>"
 
         service:
           pipelines:
             logs:
-              receivers: [filelog]
+              receivers: [file_log]
               processors: [resource, transform, batch]
-              exporters: [otlphttp]
+              exporters: [otlp_http]
         ```
         </Expandable>
-      </Step>
-      <Step title="Grant read access to /var/log/caddy">
-        ```bash
-        sudo usermod -aG caddy otelcol-contrib
-        ```
-        Add the user the Collector runs as to the `caddy` group that owns the logs (the Debian/RPM Collector package creates `otelcol-contrib`).
-      </Step>
-      <Step title="Start the Collector">
-        Start (or restart) the Collector so it loads the config. Startup logs should show no config-parse or exporter errors.
-      </Step>
-      <Step title="Send a test request">
-        ```bash
-        curl -i http://localhost/
-        ```
-      </Step>
-      <Step title="Verify in Rootprint">
-        Open Search, pick `otel-logs-v0_9`, and query `service_name:caddy`. Records typically appear within 5–10 seconds.
-      </Step>
-    </Steps>
-  </Tab>
-  <Tab title="Vector">
-    <Note>
-      This config assumes the agent runs where it can read `/var/log/caddy`.
-    </Note>
+      </Tab>
 
-    <Steps>
-      <Step title="Enable Caddy file logging">
-        Stock Caddy installs log to `journald`. Add the following to `/etc/caddy/Caddyfile` so Caddy
-        writes JSON to file instead, then reload Caddy. The `log` block has to be added to every
-        site whose access log you want shipped. Caddy's default JSON encoder is what the parser
-        expects, so do not add a `format` directive.
-
-        ```caddyfile
-        # Global block — Caddy runtime errors
-        {
-            log default {
-                output file /var/log/caddy/error.log
-            }
-        }
-
-        # Per-site — JSON access log
-        example.com {
-            log {
-                output file /var/log/caddy/access.log
-            }
-            # ... rest of the site config
-        }
-        ```
-
-        ```bash
-        sudo systemctl reload caddy
-        ```
-      </Step>
-
-      <Step title="Write the Vector config">
-        Save the following at `/etc/vector/vector.yaml`. Replace `<your-rootprint>` with your Rootprint
-        host and `<your-ingest-token>` with the API key you copied above.
+      <Tab title="Vector">
+        Save this as `/etc/vector/vector.yaml`.
 
         <Expandable title="vector.yaml">
         ```yaml
@@ -189,26 +143,17 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
                 . = merge(., object!(parsed))
               }
 
-              level = downcase(string(.level) ?? "info")
-              if level == "debug" {
-                .severity_number = 5
-                .severity_text   = "DEBUG"
-              } else if level == "info" {
-                .severity_number = 9
-                .severity_text   = "INFO"
-              } else if level == "warn" {
-                .severity_number = 13
-                .severity_text   = "WARN"
-              } else if level == "error" {
-                .severity_number = 17
-                .severity_text   = "ERROR"
-              } else if level == "panic" || level == "fatal" {
-                .severity_number = 21
-                .severity_text   = "FATAL"
-              } else {
-                .severity_number = 9
-                .severity_text   = "INFO"
+              levels = {
+                "debug": [5, "DEBUG"],
+                "info": [9, "INFO"],
+                "warn": [13, "WARN"],
+                "error": [17, "ERROR"],
+                "panic": [21, "FATAL"],
+                "fatal": [21, "FATAL"]
               }
+              level = get(levels, [downcase(string(.level) ?? "info")]) ?? [9, "INFO"]
+              .severity_number = level[0]
+              .severity_text = level[1]
 
           to_otlp:
             type: remap
@@ -217,7 +162,7 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
               msg       = string(.msg) ?? string(.message) ?? ""
               file_path = string(.file) ?? ""
 
-              ts_nano = to_unix_timestamp!(now(), unit: "nanoseconds")
+              ts_nano = to_unix_timestamp(now(), unit: "nanoseconds")
               ts_float, ts_err = to_float(.ts)
               if ts_err == null {
                 ts_nano = to_int(ts_float * 1000000000.0)
@@ -291,7 +236,7 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
                     "scope": { "name": "vector", "version": "" },
                     "logRecords": [{
                       "timeUnixNano":         ts_nano,
-                      "observedTimeUnixNano": to_unix_timestamp!(now(), unit: "nanoseconds"),
+                      "observedTimeUnixNano": to_unix_timestamp(now(), unit: "nanoseconds"),
                       "severityNumber":       sev_num,
                       "severityText":         sev_text,
                       "body":                 { "stringValue": msg },
@@ -318,122 +263,87 @@ description: "Ship Caddy's JSON access and error logs to Rootprint over OTLP wit
               compression: gzip
               request:
                 headers:
-                  Authorization: "Bearer <your-ingest-token>"
+                  Authorization: "Bearer <your-ingest-api-key>"
               batch:
                 timeout_secs: 1
                 max_bytes: 8388608
         ```
         </Expandable>
+      </Tab>
+    </Tabs>
 
-        `read_from: end` skips existing content on first start, so installing Vector against an
-        existing `access.log` does not replay every historical request. Flip it to `beginning` if
-        you want a one-time backfill.
-      </Step>
+    The Collector config (`start_at: end`) reads only lines written after each start, so it skips
+    lines written while it was stopped. Vector (`read_from: end`) skips existing lines on first start
+    only, then resumes from its checkpoint.
+  </Step>
 
-      <Step title="Grant Vector read access to /var/log/caddy">
-        The default Caddy package creates `/var/log/caddy/` owned by `caddy:caddy` with mode `750`,
-        so Vector's `vector` user cannot read it. Add `vector` to the `caddy` group:
+  <Step title="Grant read access to /var/log/caddy">
+    Let the `caddy` group enter the log directory, and add your agent's user to that group:
 
-        ```bash
-        sudo usermod -aG caddy vector
-        ```
-      </Step>
+    ```bash
+    sudo chmod 750 /var/log/caddy
+    sudo usermod -aG caddy otelcol-contrib   # Vector: sudo usermod -aG caddy vector
+    ```
+  </Step>
 
-      <Step title="Restart Vector">
-        ```bash
-        sudo systemctl restart vector
-        sudo systemctl status vector
-        ```
+  <Step title="Restart the agent">
+    Run `sudo systemctl restart otelcol-contrib` or `sudo systemctl restart vector`. The agent's
+    log should show no config or exporter errors.
+  </Step>
 
-        The status output should show `active (running)` and the most recent log lines should not
-        contain config-parse or sink-startup errors.
-      </Step>
+  <Step title="Send a test request">
+    Hit a site that has a `log` block:
 
-      <Step title="Send a test request">
-        Hit any site Caddy is serving so it writes a fresh access-log line:
+    ```bash
+    curl -i http://localhost/
+    ```
+  </Step>
 
-        ```bash
-        curl -i http://localhost/
-        ```
-
-        Replace `http://localhost/` with whichever site URL you configured the `log` block on.
-      </Step>
-
-      <Step title="Verify in Rootprint">
-        Open Search, pick `otel-logs-v0_9` from the index selector, and query
-        `service_name:caddy`. Records typically appear within 5–10 seconds.
-      </Step>
-    </Steps>
-  </Tab>
-</Tabs>
+  <Step title="Verify in Rootprint">
+    Open **Logs**, pick `otel-logs-v0_9` from the index selector, and search for
+    `service_name:caddy`. Records typically appear within 5–10 seconds.
+  </Step>
+</Steps>
 
 ## What you get in Rootprint
 
-Two `remap` transforms (Vector) or OTTL `transform` statements (OTEL Collector) map Caddy's JSON fields to OpenTelemetry semantic conventions. Both agents produce the same attributes in `otel-logs-v0_9`.
+Both agents produce the same attributes. Entries without a `request` object, such as Caddy's runtime logs, carry only `caddy.logger` and `log.file.path`.
 
-`service.name` is hard-coded to `caddy` (resource attribute). The `if exists(.request)` / `where body["request"] != nil` guard makes one config handle both access and error logs cleanly: error-log entries (no `.request` block) get only `log.file.path`/`caddy.logger`, while access-log entries get the full HTTP attribute set.
+| OTLP key                    | Source field                                                |
+| --------------------------- | ----------------------------------------------------------- |
+| `http.request.method`       | `.request.method`                                           |
+| `url.path`                  | `.request.uri`                                              |
+| `server.address`            | `.request.host`                                             |
+| `client.address`            | `.request.remote_ip`                                        |
+| `client.port`               | `.request.remote_port` (integer)                            |
+| `network.protocol.name`     | first half of `.request.proto` split on `/`                 |
+| `network.protocol.version`  | second half of `.request.proto`                             |
+| `user_agent.original`       | first element of `.request.headers."User-Agent"`            |
+| `http.response.status_code` | `.status`                                                   |
+| `http.response.body.size`   | `.size`                                                     |
+| `caddy.logger`              | `.logger` (e.g., `http.log.access.log0`, `http.log.error`)  |
+| `log.file.path`             | source file path (Vector only)                              |
 
-| OTLP key                                                                                      | Source field                                          |
-| --------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `http.request.method`                                                                         | `.request.method`                                     |
-| `url.path`                                                                                    | `.request.uri`                                        |
-| `server.address`                                                                              | `.request.host`                                       |
-| `client.address`                                                                              | `.request.remote_ip`                                  |
-| `client.port`                                                                                 | `.request.remote_port` (parsed to int)                |
-| `network.protocol.name`                                                                       | first half of `.request.proto` split on `/`           |
-| `network.protocol.version`                                                                    | second half of `.request.proto`                       |
-| `user_agent.original`                                                                         | first element of `.request.headers."User-Agent"`      |
-| `http.response.status_code`                                                                   | `.status`                                             |
-| `http.response.body.size`                                                                     | `.size`                                               |
-| `caddy.logger`                                                                                | `.logger` (e.g., `http.log.access`, `http.log.error`) |
-| `log.file.path`                                                                               | file path (Vector file source only)                           |
-
-`timeUnixNano` is derived from Caddy's `.ts` (float seconds since epoch); if the field is missing or unparseable, the agent's read time is used as a fallback.
+- **Log level**: taken from Caddy's `level` field. Caddy logs 5xx responses at `error`, and `panic` and `fatal` map to `FATAL`.
+- **Timestamp**: taken from Caddy's `ts` field, with the agent's read time as a fallback.
 
 ## Useful searches
 
-Run these in the Rootprint search box against `otel-logs-v0_9`.
-
-Every 5xx response Caddy returned, across all sites:
-
-```text
-service_name:caddy AND attributes.http.response.status_code:>=500
-```
-
-All 4xx responses for one URL prefix, useful for spotting bad clients hammering one endpoint:
-
-```text
-service_name:caddy AND attributes.url.path:/api/* AND attributes.http.response.status_code:>=400
-```
-
-Activity from a single source IP, pivot from a suspect address back to everything it touched:
-
-```text
-attributes.client.address:1.2.3.4
-```
-
-Failed POSTs only:
-
-```text
-service_name:caddy AND attributes.http.request.method:POST AND attributes.http.response.status_code:>=400
-```
-
-Access-log entries only (skip Caddy's runtime/error logger):
-
-```text
-service_name:caddy AND attributes.caddy.logger:http.log.access
-```
+| Find                        | Query                                                                                              |
+| --------------------------- | -------------------------------------------------------------------------------------------------- |
+| 5xx responses               | `service_name:caddy AND attributes.http.response.status_code:>=500`                                |
+| 4xx and 5xx under one path  | `service_name:caddy AND attributes.url.path:/api/* AND attributes.http.response.status_code:>=400` |
+| One client IP               | `attributes.client.address:1.2.3.4`                                                                |
+| Access-log entries only     | `service_name:caddy AND attributes.caddy.logger:http.log.access*`                                  |
 
 ## Troubleshooting
 
-- **Records arrive but `attributes.http.*` are missing**: the entry came from `error.log` (no `.request` block), by design. Filter access-log entries with `attributes.caddy.logger:http.log.access`.
-- **`body` looks like raw JSON instead of the message alone**: the access log is using a non-default `format` directive in the Caddyfile. The parser expects Caddy's default JSON encoder. Either remove the `format` directive or extend the config to handle the alternate shape.
-- **`severity_text` is always `INFO` even for 5xx responses**: by design. Caddy emits every HTTP access at `level: info` regardless of status code; both agents trust the source. Filter on `attributes.http.response.status_code:>=500` to surface server errors.
-- **Ingest transport errors (`401`, `403`, `413`, `415`)**: see [OTLP reference → Response codes](/send-logs/otlp#response-codes).
+- **`body` is raw JSON and entries have no `http.*` attributes**: the Caddyfile sets a `format` directive. The parsers expect Caddy's default JSON encoder. Remove the `format` directive or extend the parser.
+- **401/403/413/415**: see [Response codes](/send-logs/otlp#response-codes).
 
 ## Related
 
-- [Send Nginx logs](/send-logs/web-servers/nginx): sibling page for Nginx.
-- [Send logs with Vector](/send-logs/log-agents/vector): generic Vector setup for tailing files on a host.
-- [OTLP reference](/send-logs/otlp): endpoint URL, response codes, body limits.
-- [Indexes](/indexes): the `otel-logs-v0_9` schema, so you know what you can search.
+- [Send logs with the OpenTelemetry Collector](/send-logs/log-agents/otel-collector) and [Send logs with Vector](/send-logs/log-agents/vector): install and run the agents.
+- [Send Nginx logs](/send-logs/web-servers/nginx): the same setup for nginx.
+- [OTLP reference](/send-logs/otlp): endpoint, response codes, limits.
+- [Indexes](/indexes): the `otel-logs-v0_9` schema.

@@ -3,7 +3,7 @@ title: 'Send traces'
 description: 'Send OpenTelemetry spans to Rootprint over OTLP HTTP with an ingest API key, from Python, Node.js, Go, or the OpenTelemetry Collector.'
 ---
 
-Rootprint accepts OTLP spans at a single endpoint, authenticated with an ingest API key. Spans go to the span store, not to the key's index — see [Traces](/traces/overview) for what that means.
+Rootprint accepts OTLP spans at a single endpoint, authenticated with an ingest API key. Spans go to the span store, not to the key's index. See [Traces](/traces/overview#the-span-store).
 
 ## Endpoint
 
@@ -14,30 +14,14 @@ POST https://<your-rootprint>/v1/traces
 ## Authentication
 
 ```
-Authorization: Bearer <ingest-token>
+Authorization: Bearer <your-ingest-api-key>
 ```
 
 Any existing ingest API key works. Create one at **Settings → API keys** if you do not have one.
 
-<Note>
-	The index attached to the key is **ignored for spans**. Every span goes to the span store named by
-	`TRACE_INDEX_ID`. The key's index still applies to that key's log ingestion.
-</Note>
-
-<Warning>
-	Ingest keys cannot be created against the span store. `POST /api/api-keys` rejects it with
-	`400 INDEX_IS_TRACE_INDEX`, because a key anchored there would write log documents into the span
-	index.
-
-	A key created against it before 0.4.0 keeps working for `POST /v1/traces`, but its log ingestion
-	(`POST /v1/logs`, `POST /api/ingest/ndjson`) is now rejected with the same error.
-</Warning>
-
 ## Supported content types
 
 Rootprint accepts `application/x-protobuf` only. Any other `Content-Type` returns **415 Unsupported Media Type**.
-
-Set `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` on any runtime that can pick a protocol.
 
 <Warning>
 	The JavaScript package `@opentelemetry/exporter-trace-otlp-http` defaults to JSON. Switch to
@@ -50,8 +34,9 @@ Set `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` on any runtime that can pick a p
 | -------- | ----- |
 | `OTEL_SERVICE_NAME` | Your service name (lands in the span's `service_name`). |
 | `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | `https://<your-rootprint>/v1/traces` |
-| `OTEL_EXPORTER_OTLP_TRACES_HEADERS` | `Authorization=Bearer%20<your-ingest-token>` |
+| `OTEL_EXPORTER_OTLP_TRACES_HEADERS` | `Authorization=Bearer%20<your-ingest-api-key>` |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` |
+| `OTEL_METRICS_EXPORTER`, `OTEL_LOGS_EXPORTER` | `none` for the Python and Node.js agents. They default to `otlp` and would retry `localhost:4318` forever. |
 
 The endpoint variable takes the **full path**, not a base URL.
 
@@ -65,20 +50,20 @@ The endpoint variable takes the **full path**, not a base URL.
 <Tabs>
 <Tab title="Python">
 
-Install the zero-code agent. `opentelemetry-distro` brings the agent and the SDK; `opentelemetry-bootstrap` reads your installed packages and adds the matching instrumentation libraries, so Flask, Django, FastAPI, requests, and psycopg are traced without touching your code.
+Install the zero-code agent. `opentelemetry-bootstrap` adds instrumentation for the libraries you have installed, such as Flask, Django, FastAPI, requests, and psycopg.
 
 ```bash
 pip install opentelemetry-distro opentelemetry-exporter-otlp-proto-http
 opentelemetry-bootstrap -a install
 ```
 
-Set the environment. Metrics and logs are switched off here — they default to `otlp` and would retry `localhost:4318` forever.
+Set the environment.
 
 ```bash
 export OTEL_SERVICE_NAME=my-python-service
 export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT='https://<your-rootprint>/v1/traces'
-export OTEL_EXPORTER_OTLP_TRACES_HEADERS=Authorization=Bearer%20rp_your-ingest-token
+export OTEL_EXPORTER_OTLP_TRACES_HEADERS=Authorization=Bearer%20rp_your-ingest-api-key
 export OTEL_METRICS_EXPORTER=none
 export OTEL_LOGS_EXPORTER=none
 ```
@@ -92,37 +77,40 @@ opentelemetry-instrument python app.py
 </Tab>
 <Tab title="Node.js">
 
-Install the auto-instrumentation package. The `register` entrypoint starts the SDK and patches every supported library — `http`, `express`, `fastify`, `pg`, `redis` — before your code loads.
+Install the auto-instrumentation package. Its `register` entrypoint patches `http`, `express`, `koa`, `pg`, `redis`, and more before your code loads. For Fastify, also add [`@fastify/otel`](https://github.com/fastify/otel).
 
 ```bash
 npm install @opentelemetry/api @opentelemetry/auto-instrumentations-node
 ```
 
-Set the environment. Metrics and logs are switched off here — they default to `otlp` and would retry `localhost:4318` forever.
+Set the environment.
 
 ```bash
 export OTEL_SERVICE_NAME=my-node-service
 export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT='https://<your-rootprint>/v1/traces'
-export OTEL_EXPORTER_OTLP_TRACES_HEADERS=Authorization=Bearer%20rp_your-ingest-token
+export OTEL_EXPORTER_OTLP_TRACES_HEADERS=Authorization=Bearer%20rp_your-ingest-api-key
 export OTEL_METRICS_EXPORTER=none
 export OTEL_LOGS_EXPORTER=none
 ```
 
-Start your app with the register hook. Use `--import` instead of `--require` if your entrypoint is ESM.
+Start your app with the register hook.
 
 ```bash
 node --require @opentelemetry/auto-instrumentations-node/register app.js
 ```
 
+If your entrypoint is ESM, add the loader hook as well. Without it, modules loaded with `import` are not patched.
+
+```bash
+node --experimental-loader=@opentelemetry/instrumentation/hook.mjs \
+  --import @opentelemetry/auto-instrumentations-node/register app.js
+```
+
 </Tab>
 <Tab title="Go">
 
-Go has no stable zero-code agent, so the provider is wired up in code. Initialize a module if you do not already have one, then add the SDK with the HTTP/protobuf trace exporter.
-
-```bash
-go mod init example.com/rootprint-demo
-```
+Go has no stable zero-code agent, so you wire up the provider in code. Add the SDK and the HTTP/protobuf trace exporter to your module (run `go mod init` first if you have none).
 
 ```bash
 go get go.opentelemetry.io/otel \
@@ -130,12 +118,12 @@ go get go.opentelemetry.io/otel \
     go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
 ```
 
-Set the environment. The exporter reads these automatically — no code changes per service.
+Set the environment. The exporter reads these automatically.
 
 ```bash
 export OTEL_SERVICE_NAME=my-go-service
 export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT='https://<your-rootprint>/v1/traces'
-export OTEL_EXPORTER_OTLP_TRACES_HEADERS=Authorization=Bearer%20rp_your-ingest-token
+export OTEL_EXPORTER_OTLP_TRACES_HEADERS=Authorization=Bearer%20rp_your-ingest-api-key
 ```
 
 Save this to `main.go` and run `go run .` — `Shutdown` flushes the batch before the process exits. Then instrument for real with the `net/http` and database wrappers in `go.opentelemetry.io/contrib`.
@@ -169,9 +157,9 @@ func main() {
 </Tab>
 <Tab title="OpenTelemetry Collector">
 
-Install the Contrib distribution (`otelcol-contrib`) for your platform. Per-platform packages are maintained [upstream](https://opentelemetry.io/docs/collector/installation/).
+Install the Contrib distribution (`otelcol-contrib`) v0.149 or newer, which accepts the `otlp_http` exporter name used below. See the [upstream install guide](https://opentelemetry.io/docs/collector/installation/).
 
-Save this at `/etc/otelcol-contrib/config.yaml`. The `otlp` receiver listens on 4317 (gRPC) and 4318 (HTTP) — point your instrumented services at the Collector instead of at Rootprint directly, and it batches and forwards their spans.
+Save this at `/etc/otelcol-contrib/config.yaml`, then point your instrumented services at the Collector (4317 for gRPC, 4318 for HTTP) instead of at Rootprint.
 
 ```yaml
 receivers:
@@ -186,21 +174,21 @@ processors:
   batch: {}
 
 exporters:
-  otlphttp:
+  otlp_http:
     traces_endpoint: https://<your-rootprint>/v1/traces
     compression: gzip
     headers:
-      Authorization: "Bearer rp_your-ingest-token"
+      Authorization: "Bearer rp_your-ingest-api-key"
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlphttp]
+      exporters: [otlp_http]
 ```
 
-If you already configured the Collector for logs, merge this receiver, exporter, and pipeline into that file rather than replacing it. One `otlphttp` exporter carries both signals — keep `logs_endpoint` and `traces_endpoint` side by side and declare both pipelines.
+If the Collector already ships logs, merge this receiver, exporter, and pipeline into that file rather than replacing it. One `otlp_http` exporter carries both signals: set `logs_endpoint` and `traces_endpoint` side by side and declare both pipelines.
 
 Restart the Collector:
 
@@ -209,7 +197,7 @@ sudo systemctl restart otelcol-contrib
 sudo systemctl status otelcol-contrib
 ```
 
-Send a test span. JSON is fine on this hop — the Collector re-encodes to protobuf on export. The IDs are fixed, so repeat runs add spans to the same trace.
+Send a test span. JSON is fine on this hop, because the Collector re-encodes to protobuf on export.
 
 ```bash
 NOW=$(date +%s)
@@ -223,27 +211,27 @@ curl -sS -X POST http://localhost:4318/v1/traces \
 
 ## Correlate spans with logs
 
-Spans are reached from a log. Ship logs from the same service as well, and Rootprint pairs the two by `trace_id` so any log row opens its trace. See [Send logs](/send-logs/overview) and [Read a trace](/traces/explore).
+Ship logs from the same service as well, and Rootprint pairs logs and spans by trace ID. See [Send logs](/send-logs/overview) and [Correlate logs with traces](/traces/explore#correlate-logs-with-traces).
 
-For the Collector, pairing works once the application's own log records carry trace context — for example through an OpenTelemetry log appender. It does not work for tailed stdout or file lines, which have no trace context to carry.
+With the Collector, log records need trace context: from an OpenTelemetry log appender in the application, or a `trace_parser` operator that reads the trace ID out of tailed lines.
 
 ## Response codes
 
 | Status | Meaning |
 | ------ | ------- |
-| `200` | Accepted. Carries `partial_success` when Quickwit rejected some spans. |
-| `400` | Upstream rejected the request. |
-| `401` | Missing ingest bearer token. |
+| `200` | Accepted. Carries `partial_success` when some spans were rejected. |
+| `401` | Missing ingest API key. |
 | `403` | Invalid or unknown ingest API key. |
 | `413` | Payload too large. |
 | `415` | `Content-Type` is not `application/x-protobuf`. |
-| `429` | Upstream rate limit exceeded. Honor `Retry-After`. |
-| `503` | Upstream unavailable. Every upstream `5xx` is reported as `503`, which OTLP clients treat as retryable. |
+| `429` | Rate limit exceeded. Honor `Retry-After`. |
+| `503` | Quickwit unavailable. OTLP clients retry it. |
 
-Errors use the `google.rpc.Status` encoding. `415` is JSON; every other error is binary protobuf, because an exporter that sent the wrong content type may not decode protobuf back.
+See [`POST /v1/traces`](/api/reference/trace-ingest/ingest-otlp-traces-protobuf) for every status and the error encoding.
 
 ## Related
 
 - [Traces](/traces/overview)
+- [Trace explorer](/traces/search)
 - [Read a trace](/traces/explore)
 - [OTLP reference](/send-logs/otlp) for the logs endpoint
