@@ -70,6 +70,8 @@ description: 'Tail log files with Fluent Bit — on bare metal or in Docker — 
            ```bash
            sudo mkdir -p /var/lib/fluent-bit
            ```
+
+           If your `systemd` unit runs Fluent Bit as a non-root user, also `chown` the directory to that user.
         2. The package's `systemd` unit loads `fluent-bit.conf`. Point it at the YAML file:
 
            ```bash

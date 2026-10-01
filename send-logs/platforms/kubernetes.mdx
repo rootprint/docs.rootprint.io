@@ -166,7 +166,7 @@ To filter on something the path doesn't carry, add a `filter` processor after `k
 
 ### Collect selectively instead
 
-To have workloads opt **in**, use annotation-based discovery and drop the `file_log` block:
+To have workloads opt **in**, use annotation-based discovery and drop the `file_log` block. The preset collects every pod unless you set its default annotation to `"false"`:
 
 ```yaml
 presets:
@@ -175,6 +175,13 @@ presets:
   annotationDiscovery:
     logs:
       enabled: true
+
+config:
+  receivers:
+    receiver_creator/logs:
+      discovery:
+        default_annotations:
+          io.opentelemetry.discovery.logs/enabled: "false"
 ```
 
 Annotate the pods to collect:

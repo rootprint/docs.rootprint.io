@@ -26,7 +26,7 @@ Each provider page covers registering the app and the fields to fill in. Two thi
 
 ## Remove a provider
 
-Open **Settings → Authentication**, click **Edit** on the provider's row, and click **Remove**. The sign-in button disappears, and every session opened through that provider ends. Removing OpenID Connect also removes its link from every account.
+Open **Settings → Authentication**, click **Edit** on the provider's row, and click **Remove**. The sign-in button disappears, and every user with an account linked to that provider is signed out of all sessions, including password sessions. Removing OpenID Connect also removes its link from every account.
 
 Users keep their Rootprint accounts. They can sign in with another linked provider, or with a password while [password sign-in](#password-sign-in) is on. An admin can [reset the password](/configuration/users#reset-a-password) of anyone who has none.
 

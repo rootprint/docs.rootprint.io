@@ -303,7 +303,9 @@ This page tails nginx's access and error logs and ships them to Rootprint over O
       </Tab>
     </Tabs>
 
-    Both configs skip existing lines on first start (`start_at: end`, `read_from: end`).
+    The Collector config (`start_at: end`) reads only lines written after each start, so it skips
+    lines written while it was stopped. Vector (`read_from: end`) skips existing lines on first start
+    only, then resumes from its checkpoint.
   </Step>
 
   <Step title="Grant read access to /var/log/nginx">

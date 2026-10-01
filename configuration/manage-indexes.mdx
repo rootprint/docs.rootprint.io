@@ -13,9 +13,15 @@ Admins manage indexes from **Settings → Indexes**: the index list, how each in
 
 Click **Create index** to define a new index from a form. See [Create a custom index](/configuration/custom-indexes) for every field, type, and tokenizer the form offers.
 
+## Edit an index
+
+Click **Edit** on the index detail page to change its mode, dynamic mapping, default search fields, tag fields, partition key, retention, commit timeout, **Store source**, and **Index field presence**. You can also add new fields. Changes apply only to documents indexed after you save.
+
+The index ID, index URI, timestamp field, and existing fields can't change. To change them, delete and recreate the index.
+
 ## Index detail page
 
-The detail page header shows the index ID and a **Delete** action. Below it are three tabs: **Configuration**, **Fields**, and **Sources**.
+The detail page header shows the index ID and the **Edit** and **Delete** actions. Below it are three tabs: **Configuration**, **Fields**, and **Sources**.
 
 ### Configuration tab
 
@@ -39,7 +45,7 @@ These settings tell Rootprint which fields carry the log level, message, stacktr
 
 ### Fields tab
 
-Lists every field in the index schema with its type and whether it is [fast](/configuration/custom-indexes#indexed-stored-and-fast). Filter by name to find a specific field. The view is read-only. To change field definitions, recreate the index from the Create index form.
+Lists every field in the index schema with its type and whether it is [fast](/configuration/custom-indexes#indexed-stored-and-fast). Filter by name to find a specific field. The view is read-only. To add fields, [edit the index](#edit-an-index).
 
 ### Sources tab
 

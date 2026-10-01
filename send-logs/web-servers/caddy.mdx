@@ -17,19 +17,24 @@ This page ships Caddy's JSON logs to Rootprint over OTLP with the **OpenTelemetr
     Caddy's `systemd` service logs to `journald` by default. Add these blocks to
     `/etc/caddy/Caddyfile` so Caddy writes JSON to files. Add a `log` block to every site whose
     access log you want to ship. Keep Caddy's default JSON encoder: don't add a `format` directive.
+    `mode 0640` lets the `caddy` group read the log files. It needs Caddy 2.9 or later.
 
     ```caddyfile
     # Global block — Caddy runtime errors
     {
         log default {
-            output file /var/log/caddy/error.log
+            output file /var/log/caddy/error.log {
+                mode 0640
+            }
         }
     }
 
     # Per-site — JSON access log
     example.com {
         log {
-            output file /var/log/caddy/access.log
+            output file /var/log/caddy/access.log {
+                mode 0640
+            }
         }
         # ... rest of the site config
     }
@@ -267,14 +272,16 @@ This page ships Caddy's JSON logs to Rootprint over OTLP with the **OpenTelemetr
       </Tab>
     </Tabs>
 
-    Both configs skip existing lines on first start (`start_at: end`, `read_from: end`).
+    The Collector config (`start_at: end`) reads only lines written after each start, so it skips
+    lines written while it was stopped. Vector (`read_from: end`) skips existing lines on first start
+    only, then resumes from its checkpoint.
   </Step>
 
   <Step title="Grant read access to /var/log/caddy">
-    The Caddy package creates `/var/log/caddy/` as `caddy:caddy` with mode `750`. Add your agent's
-    user to the `caddy` group:
+    Let the `caddy` group enter the log directory, and add your agent's user to that group:
 
     ```bash
+    sudo chmod 750 /var/log/caddy
     sudo usermod -aG caddy otelcol-contrib   # Vector: sudo usermod -aG caddy vector
     ```
   </Step>

@@ -40,8 +40,8 @@ Both limiters are per process, so a horizontally scaled deployment multiplies th
 
 | Variable                | Default | Description                                                                                                                                            |
 | ----------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `RATE_LIMIT_WINDOW_MS`  | `60000` | Window length in milliseconds, shared by both limiters. Also the `Retry-After` value returned with a `429`.                                             |
-| `PUBLIC_AUTH_RATE_LIMIT`| `30`    | Requests per client IP per window on unauthenticated auth routes (sign-in, password reset, invite acceptance).                                          |
+| `RATE_LIMIT_WINDOW_MS`  | `60000` | Window length in milliseconds, shared by both limiters. A `429` sends the window in seconds, rounded up, as `Retry-After` (`60` by default).          |
+| `PUBLIC_AUTH_RATE_LIMIT`| `30`    | Requests per client IP per window on unauthenticated auth routes (first-admin setup, and invite and password-reset links).                               |
 | `READ_RATE_LIMIT`       | `300`   | Requests per signed-in user per window on search, histogram, field values, trace and service health reads, and share resolution.                                           |
 | `TRUST_PROXY_HOPS`      | `0`     | Number of trusted reverse proxies in front of Rootprint that append to `X-Forwarded-For`. `0` uses the TCP peer address.                                |
 
