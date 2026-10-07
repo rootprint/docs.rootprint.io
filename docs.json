@@ -213,7 +213,7 @@
         "groups": [
           {
             "group": "Overview",
-            "pages": ["api/overview", "api/query-logs"]
+            "pages": ["api/overview", "api/query-logs", "api/mcp"]
           },
           {
             "group": "Log ingest API",

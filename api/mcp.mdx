@@ -1,0 +1,78 @@
+---
+title: 'Connect an AI agent'
+description: 'Let Claude Code, Cursor, or another MCP client search your logs and traces through the read-only Rootprint MCP server.'
+---
+
+Rootprint serves a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server at `/api/mcp`. Connect an AI agent to it and the agent can search logs, count them over time, list top field values, find slow or failing spans, and read whole traces. It cannot change anything.
+
+## Before you start
+
+Create a [personal API key](/api/query-logs#create-a-personal-key) so the agent acts as you. For a shared agent, use a [service account key](/api/query-logs#create-a-service-account-key) instead.
+
+## Claude Code
+
+```bash
+claude mcp add --transport http rootprint https://<your-rootprint>/api/mcp \
+  --header "Authorization: Bearer rpk_abcdef0123456789..."
+```
+
+## Cursor
+
+Add the server to `~/.cursor/mcp.json`, or to `.cursor/mcp.json` in a project:
+
+```json
+{
+  "mcpServers": {
+    "rootprint": {
+      "url": "https://<your-rootprint>/api/mcp",
+      "headers": { "Authorization": "Bearer rpk_abcdef0123456789..." }
+    }
+  }
+}
+```
+
+## Claude Desktop and other stdio clients
+
+Clients that only start local processes can reach the server through [`mcp-remote`](https://www.npmjs.com/package/mcp-remote). For Claude Desktop, add this to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "rootprint": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://<your-rootprint>/api/mcp",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": { "AUTH_HEADER": "Bearer rpk_abcdef0123456789..." }
+    }
+  }
+}
+```
+
+## Tools
+
+| Tool               | What it does                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| `list_indexes`     | Lists indexes, including the span store                                                                |
+| `get_index_fields` | Lists the fields seen in an index, and which ones hold the timestamp, log level, message and trace ID |
+| `search_logs`      | Searches one index with the [query syntax](/search/query-language)                                     |
+| `log_histogram`    | Counts logs over time by log level, to find when a problem started                                     |
+| `field_values`     | Top values for up to 10 fields                                                                         |
+| `search_spans`     | Searches spans by service, operation, status, and duration, over at most 30 days                       |
+| `get_trace`        | Reads every span of one trace                                                                          |
+
+Times accept ISO 8601 with a timezone, such as `2026-10-06T14:30:00Z`, or relative values such as `now`, `now-15m`, and `now-7d`. Results are trimmed to fit an agent's context: long values are cut, large traces return their first 200 spans, and a result too large for the agent comes back as an error asking for a narrower query.
+
+## Try it
+
+Ask your agent: "Which services logged the most errors in the last hour, and when did it start?"
+
+## Access and limits
+
+- The server accepts only a bearer key, never a browser session.
+- Agent requests share the key owner's read rate limit ([`READ_RATE_LIMIT`](/configuration/environment-variables)) with their searches in the UI.
+- Log searches, span searches, and trace lookups appear to admins in **Settings → Activity** as API key searches.
