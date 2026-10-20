@@ -213,7 +213,7 @@
         "groups": [
           {
             "group": "Overview",
-            "pages": ["api/overview", "api/query-logs"]
+            "pages": ["api/overview", "api/query-logs", "api/mcp"]
           },
           {
             "group": "Log ingest API",
@@ -295,6 +295,7 @@
               "GET /api/indexes/{indexId}/config",
               "PUT /api/indexes/{indexId}/quickwit-config",
               "GET /api/indexes/{indexId}/stats",
+              "GET /api/indexes/{indexId}/describe",
               "GET /api/indexes/{indexId}/preferences",
               "PUT /api/indexes/{indexId}/preferences"
             ]
@@ -433,6 +434,9 @@
               "GET /api/admin/activity/api-keys/{apiKeyId}/volume",
               "GET /api/admin/activity/api-keys/{apiKeyId}/latency",
               "GET /api/admin/activity/api-keys/{apiKeyId}/recent",
+              "GET /api/admin/activity/indexes/{indexId}/summary",
+              "GET /api/admin/activity/indexes/{indexId}/latency",
+              "GET /api/admin/activity/indexes/{indexId}/actors",
               "GET /api/admin/metrics",
               "GET /api/admin/metrics/raw"
             ]

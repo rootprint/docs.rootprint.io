@@ -70,7 +70,9 @@ If exact-match terms are missing on a custom index, check the field's tokenizer.
 
 ## Time ranges
 
-The UI's time picker bounds every query, so you don't write a timestamp clause. When you call the log endpoint directly, pass `startTs` and `endTs` in **seconds**, whatever the field's precision, and authenticate with a [query API key](/api/query-logs):
+The UI's time picker bounds every query, so you don't write a timestamp clause. The picker, timestamps, and charts use your browser's time zone. To show them in UTC, turn on **Time in UTC** in the user menu.
+
+When you call the log endpoint directly, pass `startTs` and `endTs` in **seconds**, whatever the field's precision, and authenticate with a [query API key](/api/query-logs):
 
 ```http
 GET /api/indexes/{indexId}/logs?q=severity_text:ERROR&startTs=1776340000&endTs=1776343600
