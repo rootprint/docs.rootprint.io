@@ -1,6 +1,6 @@
 ---
 title: 'Manage indexes'
-description: 'Inspect, configure, and delete indexes from Rootprint: the index list, per-index field-role mapping, fields, sources, and deletion.'
+description: 'Inspect, configure, and delete indexes from Rootprint: the index list, per-index overview, field-role mapping, fields, sources, and deletion.'
 ---
 
 Admins manage indexes from **Settings → Indexes**: the index list, how each index appears in the search UI, the sources that feed it, and deletion.
@@ -26,7 +26,17 @@ The index ID, index URI, timestamp field, and existing fields can't change. To c
 
 ## Index detail page
 
-The detail page header shows the index ID and the **Edit** and **Delete** actions. Below it are three tabs: **Configuration**, **Fields**, and **Sources**.
+The detail page header shows the index ID and the **Open in Logs** (or **Open in Traces** for the span store), **Edit**, and **Delete** actions. Below it are four tabs: **Overview**, **Configuration**, **Fields**, and **Sources**.
+
+### Overview tab
+
+The page opens on the Overview tab:
+
+- **Stats**: document count, index size, uncompressed size, compression ratio, split count, and the time of the last event. A green dot next to the last event means the index received data in the last five minutes.
+- **Events, last 24 hours**: indexed events over time. Drag across the chart to open that range in Logs. The span store doesn't show this chart.
+- **Index size**: how the index has grown over the selected range.
+- **Ingest keys**: the ingest API keys that write to this index. On the span store, it lists every ingest API key, because every key's spans go there.
+- **Search activity**: searches against this index, their latency, and who runs the most.
 
 ### Configuration tab
 

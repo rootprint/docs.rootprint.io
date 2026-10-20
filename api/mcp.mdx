@@ -62,7 +62,7 @@ Clients that only start local processes can reach the server through [`mcp-remot
 | `search_logs`      | Searches one index with the [query syntax](/search/query-language)                                     |
 | `log_histogram`    | Counts logs over time by log level, to find when a problem started                                     |
 | `field_values`     | Top values for up to 10 fields                                                                         |
-| `search_spans`     | Searches spans by service, operation, status, and duration, over at most 30 days                       |
+| `search_spans`     | Searches spans by service, operation, status, and duration                                             |
 | `get_trace`        | Reads every span of one trace                                                                          |
 
 Times accept ISO 8601 with a timezone, such as `2026-10-06T14:30:00Z`, or relative values such as `now`, `now-15m`, and `now-7d`. Results are trimmed to fit an agent's context: long values are cut, large traces return their first 200 spans, and a result too large for the agent comes back as an error asking for a narrower query.
