@@ -7,6 +7,12 @@ The bundled `otel-logs-v0_9` index works for any application that emits OpenTele
 
 Open **Settings → Indexes → Create index**. When you save, Rootprint creates the index in Quickwit and opens its detail page, where you [map its fields](/configuration/manage-indexes#field-role-mappings) into the search UI. The same form is available over the API as `POST /api/indexes`; see the [Index management API](/api/overview).
 
+## Start from a template
+
+**Start from** fills the form for you. **Blank** is the default. **OpenTelemetry logs** loads the schema OTLP log ingest needs, the same one as the bundled `otel-logs-v0_9` index. Use it for a second index that receives OTLP logs, then set the index ID and adjust retention.
+
+Picking a template replaces everything already entered in the form, so choose it first.
+
 ## Index ID
 
 <Frame>
@@ -39,7 +45,7 @@ Add a row per field with **Add field**, then set its name, type, and options. At
 
 ### Field types
 
-`text` (searchable strings), `i64` and `u64` (signed and unsigned integers), `f64` (floating point), `datetime`, `bool`, `ip` (IPv4 or IPv6 addresses), and `json` (free-form key-value objects).
+`text` (searchable strings), `i64` and `u64` (signed and unsigned integers), `f64` (floating point), `datetime`, `bool`, `ip` (IPv4 or IPv6 addresses), `json` (free-form key-value objects), and `bytes` (binary values sent as base64 or hex strings).
 
 ### Indexed, stored, and fast
 
@@ -60,11 +66,14 @@ Depending on the field type, the editor exposes extra options:
 | `text`          | **tokenizer**; **record**; **fieldnorms** (store field-length norms for scoring)                                                    |
 | `json`          | **tokenizer**; **record**; **expand dots** (treat `a.b` keys as nested `a` → `b`)                                                    |
 | `i64` / `u64` / `f64` | **coerce** (accept numbers sent as strings)                                                                                   |
+| `bytes`         | **input** and **output**: `base64` (the default) or `hex`                                                                            |
 | `datetime`      | **input formats**: how incoming values are parsed. Tick any of `rfc3339`, `iso8601`, `rfc2822`, `unix_timestamp`, and add custom [strptime](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) patterns one per line. **output**: `rfc3339` or `unix_timestamp_secs`/`millis`/`micros`/`nanos`. **precision** of the fast column: `seconds`, `milliseconds`, `microseconds`, or `nanoseconds`. |
+
+Turning **Indexed** off disables **tokenizer**, **record**, and **fieldnorms**.
 
 **Record** sets how much term data the inverted index keeps: `basic` (which documents contain the term), `freq` (also term frequency), or `position` (also token positions, required for phrase queries).
 
-`text` and `json` fields also have a **default search** checkbox. Tick it to search the field when a query doesn't name one, so `timeout` matches `message:timeout` without the user typing the field.
+`text` and `json` fields also have a **default search** checkbox. Tick it to search the field when a query doesn't name one, so `timeout` matches `message:timeout` without the user typing the field. For a `json` field, also enter the **path** to search inside the object, such as `message`. A query without a field name matches that exact path, not the keys below it.
 
 ### Tokenizers
 
@@ -108,7 +117,7 @@ The rest of the form is optional, and most deployments leave it at the defaults:
 Saving the form lands you on the new index's detail page. To finish wiring it up:
 
 1. On the **Configuration** tab, set the [field-role mappings](/configuration/manage-indexes#field-role-mappings) so the message, log level, and traceback render correctly.
-2. Create an [ingest API key](/api/overview) scoped to the index and route writes through the [HTTP endpoint](/send-logs/http). Don't send OTLP to a custom-schema index: Quickwit answers `200` and discards the logs. See [Index target](/send-logs/otlp#index-target).
+2. Create an [ingest API key](/api/overview) scoped to the index and route writes through the [HTTP endpoint](/send-logs/http). Send OTLP only to an index created from the **OpenTelemetry logs** template. For any other schema, Quickwit answers `200` and discards the logs. See [Index target](/send-logs/otlp#index-target).
 
 ## Related
 

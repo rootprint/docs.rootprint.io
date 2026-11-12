@@ -55,7 +55,7 @@ Retry `429` and `503` after the `Retry-After` delay.
 
 ## Index target
 
-The ingest API key sets the target index, not the SDK. A key scoped to another index writes there without an error. To write to a different index, create an ingest API key scoped to that index in **Settings → API keys**. See [Manage indexes](/configuration/manage-indexes).
+The ingest API key sets the target index, not the SDK. A key scoped to another index writes there without an error. To write to a different index, create an ingest API key scoped to that index in **Settings → API keys**. See [Manage indexes](/configuration/manage-indexes). To create another index that accepts OTLP logs, [start from the **OpenTelemetry logs** template](/configuration/custom-indexes#start-from-a-template).
 
 <Warning>
 	OTLP logs only land in an index with the OpenTelemetry logs schema, such as the bundled

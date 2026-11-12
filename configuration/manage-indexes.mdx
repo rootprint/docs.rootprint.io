@@ -48,7 +48,7 @@ An optional label shown in the index selector and throughout the search UI, such
 
 #### Field-role mappings
 
-These settings tell Rootprint which fields carry the log level, message, stacktrace, trace ID, and search context. The defaults match the OpenTelemetry log schema, so the bundled `otel-logs-v0_9` index works without configuration. For a custom-schema index, override them so the log level, message, and traceback render correctly. Every setting accepts dot-notation paths to nested or JSON-object fields.
+These settings tell Rootprint which fields carry the log level, message, stacktrace, and trace ID. The defaults match the OpenTelemetry log schema, so the bundled `otel-logs-v0_9` index works without configuration. For a custom-schema index, override them so the log level, message, and traceback render correctly. Every setting accepts dot-notation paths to nested or JSON-object fields.
 
 | Setting             | Default                            | What it controls                                                                                                                                                               |
 | ------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -56,7 +56,6 @@ These settings tell Rootprint which fields carry the log level, message, stacktr
 | **Message field**   | `body.message`                     | The primary human-readable message shown per row in the log list. Required.                                                                                                   |
 | **Traceback field** | `attributes.exception.stacktrace`  | Path to stacktrace data. When a log entry contains it, a **Traceback** tab appears in the log detail drawer. Optional; clear it if your schema has none.                       |
 | **Trace ID field**  | `trace_id`                         | Path to the trace ID inside a log document. Links logs to traces in both directions: a **Trace** tab in the log detail drawer, and log counts on spans. See [Read a trace](/traces/explore#correlate-logs-with-traces). |
-| **Context fields**  | _(none)_                           | Fields used for log-context search. Leave empty to search across all fields. Entered as tags (press Enter to add).                                                            |
 
 ### Fields tab
 
