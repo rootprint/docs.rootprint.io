@@ -46,7 +46,7 @@ curl 'https://<your-rootprint>/api/indexes/{indexId}/logs?q=severity_text:ERROR&
   -H 'Authorization: Bearer rpk_abcdef0123456789...'
 ```
 
-`numHits` in the response is an exact count only when you add `countAll=true`. Without it, `numHits` can be lower than the real number of matches. The span search, `GET /api/traces/explore/spans`, returns `total` on the first page and `null` when `offset` is above `0`.
+`numHits` in the response is the exact count when you add `countAll=true`, and `null` without it. The span search, `GET /api/traces/explore/spans`, returns `total` on the first page and `null` when `offset` is above `0`.
 
 ## Endpoints that accept a query key
 

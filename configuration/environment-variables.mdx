@@ -25,6 +25,7 @@ Rootprint refuses to start if any required variable is missing or empty, or if `
 | `TRACE_INDEX_ID`     | `otel-traces-v0_9` | The **span store**: the one Quickwit index holding OTLP spans. See the warning below. |
 | `LOG_LEVEL`          | `info`           | API log level: `trace`, `debug`, `info`, `warn`, `error`, or `fatal`. |
 | `SEARCH_AUDIT_RETENTION_DAYS` | `30`    | Days of search activity audit rows to keep. Older rows are pruned hourly. Minimum `30`; a lower value fails startup. |
+| `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | Unset | Configure the [OpenID Connect](/configuration/oidc-auth#configure-with-environment-variables) provider from the environment instead of **Settings → Authentication**. Set all three or none; setting only some fails startup. |
 | `OIDC_DISCOVERY_TIMEOUT_MS` | `5000` | How long an [OpenID Connect](/configuration/oidc-auth) discovery fetch may take before the issuer is treated as unreachable. |
 | `OIDC_RETRY_MS` | `60000` | How long to wait before retrying OpenID Connect discovery after it fails at boot. The provider stays hidden from the sign-in page until discovery succeeds. |
 | `INGEST_PROXY_TIMEOUT_MS` | `120000` | How long an ingest request (`/api/ingest/ndjson`, `/v1/logs`, `/v1/traces`) may wait on Quickwit before Rootprint answers `503`. Set it below your shipper's request timeout so the shipper gets a retryable `503` instead of timing out. Minimum `1000`. |

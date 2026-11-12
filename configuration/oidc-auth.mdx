@@ -33,6 +33,27 @@ Rootprint supports one OpenID Connect (OIDC) provider alongside password, Google
   </Step>
 </Steps>
 
+## Configure with environment variables
+
+To keep the provider in your deployment config instead of the database, set all three variables and restart Rootprint:
+
+```bash
+OIDC_ISSUER_URL=https://auth.example.com/realms/main
+OIDC_CLIENT_ID=rootprint
+OIDC_CLIENT_SECRET=<your-client-secret>
+```
+
+Rootprint refuses to start if only some of them are set, or if the issuer URL is not `https://` or `http://` on a private network. Register the same redirect URI as in [Setup](#setup).
+
+While the variables are set, **Settings → Authentication** shows the provider read-only. To change or remove it, update the variables and restart.
+
+<Warning>
+	The variables replace any OpenID Connect settings saved in **Settings → Authentication**, and
+	Rootprint deletes the saved ones at startup. Moving a provider from the UI to the variables
+	unlinks every OpenID Connect account once, even with the same issuer and client ID. Removing the
+	variables later turns OpenID Connect off and unlinks the accounts again.
+</Warning>
+
 ## Issuer requirements
 
 Rootprint rejects the issuer and saves nothing unless:
@@ -43,7 +64,7 @@ Rootprint rejects the issuer and saves nothing unless:
 
 ## Changing the issuer or client ID
 
-Changing the **Issuer URL** or **Client ID** changes the identity behind every linked account. Rootprint unlinks every OpenID Connect account and signs those users out. They re-link by email on their next sign-in, or an admin can [reset their password](/configuration/users#reset-a-password). Rotating only the client secret unlinks nobody.
+Changing the **Issuer URL** or **Client ID**, in the form or through `OIDC_ISSUER_URL` and `OIDC_CLIENT_ID`, changes the identity behind every linked account. Rootprint unlinks every OpenID Connect account and signs those users out. They re-link by email on their next sign-in, or an admin can [reset their password](/configuration/users#reset-a-password). Rotating only the client secret unlinks nobody.
 
 ## Issuer unreachable at boot
 
